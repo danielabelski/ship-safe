@@ -92,6 +92,7 @@ npx ship-safe audit .
 - `--html [file]` — custom HTML report path (default: `ship-safe-report.html`)
 - `--no-deps` — skip dependency audit
 - `--no-ai` — skip AI classification
+- `--no-cache` — force full rescan (ignore cached results)
 
 ---
 
@@ -178,6 +179,54 @@ npx ship-safe checklist
 # MCP server for AI editors (Claude Desktop, Cursor, etc.)
 npx ship-safe mcp
 ```
+
+---
+
+## Claude Code Plugin
+
+Use Ship Safe directly inside Claude Code — no CLI needed:
+
+```bash
+claude plugin add github:asamassekou10/ship-safe
+```
+
+| Command | Description |
+|---------|-------------|
+| `/ship-safe` | Full security audit — 12 agents, remediation plan, auto-fix |
+| `/ship-safe-scan` | Quick scan for leaked secrets |
+| `/ship-safe-score` | Security health score (0-100) |
+
+Claude interprets the results, explains findings in plain language, and can fix issues directly in your codebase.
+
+---
+
+## Incremental Scanning
+
+Ship Safe caches file hashes and findings in `.ship-safe/context.json`. On subsequent runs, only changed files are re-scanned — unchanged files reuse cached results.
+
+```
+✔ [Phase 1/4] Secrets: 41 found (0 changed, 313 cached)
+```
+
+- **~40% faster** on repeated scans
+- **Auto-invalidation** — cache expires after 24 hours or when ship-safe updates
+- **`--no-cache`** — force a full rescan anytime
+
+The cache is stored in `.ship-safe/` which is automatically excluded from scans.
+
+---
+
+## Smart `.gitignore` Handling
+
+Ship Safe respects your `.gitignore` for build output, caches, and vendor directories — but **always scans security-sensitive files** even if gitignored:
+
+| Skipped (gitignore respected) | Always scanned (gitignore overridden) |
+|-------------------------------|---------------------------------------|
+| `node_modules/`, `dist/`, `build/` | `.env`, `.env.local`, `.env.production` |
+| `*.log`, `*.pkl`, vendor dirs | `*.pem`, `*.key`, `*.p12` |
+| Cache directories, IDE files | `credentials.json`, `*.secret` |
+
+Why? Files like `.env` are gitignored *because* they contain secrets — which is exactly what a security scanner should catch.
 
 ---
 
