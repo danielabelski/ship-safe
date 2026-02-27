@@ -56,9 +56,10 @@ export class Orchestrator {
     const absolutePath = path.resolve(rootPath);
 
     // ── 1. Recon — map the attack surface ─────────────────────────────────────
-    const reconSpinner = ora({ text: 'Mapping attack surface...', color: 'cyan' }).start();
+    const quiet = options.quiet || false;
+    const reconSpinner = quiet ? null : ora({ text: 'Mapping attack surface...', color: 'cyan' }).start();
     const recon = await this.reconAgent.analyze({ rootPath: absolutePath, options });
-    reconSpinner.succeed(chalk.green('Attack surface mapped'));
+    if (reconSpinner) reconSpinner.succeed(chalk.green('Attack surface mapped'));
 
     // ── 2. Discover files once (shared across agents) ─────────────────────────
     const files = await this.reconAgent.discoverFiles(absolutePath);
@@ -84,7 +85,7 @@ export class Orchestrator {
     let allFindings = [];
 
     for (const agent of agentsToRun) {
-      const spinner = ora({
+      const spinner = quiet ? null : ora({
         text: `Running ${agent.name}...`,
         color: 'cyan'
       }).start();
@@ -98,7 +99,7 @@ export class Orchestrator {
           success: true,
         });
         allFindings = allFindings.concat(findings);
-        spinner.succeed(
+        if (spinner) spinner.succeed(
           findings.length === 0
             ? chalk.green(`${agent.name}: clean`)
             : chalk.yellow(`${agent.name}: ${findings.length} finding(s)`)
@@ -111,7 +112,7 @@ export class Orchestrator {
           success: false,
           error: err.message,
         });
-        spinner.fail(chalk.red(`${agent.name}: error — ${err.message}`));
+        if (spinner) spinner.fail(chalk.red(`${agent.name}: error — ${err.message}`));
       }
     }
 

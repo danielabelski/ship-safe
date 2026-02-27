@@ -33,6 +33,7 @@ import { depsCommand } from '../commands/deps.js';
 import { scoreCommand } from '../commands/score.js';
 import { redTeamCommand } from '../commands/red-team.js';
 import { watchCommand } from '../commands/watch.js';
+import { auditCommand } from '../commands/audit.js';
 import { PolicyEngine } from '../agents/policy-engine.js';
 import { SBOMGenerator } from '../agents/sbom-generator.js';
 
@@ -179,6 +180,20 @@ program
   .action(scoreCommand);
 
 // -----------------------------------------------------------------------------
+// AUDIT COMMAND (v4.0 — Full Security Audit)
+// -----------------------------------------------------------------------------
+program
+  .command('audit [path]')
+  .description('Full security audit: secrets + 12 agents + deps + score + remediation plan')
+  .option('--json', 'Output results as JSON')
+  .option('--sarif', 'Output results in SARIF format')
+  .option('--html [file]', 'HTML report path (default: ship-safe-report.html)')
+  .option('--no-deps', 'Skip dependency audit')
+  .option('--no-ai', 'Skip AI classification')
+  .option('-v, --verbose', 'Verbose output')
+  .action(auditCommand);
+
+// -----------------------------------------------------------------------------
 // RED TEAM COMMAND (v4.0 — Multi-Agent Security Audit)
 // -----------------------------------------------------------------------------
 program
@@ -241,8 +256,9 @@ program
 if (process.argv.length === 2) {
   console.log(banner);
   console.log(chalk.yellow('\nQuick start:\n'));
-  console.log(chalk.cyan.bold('  v4.0 — Multi-Agent Security Audit'));
-  console.log(chalk.white('  npx ship-safe red-team .    ') + chalk.gray('# Full 12-agent security audit (50+ attack classes)'));
+  console.log(chalk.cyan.bold('  v4.0 — Full Security Audit'));
+  console.log(chalk.white('  npx ship-safe audit .       ') + chalk.gray('# Full audit: secrets + agents + deps + remediation plan'));
+  console.log(chalk.white('  npx ship-safe red-team .    ') + chalk.gray('# 12-agent red team scan (50+ attack classes)'));
   console.log(chalk.white('  npx ship-safe watch .       ') + chalk.gray('# Continuous monitoring mode'));
   console.log(chalk.white('  npx ship-safe sbom .        ') + chalk.gray('# Generate CycloneDX SBOM'));
   console.log(chalk.white('  npx ship-safe policy init   ') + chalk.gray('# Create security policy template'));

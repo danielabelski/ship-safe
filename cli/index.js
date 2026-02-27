@@ -15,6 +15,7 @@ export { depsCommand, runDepsAudit } from './commands/deps.js';
 export { scoreCommand } from './commands/score.js';
 
 // ── v4.0 Commands ─────────────────────────────────────────────────────────────
+export { auditCommand } from './commands/audit.js';
 export { redTeamCommand } from './commands/red-team.js';
 export { watchCommand } from './commands/watch.js';
 
