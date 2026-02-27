@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 /**
  * Secret Detection Patterns
  * =========================
@@ -808,6 +811,50 @@ export const SKIP_EXTENSIONS = new Set([
 
 // Maximum file size to scan (1MB)
 export const MAX_FILE_SIZE = 1_000_000;
+
+// =============================================================================
+// .GITIGNORE LOADING
+// =============================================================================
+
+/**
+ * Load patterns from .gitignore file in the project root.
+ * Returns an array of glob-compatible ignore patterns.
+ *
+ * Handles:
+ *   - Comments (#)
+ *   - Negation (!) — skipped (not supported by fast-glob ignore)
+ *   - Directory patterns (dir/)
+ *   - Wildcard patterns (*.log, build/*)
+ */
+export function loadGitignorePatterns(rootPath) {
+  const gitignorePath = path.join(rootPath, '.gitignore');
+  try {
+    if (!fs.existsSync(gitignorePath)) return [];
+    return fs.readFileSync(gitignorePath, 'utf-8')
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => l && !l.startsWith('#') && !l.startsWith('!'))
+      .map(p => {
+        // Convert .gitignore patterns to fast-glob ignore patterns
+        if (p.startsWith('/')) {
+          // Rooted pattern: /build → build/**
+          return p.slice(1) + (p.endsWith('/') ? '**' : '');
+        }
+        if (p.endsWith('/')) {
+          // Directory pattern: logs/ → **/logs/**
+          return `**/${p}**`;
+        }
+        // General pattern: *.log → **/*.log, dist → **/dist, **/dist/**
+        if (!p.includes('/') && !p.includes('*')) {
+          return [`**/${p}`, `**/${p}/**`];
+        }
+        return `**/${p}`;
+      })
+      .flat();
+  } catch {
+    return [];
+  }
+}
 
 // =============================================================================
 // SECURITY VULNERABILITY PATTERNS

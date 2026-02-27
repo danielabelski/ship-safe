@@ -29,7 +29,8 @@ import {
   SECURITY_PATTERNS,
   SKIP_DIRS,
   SKIP_EXTENSIONS,
-  MAX_FILE_SIZE
+  MAX_FILE_SIZE,
+  loadGitignorePatterns
 } from '../utils/patterns.js';
 import { isHighEntropyMatch, getConfidence } from '../utils/entropy.js';
 
@@ -230,26 +231,28 @@ export async function auditCommand(targetPath = '.', options = {}) {
     console.log(chalk.cyan(`  Full report: ${chalk.white.bold(htmlPath)}`));
   }
 
-  // ── Policy Violations ────────────────────────────────────────────────────
-  const violations = policy.evaluate(scoreResult, filteredFindings);
-  if (violations.length > 0) {
-    console.log();
-    console.log(chalk.red.bold('  Policy Violations:'));
-    for (const v of violations.slice(0, 5)) {
-      console.log(chalk.red(`    ✗ ${v.message}`));
+  if (!machineOutput) {
+    // ── Policy Violations ──────────────────────────────────────────────────
+    const violations = policy.evaluate(scoreResult, filteredFindings);
+    if (violations.length > 0) {
+      console.log();
+      console.log(chalk.red.bold('  Policy Violations:'));
+      for (const v of violations.slice(0, 5)) {
+        console.log(chalk.red(`    ✗ ${v.message}`));
+      }
     }
-  }
 
-  // ── Trend ─────────────────────────────────────────────────────────────────
-  const trend = scoringEngine.getTrend(absolutePath, scoreResult.score);
-  if (trend) {
-    const arrow = trend.diff > 0 ? chalk.green('↑') : trend.diff < 0 ? chalk.red('↓') : chalk.gray('→');
-    console.log(chalk.gray(`  Trend: ${trend.previousScore} → ${trend.currentScore} ${arrow} (${trend.diff > 0 ? '+' : ''}${trend.diff})`));
-  }
+    // ── Trend ───────────────────────────────────────────────────────────────
+    const trend = scoringEngine.getTrend(absolutePath, scoreResult.score);
+    if (trend) {
+      const arrow = trend.diff > 0 ? chalk.green('↑') : trend.diff < 0 ? chalk.red('↓') : chalk.gray('→');
+      console.log(chalk.gray(`  Trend: ${trend.previousScore} → ${trend.currentScore} ${arrow} (${trend.diff > 0 ? '+' : ''}${trend.diff})`));
+    }
 
-  console.log();
-  console.log(chalk.cyan('═'.repeat(60)));
-  console.log();
+    console.log();
+    console.log(chalk.cyan('═'.repeat(60)));
+    console.log();
+  }
 
   process.exit(scoreResult.score >= 75 ? 0 : 1);
 }
@@ -494,6 +497,10 @@ function outputSARIF(findings, rootPath) {
 
 async function findFiles(rootPath) {
   const globIgnore = Array.from(SKIP_DIRS).map(dir => `**/${dir}/**`);
+
+  // Respect .gitignore patterns
+  const gitignoreGlobs = loadGitignorePatterns(rootPath);
+  globIgnore.push(...gitignoreGlobs);
 
   // Load .ship-safeignore
   const ignorePath = path.join(rootPath, '.ship-safeignore');

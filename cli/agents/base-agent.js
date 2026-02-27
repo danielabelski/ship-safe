@@ -18,7 +18,7 @@
 import fs from 'fs';
 import path from 'path';
 import fg from 'fast-glob';
-import { SKIP_DIRS, SKIP_EXTENSIONS, MAX_FILE_SIZE } from '../utils/patterns.js';
+import { SKIP_DIRS, SKIP_EXTENSIONS, MAX_FILE_SIZE, loadGitignorePatterns } from '../utils/patterns.js';
 
 // =============================================================================
 // FINDING FACTORY
@@ -94,6 +94,10 @@ export class BaseAgent {
    */
   async discoverFiles(rootPath, extraGlobs = ['**/*']) {
     const globIgnore = Array.from(SKIP_DIRS).map(dir => `**/${dir}/**`);
+
+    // Respect .gitignore patterns
+    const gitignoreGlobs = loadGitignorePatterns(rootPath);
+    globIgnore.push(...gitignoreGlobs);
 
     // Load .ship-safeignore patterns
     const ignorePatterns = this._loadIgnorePatterns(rootPath);
