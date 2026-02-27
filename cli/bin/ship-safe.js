@@ -82,6 +82,7 @@ program
   .option('--json', 'Output results as JSON (useful for CI)')
   .option('--sarif', 'Output results in SARIF format (for GitHub Code Scanning)')
   .option('--include-tests', 'Also scan test files (excluded by default to reduce false positives)')
+  .option('--no-cache', 'Force full rescan (ignore cached results)')
   .action(scanCommand);
 
 // -----------------------------------------------------------------------------
@@ -190,6 +191,7 @@ program
   .option('--html [file]', 'HTML report path (default: ship-safe-report.html)')
   .option('--no-deps', 'Skip dependency audit')
   .option('--no-ai', 'Skip AI classification')
+  .option('--no-cache', 'Force full rescan (ignore cached results)')
   .option('-v, --verbose', 'Verbose output')
   .action(auditCommand);
 

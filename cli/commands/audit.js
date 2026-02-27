@@ -33,6 +33,7 @@ import {
   loadGitignorePatterns
 } from '../utils/patterns.js';
 import { isHighEntropyMatch, getConfidence } from '../utils/entropy.js';
+import { CacheManager } from '../utils/cache-manager.js';
 
 // =============================================================================
 // CONSTANTS
@@ -85,16 +86,36 @@ export async function auditCommand(targetPath = '.', options = {}) {
     console.log();
   }
 
+  // ── Cache Layer ──────────────────────────────────────────────────────────
+  const useCache = options.cache !== false;
+  const cache = new CacheManager(absolutePath);
+  let cacheData = useCache ? cache.load() : null;
+  let cacheDiff = null;
+  let allFiles = [];
+
   // ── Phase 1: Secret Scan ──────────────────────────────────────────────────
   const secretSpinner = machineOutput ? null : ora({ text: chalk.white('[Phase 1/4] Scanning for secrets...'), color: 'cyan' }).start();
   let secretFindings = [];
   let filesScanned = 0;
 
   try {
-    const files = await findFiles(absolutePath);
-    filesScanned = files.length;
+    allFiles = await findFiles(absolutePath);
+    filesScanned = allFiles.length;
 
-    for (const file of files) {
+    // Determine which files need scanning (incremental if cache exists)
+    let filesToScan = allFiles;
+    let cachedSecretFindings = [];
+
+    if (cacheData) {
+      cacheDiff = cache.diff(allFiles);
+      filesToScan = cacheDiff.changedFiles;
+      // Reuse cached findings for unchanged files (secrets only)
+      cachedSecretFindings = cacheDiff.cachedFindings.filter(
+        f => f.category === 'secrets' || f.category === 'secret'
+      );
+    }
+
+    for (const file of filesToScan) {
       const fileResults = scanFileForSecrets(file);
       for (const f of fileResults) {
         secretFindings.push({
@@ -113,10 +134,17 @@ export async function auditCommand(targetPath = '.', options = {}) {
       }
     }
 
+    // Merge with cached findings for unchanged files
+    secretFindings = [...secretFindings, ...cachedSecretFindings];
+
+    const cacheNote = cacheDiff && cacheDiff.changedFiles.length < allFiles.length
+      ? ` (${cacheDiff.changedFiles.length} changed, ${cacheDiff.unchangedCount} cached)`
+      : '';
+
     if (secretSpinner) secretSpinner.succeed(
       secretFindings.length === 0
-        ? chalk.green('[Phase 1/4] Secrets: clean')
-        : chalk.red(`[Phase 1/4] Secrets: ${secretFindings.length} found`)
+        ? chalk.green(`[Phase 1/4] Secrets: clean${cacheNote}`)
+        : chalk.red(`[Phase 1/4] Secrets: ${secretFindings.length} found${cacheNote}`)
     );
   } catch (err) {
     if (secretSpinner) secretSpinner.fail(chalk.red(`[Phase 1/4] Secret scan failed: ${err.message}`));
@@ -131,7 +159,12 @@ export async function auditCommand(targetPath = '.', options = {}) {
   try {
     const orchestrator = buildOrchestrator();
     // Suppress individual agent spinners by using quiet mode
-    const results = await orchestrator.runAll(absolutePath, { quiet: true });
+    // Pass changedFiles for incremental scanning if cache is valid
+    const orchestratorOpts = { quiet: true };
+    if (cacheDiff && cacheDiff.changedFiles.length < allFiles.length) {
+      orchestratorOpts.changedFiles = cacheDiff.changedFiles;
+    }
+    const results = await orchestrator.runAll(absolutePath, orchestratorOpts);
     recon = results.recon;
     agentFindings = results.findings;
     agentResults = results.agentResults;
@@ -205,6 +238,21 @@ export async function auditCommand(targetPath = '.', options = {}) {
       } catch (err) {
         if (aiSpinner) aiSpinner.fail(chalk.yellow(`AI classification failed: ${err.message}`));
       }
+    }
+  }
+
+  // ── Save Cache ──────────────────────────────────────────────────────────
+  if (useCache) {
+    try {
+      // Merge agent findings back for cache (secret + agent findings from changed files)
+      // plus cached findings from unchanged files
+      const cachedAgentFindings = cacheData && cacheDiff
+        ? cacheDiff.cachedFindings.filter(f => f.category !== 'secrets' && f.category !== 'secret')
+        : [];
+      const allFindingsForCache = [...secretFindings, ...agentFindings, ...cachedAgentFindings];
+      cache.save(allFiles, deduplicateFindings(allFindingsForCache), recon, scoreResult);
+    } catch {
+      // Silent — caching should never break a scan
     }
   }
 

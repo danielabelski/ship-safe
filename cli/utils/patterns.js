@@ -786,6 +786,7 @@ export const SKIP_DIRS = new Set([
   '.expo',
   '.docusaurus',
   '.storybook',
+  '.ship-safe',
 ]);
 
 export const SKIP_EXTENSIONS = new Set([

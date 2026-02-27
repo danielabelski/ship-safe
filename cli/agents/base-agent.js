@@ -150,6 +150,15 @@ export class BaseAgent {
   }
 
   /**
+   * Get the files this agent should scan.
+   * If incremental scanning is active (changedFiles in context), returns only changed files.
+   * Otherwise returns all files. Agents that need the full file list can use context.files directly.
+   */
+  getFilesToScan(context) {
+    return context.changedFiles || context.files;
+  }
+
+  /**
    * Read a file safely, returning null on failure.
    */
   readFile(filePath) {

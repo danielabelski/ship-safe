@@ -46,5 +46,8 @@ export { SBOMGenerator } from './agents/sbom-generator.js';
 export { PolicyEngine } from './agents/policy-engine.js';
 export { HTMLReporter } from './agents/html-reporter.js';
 
+// ── Caching ──────────────────────────────────────────────────────────────────
+export { CacheManager } from './utils/cache-manager.js';
+
 // ── LLM Providers ─────────────────────────────────────────────────────────────
 export { createProvider, autoDetectProvider } from './providers/llm-provider.js';

@@ -81,6 +81,11 @@ export class Orchestrator {
 
     // ── 4. Run each agent ─────────────────────────────────────────────────────
     const context = { rootPath: absolutePath, files, recon, options };
+
+    // Pass changedFiles for incremental scanning (agents can use this to scope analysis)
+    if (options.changedFiles) {
+      context.changedFiles = options.changedFiles;
+    }
     const agentResults = [];
     let allFindings = [];
 

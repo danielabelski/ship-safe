@@ -35,6 +35,7 @@ import {
 } from '../utils/patterns.js';
 import { isHighEntropyMatch, getConfidence } from '../utils/entropy.js';
 import * as output from '../utils/output.js';
+import { CacheManager } from '../utils/cache-manager.js';
 
 // =============================================================================
 // CUSTOM PATTERNS (.ship-safe.json)
@@ -111,13 +112,49 @@ export async function scanCommand(targetPath = '.', options = {}) {
   try {
     // Find all files
     const files = await findFiles(absolutePath, ignorePatterns, options);
-    spinner.text = `Scanning ${files.length} files...`;
+
+    // Cache: determine which files changed
+    const useCache = options.cache !== false;
+    const cache = new CacheManager(absolutePath);
+    const cacheData = useCache ? cache.load() : null;
+    let filesToScan = files;
+    let cacheDiff = null;
+    const cachedResults = [];
+
+    if (cacheData) {
+      cacheDiff = cache.diff(files);
+      filesToScan = cacheDiff.changedFiles;
+
+      // Group cached findings by file
+      const cachedByFile = {};
+      for (const f of cacheDiff.cachedFindings) {
+        if (!cachedByFile[f.file]) cachedByFile[f.file] = [];
+        cachedByFile[f.file].push({
+          line: f.line,
+          column: f.column,
+          matched: f.matched,
+          patternName: f.rule || f.title,
+          severity: f.severity,
+          confidence: f.confidence,
+          description: f.description,
+          category: f.category,
+        });
+      }
+      for (const [file, findings] of Object.entries(cachedByFile)) {
+        cachedResults.push({ file, findings });
+      }
+    }
+
+    const cacheNote = cacheDiff && filesToScan.length < files.length
+      ? ` (${filesToScan.length} changed, ${cacheDiff.unchangedCount} cached)`
+      : '';
+    spinner.text = `Scanning ${filesToScan.length} files${cacheNote}...`;
 
     // Scan each file
     const results = [];
     let scannedCount = 0;
 
-    for (const file of files) {
+    for (const file of filesToScan) {
       const findings = await scanFile(file, allPatterns);
       if (findings.length > 0) {
         results.push({ file, findings });
@@ -125,7 +162,36 @@ export async function scanCommand(targetPath = '.', options = {}) {
 
       scannedCount++;
       if (options.verbose) {
-        spinner.text = `Scanned ${scannedCount}/${files.length}: ${path.relative(absolutePath, file)}`;
+        spinner.text = `Scanned ${scannedCount}/${filesToScan.length}: ${path.relative(absolutePath, file)}`;
+      }
+    }
+
+    // Merge with cached results
+    const allResults = [...results, ...cachedResults];
+
+    // Save cache
+    if (useCache) {
+      try {
+        const allFindings = [];
+        for (const { file, findings } of allResults) {
+          for (const f of findings) {
+            allFindings.push({
+              file,
+              line: f.line,
+              column: f.column,
+              severity: f.severity,
+              category: f.category || 'secrets',
+              rule: f.patternName,
+              title: f.patternName,
+              description: f.description,
+              matched: f.matched,
+              confidence: f.confidence,
+            });
+          }
+        }
+        cache.save(files, allFindings, null, null);
+      } catch {
+        // Silent
       }
     }
 
@@ -133,15 +199,15 @@ export async function scanCommand(targetPath = '.', options = {}) {
 
     // Output results
     if (options.sarif) {
-      outputSARIF(results, absolutePath);
+      outputSARIF(allResults, absolutePath);
     } else if (options.json) {
-      outputJSON(results, files.length);
+      outputJSON(allResults, files.length);
     } else {
-      outputPretty(results, files.length, absolutePath);
+      outputPretty(allResults, files.length, absolutePath);
     }
 
     // Exit with appropriate code
-    const hasFindings = results.length > 0;
+    const hasFindings = allResults.length > 0;
     process.exit(hasFindings ? 1 : 0);
 
   } catch (err) {
