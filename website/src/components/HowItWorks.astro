@@ -2,9 +2,9 @@
 ---
 <section class="how-it-works" id="how-it-works">
   <div class="container">
-    <span class="section-label">Agent flow</span>
-    <h2>How <span class="mono-h">agent</span> works</h2>
-    <p class="section-sub">One command. No config. Claude does the thinking.</p>
+    <span class="section-label">How it works</span>
+    <h2>How <span class="mono-h">audit</span> works</h2>
+    <p class="section-sub">One command. Four phases. Prioritized fix list.</p>
 
     <div class="steps">
       <div class="step" data-animate data-delay="0">
@@ -13,8 +13,8 @@
           <div class="step-connector"></div>
         </div>
         <div class="step-body">
-          <h4>Scan</h4>
-          <p>Scans every file in your project for 50+ secret patterns and 18 OWASP code vulnerability patterns. Skips <code>node_modules</code>, test files, and binaries automatically.</p>
+          <h4>Scan for secrets</h4>
+          <p>Scans every file for 50+ secret patterns with entropy scoring. Respects <code>.gitignore</code> for build output but always scans <code>.env</code>, <code>.pem</code>, and other security-sensitive files.</p>
         </div>
       </div>
 
@@ -24,8 +24,8 @@
           <div class="step-connector"></div>
         </div>
         <div class="step-body">
-          <h4>Classify with Claude</h4>
-          <p>Sends findings to Claude. For each finding, Claude classifies as <span class="tag tag-red">REAL</span> (exploitable) or <span class="tag tag-gray">FALSE POSITIVE</span> (safe in context). Secrets are masked before sending — Claude never sees your actual key values.</p>
+          <h4>Run 12 security agents</h4>
+          <p>Deploys specialized agents for injection, auth bypass, SSRF, supply chain, config, LLM security, mobile, git history, CI/CD, API fuzzing, and recon. Each agent knows exactly what to look for.</p>
         </div>
       </div>
 
@@ -35,8 +35,8 @@
           <div class="step-connector"></div>
         </div>
         <div class="step-body">
-          <h4>Remediate secrets</h4>
-          <p>Confirmed real secrets are automatically rewritten to use environment variables. Source files are updated, a <code>.env</code> file is created with the actual values, and <code>.gitignore</code> is patched.</p>
+          <h4>Audit dependencies</h4>
+          <p>Runs your package manager's own audit tool — npm, yarn, pnpm, pip, or bundler. Finds known CVEs in your dependency tree and flags vulnerable versions.</p>
         </div>
       </div>
 
@@ -46,8 +46,8 @@
           <div class="step-connector"></div>
         </div>
         <div class="step-body">
-          <h4>Fix code vulnerabilities</h4>
-          <p>For each real vulnerability, Claude provides a specific 1-line fix with a plain-English explanation of why the current code is exploitable and how the fix addresses it.</p>
+          <h4>Score &amp; remediation plan</h4>
+          <p>Computes a 0–100 security score across 8 weighted categories. Generates a prioritized remediation plan — <span class="tag tag-red">CRITICAL</span> first, then <span class="tag tag-yellow">HIGH</span>, <span class="tag tag-gray">MEDIUM</span> — so you know exactly what to fix first.</p>
         </div>
       </div>
 
@@ -56,8 +56,8 @@
           <div class="step-num">5</div>
         </div>
         <div class="step-body">
-          <h4>Verify</h4>
-          <p>Re-scans after remediation to confirm all secrets are gone. Shows a final clean bill of health — or a clear list of what still needs manual attention.</p>
+          <h4>HTML report</h4>
+          <p>Outputs a standalone dark-themed HTML report with every finding, file location, severity, CWE/OWASP mapping, and suggested fix. Share it with your team or attach it to a PR.</p>
         </div>
       </div>
     </div>
@@ -150,6 +150,7 @@
     font-weight: 600;
   }
 
-  .tag-red  { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.25); }
-  .tag-gray { background: var(--bg-card); color: var(--text-muted); border: 1px solid var(--border); }
+  .tag-red    { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.25); }
+  .tag-yellow { background: rgba(251,191,36,0.12); color: var(--yellow); border: 1px solid rgba(251,191,36,0.25); }
+  .tag-gray   { background: var(--bg-card); color: var(--text-muted); border: 1px solid var(--border); }
 </style>

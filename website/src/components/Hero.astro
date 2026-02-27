@@ -19,13 +19,13 @@
       </h1>
 
       <p class="hero-sub">
-        One command scans secrets, detects OWASP vulnerabilities,
-        audits CVEs, and auto-fixes what it finds — before you push.
+        12 security agents scan for secrets, injection, auth bypass, SSRF,
+        supply chain attacks, misconfigs, and more — then give you a prioritized fix list.
       </p>
 
       <div class="install-box">
         <span class="install-prompt">$</span>
-        <span class="install-cmd">npx ship-safe agent .</span>
+        <span class="install-cmd">npx ship-safe audit .</span>
         <button class="copy-btn" id="hero-copy" title="Copy command" aria-label="Copy install command">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -56,29 +56,30 @@
             <span class="dot dot-y"></span>
             <span class="dot dot-g"></span>
           </div>
-          <span class="dash-title">ship-safe agent .</span>
+          <span class="dash-title">ship-safe audit .</span>
           <span class="dash-badge">LIVE</span>
         </div>
 
         <!-- Scan output lines -->
         <div class="dash-terminal">
           <div class="term-line">
-            <span class="term-prompt">▸</span>
-            <span class="term-text dim">Scanning 847 files...</span>
-          </div>
-          <div class="term-line">
-            <span class="term-prompt red">✗</span>
-            <span class="term-text">4 secrets found</span>
+            <span class="term-prompt green">✔</span>
+            <span class="term-text">Secrets: 4 found</span>
             <span class="term-tag tag-red">CRITICAL</span>
           </div>
           <div class="term-line">
-            <span class="term-prompt yellow">!</span>
-            <span class="term-text">3 code vulnerabilities</span>
+            <span class="term-prompt green">✔</span>
+            <span class="term-text">12 agents: 23 findings</span>
             <span class="term-tag tag-yellow">HIGH</span>
           </div>
           <div class="term-line">
             <span class="term-prompt green">✔</span>
-            <span class="term-text dim">Dependencies clean</span>
+            <span class="term-text">Dependencies: 3 CVEs</span>
+            <span class="term-tag tag-yellow">HIGH</span>
+          </div>
+          <div class="term-line">
+            <span class="term-prompt green">✔</span>
+            <span class="term-text dim">Remediation plan ready</span>
           </div>
         </div>
 
@@ -167,7 +168,7 @@
 
 <script>
   document.getElementById('hero-copy')?.addEventListener('click', function() {
-    navigator.clipboard.writeText('npx ship-safe agent .').then(() => {
+    navigator.clipboard.writeText('npx ship-safe audit .').then(() => {
       this.style.color = 'var(--green)';
       setTimeout(() => { this.style.color = ''; }, 1500);
     });

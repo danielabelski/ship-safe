@@ -7,7 +7,7 @@
         <span class="dot dot-r"></span>
         <span class="dot dot-y"></span>
         <span class="dot dot-g"></span>
-        <span class="terminal-title">npx ship-safe agent .</span>
+        <span class="terminal-title">npx ship-safe audit .</span>
       </div>
       <div class="terminal-body" id="terminal-body" aria-live="polite">
         <!-- JS will populate this -->
@@ -18,25 +18,31 @@
 
 <script>
   const LINES: { text: string; cls?: string; pause?: number }[] = [
-    { text: '$ npx ship-safe agent .', cls: 'cmd', pause: 400 },
+    { text: '$ npx ship-safe audit .', cls: 'cmd', pause: 400 },
     { text: '', pause: 200 },
-    { text: '  Scanning 247 files...', cls: 'dim', pause: 600 },
+    { text: '  ════════════════════════════════════════════════════', cls: 'dim', pause: 100 },
+    { text: '    Ship Safe v4.1 — Full Security Audit', cls: 'white bold', pause: 300 },
+    { text: '  ════════════════════════════════════════════════════', cls: 'dim', pause: 300 },
     { text: '', pause: 100 },
-    { text: '  ✘  4 secrets found', cls: 'red', pause: 150 },
-    { text: '  ✘  3 code vulnerabilities', cls: 'yellow', pause: 150 },
-    { text: '  ✘  2 dependency CVEs', cls: 'red', pause: 500 },
+    { text: '  [Phase 1/4] Scanning for secrets...         ✔ 4 found', cls: 'yellow', pause: 400 },
+    { text: '  [Phase 2/4] Running 12 security agents...   ✔ 23 findings', cls: 'yellow', pause: 400 },
+    { text: '  [Phase 3/4] Auditing dependencies...        ✔ 3 CVEs', cls: 'yellow', pause: 400 },
+    { text: '  [Phase 4/4] Computing security score...     ✔ 72/100 C', cls: 'cyan', pause: 500 },
     { text: '', pause: 100 },
-    { text: '  Classifying with Claude...', cls: 'cyan', pause: 700 },
+    { text: '  Remediation Plan', cls: 'white bold', pause: 200 },
+    { text: '  ────────────────────────────────────────────────────', cls: 'dim', pause: 100 },
     { text: '', pause: 100 },
-    { text: '  REAL  ·  sk-proj-xK9m***Q3f5       OpenAI API Key', cls: 'red', pause: 120 },
-    { text: '  REAL  ·  postgres://ad***8f92        Database URL', cls: 'red', pause: 120 },
-    { text: '  SKIP  ·  example_key_placeholder    False positive', cls: 'dim', pause: 500 },
+    { text: '  🔴 CRITICAL — fix immediately', cls: 'red', pause: 200 },
+    { text: '   1. [SECRETS] Rotate Stripe Live Secret Key', cls: 'red', pause: 120 },
+    { text: '      .env:12 → Move to secrets manager', cls: 'dim', pause: 120 },
+    { text: '   2. [INJECTION] Unsafe eval() with user input', cls: 'red', pause: 120 },
+    { text: '      api/process.js:41 → Use safe parser', cls: 'dim', pause: 400 },
     { text: '', pause: 100 },
-    { text: '  Auto-fixing 2 confirmed secrets...', cls: 'cyan', pause: 600 },
-    { text: '  ✔  src/config.js rewritten → process.env.OPENAI_API_KEY', cls: 'green', pause: 120 },
-    { text: '  ✔  .env updated  ·  .gitignore updated', cls: 'green', pause: 500 },
+    { text: '  🟠 HIGH — fix before deploy', cls: 'yellow', pause: 200 },
+    { text: '   3. [XSS] dangerouslySetInnerHTML without sanitization', cls: 'yellow', pause: 120 },
+    { text: '      src/BlogRenderer.jsx:28 → Add DOMPurify', cls: 'dim', pause: 400 },
     { text: '', pause: 100 },
-    { text: '  Ship Safe Score: 83/100  ·  B — Minor issues to review', cls: 'white bold', pause: 0 },
+    { text: '  📊 Full report: ship-safe-report.html', cls: 'cyan', pause: 0 },
   ];
 
   let started = false;

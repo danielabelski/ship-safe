@@ -1,22 +1,28 @@
 ---
 const commands = [
   {
-    name: 'agent',
-    cmd: 'npx ship-safe agent .',
-    desc: 'Full AI audit — scan, classify with Claude, auto-fix secrets, suggest code fixes.',
-    flags: ['--dry-run', '--model <model>'],
+    name: 'audit',
+    cmd: 'npx ship-safe audit .',
+    desc: 'Full security audit — secrets + 12 agents + deps + score + remediation plan + HTML report.',
+    flags: ['--json', '--sarif', '--html [file]', '--no-deps', '--no-ai', '--no-cache'],
     featured: true,
+  },
+  {
+    name: 'red-team',
+    cmd: 'npx ship-safe red-team .',
+    desc: 'Run 12 security agents (50+ attack classes) against your codebase. Targeted deep scan.',
+    flags: ['--agents <list>', '--json', '--html [file]'],
   },
   {
     name: 'scan',
     cmd: 'npx ship-safe scan .',
-    desc: 'Scan for secrets and code vulnerabilities. No API key needed. CI-friendly.',
-    flags: ['--json', '--sarif', '--include-tests'],
+    desc: 'Quick secret scan — 50+ patterns with entropy scoring. No API key needed.',
+    flags: ['--json', '--sarif', '--no-cache'],
   },
   {
     name: 'score',
     cmd: 'npx ship-safe score .',
-    desc: '0–100 security health score with A–F grade. Instant — no API call needed.',
+    desc: '0–100 security health score with A–F grade. 8 weighted categories.',
     flags: ['--no-deps'],
   },
   {
@@ -26,28 +32,22 @@ const commands = [
     flags: ['--fix'],
   },
   {
-    name: 'remediate',
-    cmd: 'npx ship-safe remediate .',
-    desc: 'Auto-fix secrets: rewrites code, writes .env, updates .gitignore.',
-    flags: ['--dry-run', '--yes'],
+    name: 'agent',
+    cmd: 'npx ship-safe agent .',
+    desc: 'AI-powered audit — scan + classify with Claude + auto-fix secrets.',
+    flags: ['--dry-run', '--model <model>'],
   },
   {
-    name: 'rotate',
-    cmd: 'npx ship-safe rotate .',
-    desc: 'Opens provider dashboards with step-by-step key revocation instructions.',
-    flags: ['--provider <name>'],
+    name: 'watch',
+    cmd: 'npx ship-safe watch .',
+    desc: 'Continuous monitoring — watches files for changes and re-scans automatically.',
+    flags: [],
   },
   {
     name: 'guard',
     cmd: 'npx ship-safe guard',
     desc: 'Install a git hook that blocks git push if secrets are found.',
     flags: ['--pre-commit'],
-  },
-  {
-    name: 'checklist',
-    cmd: 'npx ship-safe checklist',
-    desc: 'Interactive 10-point launch-day security checklist.',
-    flags: [],
   },
 ];
 ---

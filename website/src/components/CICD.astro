@@ -1,5 +1,5 @@
 ---
-const yamlCode = `name: Security Scan
+const yamlCode = `name: Security Audit
 on: [push, pull_request]
 
 jobs:
@@ -8,14 +8,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Scan for secrets and code vulnerabilities
-        run: npx ship-safe scan . --json
+      - name: Full security audit
+        run: npx ship-safe audit . --no-ai --json
 
-      - name: Audit dependencies for CVEs
-        run: npx ship-safe deps .
+      - name: Upload SARIF to GitHub Security tab
+        run: npx ship-safe audit . --no-ai --sarif > results.sarif
 
-      - name: Security health score (fail if C or below)
-        run: npx ship-safe score . --no-deps`;
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif`;
 ---
 
 <section class="cicd">
