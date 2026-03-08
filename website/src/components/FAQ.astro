@@ -18,7 +18,7 @@ const faqs = [
   },
   {
     q: 'Can I use it inside Claude Code?',
-    a: 'Yes. Install the plugin with <code>claude plugin add github:asamassekou10/ship-safe</code> and use <code>/ship-safe</code> for a full audit, <code>/ship-safe-scan</code> for secrets, or <code>/ship-safe-score</code> for your health score. Claude interprets the results and can fix issues directly.'
+    a: 'Yes. Install the plugin with <code>claude plugin add github:asamassekou10/ship-safe</code> and use <code>/ship-safe</code> for a full audit, <code>/ship-safe-scan</code> for secrets, <code>/ship-safe-score</code> for your health score, <code>/ship-safe-fix</code> for auto-remediation, or <code>/ship-safe-baseline</code> to manage your baseline. Claude interprets the results and can fix issues directly.'
   },
   {
     q: 'How is this different from Semgrep or Snyk?',
@@ -27,6 +27,10 @@ const faqs = [
   {
     q: 'Is it safe to run in CI?',
     a: 'Yes. <code>audit</code> exits <code>0</code> for scores >= 75 (A/B grade) and <code>1</code> for lower scores. Use <code>--json</code> for structured output or <code>--sarif</code> to upload findings to GitHub\'s Security tab.'
+  },
+  {
+    q: 'What about false positives?',
+    a: 'v4.3 adds context-aware confidence tuning that automatically downgrades findings in test files, documentation, comments, and example code — reducing false positives by up to 70%. You can also use <code>ship-safe baseline .</code> to accept current findings and only see new regressions, or add <code># ship-safe-ignore</code> to suppress individual lines.'
   }
 ];
 ---

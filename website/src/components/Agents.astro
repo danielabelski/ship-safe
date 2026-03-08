@@ -3,13 +3,14 @@ const agents = [
   { name: 'InjectionTester', category: 'Code Vulns', desc: 'SQL/NoSQL injection, XSS, command injection, eval, path traversal, XXE, ReDoS, prototype pollution' },
   { name: 'AuthBypassAgent', category: 'Auth', desc: 'JWT alg:none, weak secrets, CSRF, OAuth misconfig, BOLA/IDOR, timing attacks' },
   { name: 'SSRFProber', category: 'SSRF', desc: 'User input in fetch/axios, cloud metadata endpoints, internal IPs, redirect following' },
-  { name: 'SupplyChainAudit', category: 'Supply Chain', desc: 'Typosquatting, git/URL deps, wildcard versions, suspicious install scripts' },
-  { name: 'ConfigAuditor', category: 'Config', desc: 'Dockerfile, Terraform, Kubernetes, CORS, CSP, Firebase, Nginx misconfigs' },
+  { name: 'SupplyChainAudit', category: 'Supply Chain', desc: 'Typosquatting, dependency confusion, git/URL deps, wildcard versions, suspicious install scripts' },
+  { name: 'ConfigAuditor', category: 'Config', desc: 'Dockerfile, Terraform (RDS, CloudFront, Lambda, S3), Kubernetes, CORS, CSP, Firebase, Nginx misconfigs' },
+  { name: 'SupabaseRLSAgent', category: 'Auth', desc: 'Row Level Security — service_role key in client code, CREATE TABLE without RLS, anon inserts, unprotected storage' },
   { name: 'LLMRedTeam', category: 'AI/LLM', desc: 'Prompt injection, excessive agency, system prompt leakage, RAG poisoning' },
   { name: 'MobileScanner', category: 'Mobile', desc: 'Insecure storage, WebView injection, HTTP endpoints, debug mode, permissions' },
   { name: 'GitHistoryScanner', category: 'Secrets', desc: 'Leaked secrets in git history — checks if still active in working tree' },
   { name: 'CICDScanner', category: 'CI/CD', desc: 'Pipeline poisoning, unpinned actions, secret logging, self-hosted runners' },
-  { name: 'APIFuzzer', category: 'API', desc: 'Routes without auth, missing validation, mass assignment, GraphQL introspection' },
+  { name: 'APIFuzzer', category: 'API', desc: 'Routes without auth, missing validation, mass assignment, GraphQL introspection, rate limiting, OpenAPI spec issues' },
   { name: 'ReconAgent', category: 'Recon', desc: 'Attack surface mapping — frameworks, auth patterns, databases, cloud providers' },
   { name: 'ScoringEngine', category: 'Scoring', desc: '8-category weighted scoring with trend tracking (0–100, A–F)' },
 ];
@@ -17,7 +18,7 @@ const agents = [
 
 <section class="agents" id="agents">
   <div class="container">
-    <span class="section-label">12 Agents</span>
+    <span class="section-label">13 Agents</span>
     <h2>A specialist for every attack surface.</h2>
     <p class="section-sub">Each agent is purpose-built to find what general scanners miss.</p>
 

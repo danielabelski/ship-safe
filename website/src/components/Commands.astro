@@ -3,14 +3,14 @@ const commands = [
   {
     name: 'audit',
     cmd: 'npx ship-safe audit .',
-    desc: 'Full security audit — secrets + 12 agents + deps + score + remediation plan + HTML report.',
-    flags: ['--json', '--sarif', '--html [file]', '--no-deps', '--no-ai', '--no-cache'],
+    desc: 'Full security audit — secrets + 13 agents + deps + score + remediation plan + HTML report.',
+    flags: ['--json', '--sarif', '--html [file]', '--pdf [file]', '--baseline', '--csv', '--md', '--no-deps', '--no-ai', '--no-cache'],
     featured: true,
   },
   {
     name: 'red-team',
     cmd: 'npx ship-safe red-team .',
-    desc: 'Run 12 security agents (50+ attack classes) against your codebase. Targeted deep scan.',
+    desc: 'Run 13 security agents (50+ attack classes) against your codebase. Targeted deep scan.',
     flags: ['--agents <list>', '--json', '--html [file]'],
   },
   {
@@ -42,6 +42,18 @@ const commands = [
     cmd: 'npx ship-safe watch .',
     desc: 'Continuous monitoring — watches files for changes and re-scans automatically.',
     flags: [],
+  },
+  {
+    name: 'baseline',
+    cmd: 'npx ship-safe baseline .',
+    desc: 'Accept current findings as baseline — only report regressions on future scans.',
+    flags: ['--diff', '--clear'],
+  },
+  {
+    name: 'remediate',
+    cmd: 'npx ship-safe remediate .',
+    desc: 'Auto-fix secrets and common vulnerabilities — TLS bypass, debug mode, XSS, Docker :latest.',
+    flags: ['--all', '--dry-run', '--yes'],
   },
   {
     name: 'guard',
