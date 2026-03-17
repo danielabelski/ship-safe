@@ -158,6 +158,14 @@ export async function auditCommand(targetPath = '.', options = {}) {
       }
     }
 
+    // Downgrade secrets in test files (intentional test fixtures)
+    const TEST_PATH = /(?:__tests__|\.test\.|\.spec\.|\/test\/|\/tests\/|\/fixtures?\/)/i;
+    for (const f of secretFindings) {
+      if (TEST_PATH.test(f.file)) {
+        f.confidence = 'low';
+      }
+    }
+
     // Merge with cached findings for unchanged files
     secretFindings = [...secretFindings, ...cachedSecretFindings];
 
@@ -175,13 +183,14 @@ export async function auditCommand(targetPath = '.', options = {}) {
   }
 
   // ── Phase 2: Agent Scan ───────────────────────────────────────────────────
-  const agentSpinner = machineOutput ? null : ora({ text: chalk.white('[Phase 2/4] Running 12 security agents...'), color: 'cyan' }).start();
+  const orchestrator = buildOrchestrator();
+  const registeredAgentCount = orchestrator.agents?.length || 15;
+  const agentSpinner = machineOutput ? null : ora({ text: chalk.white(`[Phase 2/4] Running ${registeredAgentCount} security agents...`), color: 'cyan' }).start();
   let agentFindings = [];
   let recon = null;
   let agentResults = [];
 
   try {
-    const orchestrator = buildOrchestrator();
     // Suppress individual agent spinners by using quiet mode
     // Pass changedFiles for incremental scanning if cache is valid
     const orchestratorOpts = { quiet: true };
@@ -436,9 +445,12 @@ function buildRemediationPlan(findings, depVulns, rootPath) {
   const plan = [];
   let priority = 1;
 
+  // Exclude low-confidence findings (test files, docs, comments) from remediation plan
+  const actionable = findings.filter(f => f.confidence !== 'low');
+
   // Priority order: secrets first, then by severity
-  const secretFindings = findings.filter(f => f.category === 'secrets' || f.category === 'secret');
-  const otherFindings = findings.filter(f => f.category !== 'secrets' && f.category !== 'secret');
+  const secretFindings = actionable.filter(f => f.category === 'secrets' || f.category === 'secret');
+  const otherFindings = actionable.filter(f => f.category !== 'secrets' && f.category !== 'secret');
 
   // Group and sort
   for (const sev of SEV_ORDER) {

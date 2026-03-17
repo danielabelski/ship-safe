@@ -188,7 +188,7 @@ const PATTERNS = [
   {
     rule: 'PII_IP_LOGGING',
     title: 'Privacy: IP Address Logged Without Anonymization',
-    regex: /(?:console\.log|logger\.\w+|log\.\w+)\s*\([\s\S]{0,100}(?:ip|ipAddress|ip_address|remoteAddress|x-forwarded-for|client.?ip)/gi,
+    regex: /(?:console\.log|logger\.\w+|log\.\w+)\s*\([\s\S]{0,100}(?:(?<![a-z])ip(?![a-z])|ipAddress|ip_address|remoteAddress|x-forwarded-for|client.?ip)/gi,
     severity: 'medium',
     cwe: 'CWE-532',
     owasp: 'A09:2021',
