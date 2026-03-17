@@ -3,6 +3,13 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import styles from './Hero.module.css';
 
+const stats = [
+  { num: '16', label: 'Security agents' },
+  { num: '80+', label: 'Attack classes' },
+  { num: '5', label: 'OWASP standards' },
+  { num: '<5s', label: 'To run' },
+];
+
 export default function Hero() {
   useEffect(() => {
     const scoreEl = document.getElementById('score-val');
@@ -54,7 +61,7 @@ export default function Hero() {
           </h1>
 
           <p className={styles.heroSub}>
-            16 security agents scan for secrets, injection, auth bypass, SSRF, supply chain attacks, agentic AI, MCP, RAG, PII, and more — with LLM-powered deep analysis and confidence tuning that cuts false positives by 70%.
+            One command finds secrets, code vulns, and CVEs across your entire codebase. 16 AI agents. 80+ attack classes. Under 5 seconds.
           </p>
 
           <div className={`install-box ${styles.installBox}`}>
@@ -72,7 +79,7 @@ export default function Hero() {
             <Link href="/signup" className="btn btn-primary">
               Start for free
             </Link>
-            <a href="#how-it-works" className="btn btn-ghost">See how it works</a>
+            <a href="#pricing" className="btn btn-ghost">See pricing</a>
           </div>
         </div>
 
@@ -96,7 +103,7 @@ export default function Hero() {
                 { icon: '✔', text: 'Dependencies: 3 CVEs', tag: 'HIGH', tagCls: styles.tagYellow },
                 { icon: '✔', text: 'Remediation plan ready', tag: null, dim: true },
               ].map((l, i) => (
-                <div key={i} className={styles.termLine}>
+                <div key={i} className={styles.termLine} style={{ animationDelay: `${0.3 + i * 0.25}s` }}>
                   <span className={`${styles.termPrompt} ${styles.green}`}>{l.icon}</span>
                   <span className={`${styles.termText} ${l.dim ? styles.dim : ''}`}>{l.text}</span>
                   {l.tag && <span className={`${styles.termTag} ${l.tagCls}`}>{l.tag}</span>}
@@ -165,6 +172,17 @@ export default function Hero() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Inline stats bar */}
+      <div className={`container ${styles.statsBar}`}>
+        {stats.map((s, i) => (
+          <div key={s.label} className={styles.statsItem}>
+            {i > 0 && <span className={styles.statsSep} aria-hidden="true" />}
+            <span className={styles.statsNum}>{s.num}</span>
+            <span className={styles.statsLabel}>{s.label}</span>
+          </div>
+        ))}
       </div>
     </section>
   );

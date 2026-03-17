@@ -1,5 +1,5 @@
 .hero {
-  padding: 7rem 0 5rem;
+  padding: 7rem 0 3rem;
   position: relative;
   overflow: hidden;
 }
@@ -115,6 +115,22 @@
     0 0 0 1px rgba(34,211,238,0.06),
     0 32px 80px rgba(0,0,0,0.6),
     0 0 60px rgba(34,211,238,0.04);
+  position: relative;
+}
+
+/* Gradient glow border effect */
+.dashCard::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 17px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(34,211,238,0.25), transparent 40%, transparent 60%, rgba(59,130,246,0.2));
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .dashHeader {
@@ -157,13 +173,23 @@
   gap: 0.35rem;
   background: rgba(0,0,0,0.2);
 }
+
+/* Staggered line-appear animation */
 .termLine {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   font-family: var(--font-mono);
   font-size: 0.73rem;
+  opacity: 0;
+  animation: line-appear 0.4s ease forwards;
 }
+
+@keyframes line-appear {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
 .termPrompt { width: 14px; text-align: center; flex-shrink: 0; font-size: 0.7rem; }
 .green { color: var(--green); }
 .termText { color: var(--text-muted); flex: 1; }
@@ -265,12 +291,59 @@
   flex-shrink: 0;
 }
 
+/* Inline stats bar */
+.statsBar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  padding-top: 3rem;
+  animation: fade-up 0.6s 0.55s ease both;
+}
+
+.statsItem {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.statsSep {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+  margin: 0 1.5rem;
+}
+
+.statsNum {
+  font-family: var(--font-mono);
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--cyan);
+  line-height: 1;
+}
+
+.statsLabel {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
 @media (max-width: 800px) {
-  .hero { padding: 5.5rem 0 3.5rem; }
+  .hero { padding: 5.5rem 0 2.5rem; }
   .heroLayout { grid-template-columns: 1fr; gap: 2.5rem; text-align: center; }
   .heroLeft { align-items: center; }
   .h1Line2 { white-space: normal; }
   .heroSub { margin: 0 auto 1.75rem; }
   .heroCtas { justify-content: center; }
   .heroRight { justify-content: center; }
+  .statsBar { flex-wrap: wrap; gap: 0.5rem; padding-top: 2rem; }
+  .statsSep { height: 20px; margin: 0 0.75rem; }
+}
+
+@media (max-width: 480px) {
+  .statsBar { gap: 0.25rem; }
+  .statsNum { font-size: 1.1rem; }
+  .statsLabel { font-size: 0.72rem; }
+  .statsSep { margin: 0 0.5rem; }
 }

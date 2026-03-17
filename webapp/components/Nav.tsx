@@ -20,9 +20,9 @@ export default function Nav() {
           <span>ship-safe</span>
         </Link>
         <div className={styles.navLinks}>
+          <a href="#features">Features</a>
           <a href="#how-it-works">How it works</a>
-          <a href="#commands">Commands</a>
-          <Link href="/pricing" className={styles.navLink}>Pricing</Link>
+          <a href="#pricing">Pricing</a>
           <Link href="/login" className={styles.navLink}>Log in</Link>
           <Link href="/signup" className={styles.navCta}>Get started</Link>
           <a

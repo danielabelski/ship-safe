@@ -1,0 +1,210 @@
+.features {
+  border-top: 1px solid var(--border);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+
+.card {
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.cardIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--cyan-glow);
+  border: 1px solid rgba(34, 211, 238, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cyan);
+}
+
+.cardTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.cardDesc {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+
+/* Mini terminal (Scan card) */
+.miniTerminal {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #0d1117;
+  margin-top: auto;
+}
+
+.miniHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-card2);
+  border-bottom: 1px solid var(--border);
+}
+
+.miniDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.miniTitle {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  margin-left: 0.4rem;
+}
+
+.miniBody {
+  padding: 0.65rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.miniLine {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.miniOk {
+  color: var(--green);
+  font-size: 0.65rem;
+  width: 12px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.miniDim { color: var(--text-dim); }
+
+.miniTag {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.1em 0.4em;
+  border-radius: 3px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.miniTag[data-level="medium"] {
+  color: var(--yellow);
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+/* Diff block (Remediate card) */
+.diffBlock {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #0d1117;
+  margin-top: auto;
+}
+
+.diffFile {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  background: var(--bg-card2);
+  border-bottom: 1px solid var(--border);
+}
+
+.diffBadge {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.1em 0.4em;
+  border-radius: 3px;
+}
+.diffBadge[data-type="before"] {
+  color: var(--red);
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+}
+.diffBadge[data-type="after"] {
+  color: var(--green);
+  background: rgba(74, 222, 128, 0.12);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.diffName {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+}
+
+.diffCode {
+  padding: 0.45rem 0.75rem;
+  margin: 0;
+  overflow-x: auto;
+}
+
+.diffCode code {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  line-height: 1.6;
+  white-space: pre;
+}
+
+.diffDel { color: var(--red); }
+.diffAdd { color: var(--green); }
+
+/* YAML block (CI/CD card) */
+.yamlBlock {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #0d1117;
+  margin-top: auto;
+}
+
+.yamlHeader {
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-card2);
+  border-bottom: 1px solid var(--border);
+}
+
+.yamlFile {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+}
+
+.yamlCode {
+  padding: 0.65rem 0.75rem;
+  margin: 0;
+  overflow-x: auto;
+}
+
+.yamlCode code {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+  white-space: pre;
+}
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; max-width: 480px; margin: 0 auto; }
+}

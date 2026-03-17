@@ -1,13 +1,9 @@
 import Nav from '@/components/Nav';
 import Hero from '@/components/Hero';
-import Stats from '@/components/Stats';
-import Terminal from '@/components/Terminal';
-import BeforeAfter from '@/components/BeforeAfter';
-import Pillars from '@/components/Pillars';
-import Agents from '@/components/Agents';
+import TrustBar from '@/components/TrustBar';
 import HowItWorks from '@/components/HowItWorks';
-import Commands from '@/components/Commands';
-import CICD from '@/components/CICD';
+import Features from '@/components/Features';
+import PricingTeaser from '@/components/PricingTeaser';
 import FAQ from '@/components/FAQ';
 import CTA from '@/components/CTA';
 import ScrollAnimator from '@/components/ScrollAnimator';
@@ -19,14 +15,10 @@ export default function Home() {
       <Nav />
       <main>
         <Hero />
-        <Stats />
-        <Terminal />
-        <BeforeAfter />
-        <Pillars />
-        <Agents />
+        <TrustBar />
         <HowItWorks />
-        <Commands />
-        <CICD />
+        <Features />
+        <PricingTeaser />
         <FAQ />
       </main>
       <CTA />
