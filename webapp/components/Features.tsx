@@ -1,0 +1,118 @@
+import styles from './Features.module.css';
+
+export default function Features() {
+  return (
+    <section className={styles.features} id="features">
+      <div className="container">
+        <span className="section-label">Features</span>
+        <h2>Everything you need to ship safely.</h2>
+        <p className="section-sub">
+          One command covers secrets, code vulnerabilities, dependencies, CI/CD, and more.
+        </p>
+
+        <div className={styles.grid}>
+          {/* Card 1: Scan Everything */}
+          <div className={`${styles.card} card`} data-animate>
+            <div className={styles.cardIcon}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            </div>
+            <h3 className={styles.cardTitle}>Scan everything</h3>
+            <p className={styles.cardDesc}>
+              16 specialized agents scan for secrets, injection, auth bypass, SSRF, supply chain attacks, LLM security, and more. 80+ attack classes across 5 OWASP standards.
+            </p>
+            <div className={styles.miniTerminal}>
+              <div className={styles.miniHeader}>
+                <span className={styles.miniDot} style={{ background: 'var(--red)' }} />
+                <span className={styles.miniDot} style={{ background: 'var(--yellow)' }} />
+                <span className={styles.miniDot} style={{ background: 'var(--green)' }} />
+                <span className={styles.miniTitle}>ship-safe audit .</span>
+              </div>
+              <div className={styles.miniBody}>
+                <div className={styles.miniLine}>
+                  <span className={styles.miniOk}>✔</span>
+                  <span>Secrets: 0 found</span>
+                </div>
+                <div className={styles.miniLine}>
+                  <span className={styles.miniOk}>✔</span>
+                  <span>16 agents: 2 findings</span>
+                  <span className={styles.miniTag} data-level="medium">MEDIUM</span>
+                </div>
+                <div className={styles.miniLine}>
+                  <span className={styles.miniOk}>✔</span>
+                  <span>Dependencies: 0 CVEs</span>
+                </div>
+                <div className={styles.miniLine}>
+                  <span className={styles.miniOk}>✔</span>
+                  <span className={styles.miniDim}>Score: 94/100 — A</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Auto-Remediate */}
+          <div className={`${styles.card} card`} data-animate data-delay="80">
+            <div className={styles.cardIcon}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+              </svg>
+            </div>
+            <h3 className={styles.cardTitle}>Auto-remediate</h3>
+            <p className={styles.cardDesc}>
+              One command fixes findings automatically — moves secrets to environment variables, replaces vulnerable patterns, and generates a clean diff you can review.
+            </p>
+            <div className={styles.diffBlock}>
+              <div className={styles.diffFile}>
+                <span className={styles.diffBadge} data-type="before">BEFORE</span>
+                <span className={styles.diffName}>config.js</span>
+              </div>
+              <pre className={styles.diffCode}>
+                <code>
+                  <span className={styles.diffDel}>- const key = &quot;sk-proj-abc123def&quot;;</span>
+                </code>
+              </pre>
+              <div className={styles.diffFile}>
+                <span className={styles.diffBadge} data-type="after">AFTER</span>
+                <span className={styles.diffName}>config.js</span>
+              </div>
+              <pre className={styles.diffCode}>
+                <code>
+                  <span className={styles.diffAdd}>+ const key = process.env.OPENAI_API_KEY;</span>
+                </code>
+              </pre>
+            </div>
+          </div>
+
+          {/* Card 3: CI/CD Ready */}
+          <div className={`${styles.card} card`} data-animate data-delay="160">
+            <div className={styles.cardIcon}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="6" y1="3" x2="6" y2="15" />
+                <circle cx="18" cy="6" r="3" />
+                <circle cx="6" cy="18" r="3" />
+                <path d="M18 9a9 9 0 0 1-9 9" />
+              </svg>
+            </div>
+            <h3 className={styles.cardTitle}>CI/CD ready</h3>
+            <p className={styles.cardDesc}>
+              Drop a one-liner into GitHub Actions. Threshold gating, SARIF output for GitHub Security tab, and exit codes for pipeline control.
+            </p>
+            <div className={styles.yamlBlock}>
+              <div className={styles.yamlHeader}>
+                <span className={styles.yamlFile}>.github/workflows/security.yml</span>
+              </div>
+              <pre className={styles.yamlCode}>
+                <code>{`- name: Ship Safe Audit
+  run: npx ship-safe ci .
+    --threshold 75
+    --sarif results.sarif`}</code>
+              </pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
