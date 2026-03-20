@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
   }
 
-  const planConfig = PLANS[plan];
+  const planConfig = PLANS[plan as keyof typeof PLANS];
   const origin = req.nextUrl.origin;
 
   const checkoutSession = await stripe.checkout.sessions.create({
