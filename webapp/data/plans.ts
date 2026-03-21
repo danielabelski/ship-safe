@@ -16,7 +16,7 @@ export const plans: Plan[] = [
     period: 'one-time',
     desc: 'For developers who ship fast and need full coverage.',
     cta: 'Buy Pro',
-    ctaHref: '/signup?plan=pro',
+    ctaHref: '/app/checkout?plan=pro',
     featured: true,
     features: [
       'Unlimited cloud scans',
@@ -36,7 +36,7 @@ export const plans: Plan[] = [
     period: 'one-time per seat',
     desc: 'For teams that need collaboration and shared visibility.',
     cta: 'Buy Team',
-    ctaHref: '/signup?plan=team',
+    ctaHref: '/app/checkout?plan=team',
     featured: false,
     features: [
       'Everything in Pro',

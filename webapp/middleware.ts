@@ -11,7 +11,7 @@ export function middleware(req: NextRequest) {
 
   if (!token) {
     const loginUrl = new URL('/login', req.url); // ship-safe-ignore — redirect middleware; actual auth+rate-limiting enforced by Auth.js, not here
-    loginUrl.searchParams.set('callbackUrl', req.nextUrl.pathname);
+    loginUrl.searchParams.set('callbackUrl', req.nextUrl.pathname + req.nextUrl.search);
     return NextResponse.redirect(loginUrl);
   }
 
