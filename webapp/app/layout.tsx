@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Providers from './providers';
 import AuroraBackground from '@/components/AuroraBackground';
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -11,11 +12,13 @@ export const metadata: Metadata = {
     title: 'Ship Safe — Security toolkit for vibe coders',
     description: 'Scan for secrets, detect code vulnerabilities, audit dependencies, and get a 0-100 security score.',
     type: 'website',
+    images: [{ url: '/og shipsafe.jpg', width: 1200, height: 630, alt: 'Ship Safe' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Ship Safe — Security toolkit for vibe coders',
     description: 'Scan for secrets, detect code vulnerabilities, audit dependencies, and get a 0-100 security score.',
+    images: ['/og shipsafe.jpg'],
   },
 };
 
@@ -35,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <AuroraBackground />
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   );
