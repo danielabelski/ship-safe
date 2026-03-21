@@ -78,7 +78,7 @@ async function fullScan(rootPath) {
   const { findings: secretFindings, files } = await quickScan(rootPath);
 
   const orchestrator = buildOrchestrator();
-  const { findings: agentFindings } = await orchestrator.runAll(rootPath, { quiet: true });
+  const { findings: agentFindings } = await orchestrator.runAll(rootPath, { quiet: true }); // ship-safe-ignore — orchestrator result, not LLM output triggering actions
 
   return [...secretFindings, ...agentFindings];
 }

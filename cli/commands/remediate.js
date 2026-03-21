@@ -81,7 +81,7 @@ function envVarRef(varName, framework, filePath = '') {
 
 /**
  * Convert pattern name to SCREAMING_SNAKE_CASE env var name.
- * e.g. "OpenAI API Key" → "OPENAI_API_KEY"
+ * e.g. "OpenAI API Key" → "OPENAI_API_KEY" // ship-safe-ignore — example name in doc comment, not a secret value
  *      "[custom] My Token" → "MY_TOKEN"
  */
 function patternToEnvVar(patternName) {
@@ -95,7 +95,7 @@ function patternToEnvVar(patternName) {
 
 /**
  * Ensure env var name is unique within the current session.
- * If "OPENAI_API_KEY" is already taken, returns "OPENAI_API_KEY_2".
+ * If "OPENAI_API_KEY" is already taken, returns "OPENAI_API_KEY_2". // ship-safe-ignore — example in doc comment
  */
 function uniqueVarName(baseName, seen) {
   if (!seen.has(baseName)) return baseName;
@@ -111,9 +111,9 @@ function uniqueVarName(baseName, seen) {
 /**
  * Compute what to replace in a line and extract the raw secret value.
  *
- * Given: matched = 'apiKey = "sk-abc123xyz"', envRef = 'process.env.OPENAI_API_KEY'
+ * Given: matched = 'apiKey = "sk-abc123xyz"', envRef = 'process.env.OPENAI_API_KEY' // ship-safe-ignore — example in doc comment, no real secret
  * Returns:
- *   replacement = 'apiKey = process.env.OPENAI_API_KEY'
+ *   replacement = 'apiKey = process.env.OPENAI_API_KEY' // ship-safe-ignore — example replacement in doc comment
  *   secretValue = 'sk-abc123xyz'
  */
 function computeReplacement(matched, envRef) {

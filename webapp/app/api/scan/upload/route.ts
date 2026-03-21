@@ -83,7 +83,7 @@ async function runUploadScan(
 
   try {
     // Write ZIP to temp dir — use basename to prevent path traversal
-    const zipPath = join(tmpDir, basename(filename));
+    const zipPath = join(tmpDir, basename(filename)); // ship-safe-ignore — basename() sanitizes user-supplied filename; no direct path construction from user input
     await writeFile(zipPath, buffer);
 
     // Extract ZIP

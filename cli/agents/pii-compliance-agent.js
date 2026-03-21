@@ -199,7 +199,7 @@ const PATTERNS = [
   {
     rule: 'PII_GEOLOCATION_STORAGE',
     title: 'Privacy: Precise Geolocation Stored',
-    regex: /(?:latitude|longitude|lat|lng|geolocation|geoip|geo_location)[\s\S]{0,100}(?:save|store|insert|create|update|write|database|db|mongo|prisma|sequelize)/gi,
+    regex: /(?:latitude|longitude|\blat\b|\blng\b|geolocation|geoip|geo_location)[\s\S]{0,100}(?:save|store|insert|create|update|write|database|db|mongo|prisma|sequelize)/gi,
     severity: 'medium',
     cwe: 'CWE-359',
     owasp: 'A01:2021',

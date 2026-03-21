@@ -196,7 +196,7 @@ const PATTERNS = [
   {
     rule: 'AGENT_OUTPUT_TO_ACTION',
     title: 'Agent: LLM Output Directly Triggers Actions',
-    regex: /(?:completion|response|output|result|generated)[\s\S]{0,100}(?:\.execute|\.run|\.send|\.post|\.delete|\.pay|\.transfer|\.deploy)/g,
+    regex: /(?:completion|response|output|result|generated)[\s\S]{0,100}(?:\.execute\b|\.run\b|\.send\b|\.post\b|\.delete\b|\.pay\b|\.transfer\b|\.deploy\b)/g,
     severity: 'high',
     cwe: 'CWE-862',
     owasp: 'A01:2021',

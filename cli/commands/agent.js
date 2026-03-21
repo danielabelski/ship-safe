@@ -100,7 +100,7 @@ export async function agentCommand(targetPath = '.', options = {}) {
 
   // ── 4. Fallback: no API key ────────────────────────────────────────────────
   if (!apiKey) {
-    console.log(chalk.yellow('  ⚠  No ANTHROPIC_API_KEY found.'));
+    console.log(chalk.yellow('  ⚠  No ANTHROPIC_API_KEY found.')); // ship-safe-ignore — env var name in user-facing message, no key value
     console.log(chalk.gray('     Set it in your environment or .env to enable AI classification.'));
     if (secretCount > 0) {
       console.log(chalk.gray('     Falling back to pattern-based remediation for secrets...\n'));
@@ -227,8 +227,8 @@ export async function agentCommand(targetPath = '.', options = {}) {
  * Returns the key string or null if not found.
  */
 function loadApiKey(rootPath) {
-  if (process.env.ANTHROPIC_API_KEY) {
-    return process.env.ANTHROPIC_API_KEY;
+  if (process.env.ANTHROPIC_API_KEY) { // ship-safe-ignore — reading env var at runtime, no hardcoded key value
+    return process.env.ANTHROPIC_API_KEY; // ship-safe-ignore — returning env var value, not a hardcoded secret
   }
 
   const envPath = path.join(rootPath, '.env');
@@ -240,7 +240,7 @@ function loadApiKey(rootPath) {
         if (trimmed.startsWith('#') || !trimmed.includes('=')) continue;
         const eqIdx = trimmed.indexOf('=');
         const key = trimmed.slice(0, eqIdx).trim();
-        if (key === 'ANTHROPIC_API_KEY') {
+        if (key === 'ANTHROPIC_API_KEY') { // ship-safe-ignore — parsing .env file to read user's own API key from their project
           const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '');
           if (val) return val;
         }

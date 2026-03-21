@@ -95,7 +95,7 @@ export async function depsCommand(targetPath = '.', options = {}) {
     console.log();
     console.log(chalk.cyan(`  Running: ${pm.fixCommand}`));
     try {
-      execSync(pm.fixCommand, { cwd: absolutePath, stdio: 'inherit' });
+      execSync(pm.fixCommand, { cwd: absolutePath, stdio: 'inherit' }); // ship-safe-ignore — command is a hardcoded package manager command, not user input
     } catch {
       output.warning('Fix command exited with errors — some vulnerabilities may require manual updates.');
     }
@@ -178,7 +178,7 @@ function detectPackageManager(rootPath) {
 function runAudit(pm, cwd) {
   let stdout;
   try {
-    stdout = execSync(pm.auditCommand, { cwd, stdio: ['pipe', 'pipe', 'pipe'] }).toString();
+    stdout = execSync(pm.auditCommand, { cwd, stdio: ['pipe', 'pipe', 'pipe'] }).toString(); // ship-safe-ignore — command is a hardcoded package manager audit command, not user input
   } catch (err) {
     // npm/yarn/pnpm exit with code 1 when vulns found — that's expected
     if (err.stdout) {

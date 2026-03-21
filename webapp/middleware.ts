@@ -7,7 +7,7 @@ import type { NextRequest } from 'next/server';
 export function middleware(req: NextRequest) {
   const token =
     req.cookies.get('authjs.session-token')?.value || // ship-safe-ignore — reading Auth.js session cookies, not setting them; httpOnly/Secure flags are managed by Auth.js
-    req.cookies.get('__Secure-authjs.session-token')?.value;
+    req.cookies.get('__Secure-authjs.session-token')?.value; // ship-safe-ignore — reading Auth.js session cookies, not setting them
 
   if (!token) {
     const loginUrl = new URL('/login', req.url); // ship-safe-ignore — redirect middleware; actual auth+rate-limiting enforced by Auth.js, not here

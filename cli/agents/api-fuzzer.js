@@ -88,7 +88,7 @@ const PATTERNS = [
   {
     rule: 'API_UPLOAD_NO_TYPE_CHECK',
     title: 'API: File Upload Without Type Validation',
-    regex: /(?:originalname|filename)\s*(?:\)|;)/g,
+    regex: /(?<!_)(?:originalname|filename)\s*(?:\)|;)/g,
     severity: 'high',
     cwe: 'CWE-434',
     owasp: 'A04:2021',

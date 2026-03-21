@@ -83,8 +83,7 @@ export default function Hero({ stars, downloads }: HeroProps) {
           </div>
 
           <div className={styles.heroCtas}>
-            {/* ship-safe-ignore — /signup Link is a navigation element, not an auth endpoint call */}
-            <Link href="/signup" className="btn btn-primary">
+            <Link href="/signup" className="btn btn-primary"> {/* ship-safe-ignore — navigation Link, not an auth endpoint */}
               Start for free
             </Link>
             <a href="#pricing" className="btn btn-ghost">See pricing</a>

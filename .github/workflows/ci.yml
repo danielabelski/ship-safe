@@ -57,7 +57,7 @@ jobs:
       - name: Pack and install locally
         run: |
           npm pack
-          npm install -g ./ship-safe-*.tgz
+          npm install -g ./ship-safe-*.tgz # ship-safe-ignore — installing the locally built package tarball for integration test, not a supply chain risk
 
       - name: Test global install
         run: ship-safe --version

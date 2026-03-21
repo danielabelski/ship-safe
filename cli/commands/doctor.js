@@ -66,8 +66,8 @@ export async function doctorCommand() {
 
   // 4. API keys
   const apiKeys = [
-    { name: 'Anthropic API key', env: 'ANTHROPIC_API_KEY', required: false },
-    { name: 'OpenAI API key', env: 'OPENAI_API_KEY', required: false },
+    { name: 'Anthropic API key', env: 'ANTHROPIC_API_KEY', required: false }, // ship-safe-ignore — env var names in diagnostic check, no key values
+    { name: 'OpenAI API key', env: 'OPENAI_API_KEY', required: false }, // ship-safe-ignore — env var name in diagnostic check, no key value
     { name: 'Google AI API key', env: 'GOOGLE_API_KEY', required: false },
   ];
   for (const key of apiKeys) {

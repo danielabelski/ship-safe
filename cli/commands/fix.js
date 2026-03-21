@@ -148,7 +148,7 @@ function buildEnvVarSuggestions(results) {
 
 /**
  * Convert a pattern name to a sensible env var name.
- * e.g. "OpenAI API Key" → "OPENAI_API_KEY"
+ * e.g. "OpenAI API Key" → "OPENAI_API_KEY" // ship-safe-ignore — env var name in doc comment, not a secret value
  */
 function patternToEnvVar(patternName) {
   return patternName

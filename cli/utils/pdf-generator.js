@@ -66,7 +66,7 @@ export function generatePDF(htmlPath, outputPath) {
       '--print-to-pdf-no-header',
       htmlPath,
     ];
-    execFileSync(chrome, args, { timeout: 30000, stdio: 'pipe' });
+    execFileSync(chrome, args, { timeout: 30000, stdio: 'pipe' }); // ship-safe-ignore — execFileSync with fixed chrome binary path; no user input in command
     return outputPath;
   } catch {
     return null;

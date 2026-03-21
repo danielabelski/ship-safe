@@ -202,7 +202,7 @@ export async function auditCommand(targetPath = '.', options = {}) {
     if (cacheDiff && cacheDiff.changedFiles.length < allFiles.length) {
       orchestratorOpts.changedFiles = cacheDiff.changedFiles;
     }
-    const results = await orchestrator.runAll(absolutePath, orchestratorOpts);
+    const results = await orchestrator.runAll(absolutePath, orchestratorOpts); // ship-safe-ignore — orchestrator result, not LLM output triggering actions
     recon = results.recon;
     agentFindings = results.findings;
     agentResults = results.agentResults;

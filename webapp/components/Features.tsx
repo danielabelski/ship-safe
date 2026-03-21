@@ -79,7 +79,7 @@ export default function Features() {
               </div>
               <pre className={styles.diffCode}>
                 <code>
-                  <span className={styles.diffAdd}>+ const key = process.env.OPENAI_API_KEY;</span>
+                  <span className={styles.diffAdd}>+ const key = process.env.OPENAI_API_KEY;</span> {/* ship-safe-ignore — example code displayed in UI, not a real API key reference */}
                 </code>
               </pre>
             </div>

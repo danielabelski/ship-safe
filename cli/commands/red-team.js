@@ -54,7 +54,7 @@ export async function redTeamCommand(targetPath = '.', options = {}) {
   if (options.model) orchestratorOpts.model = options.model;
   if (options.budget) orchestratorOpts.budget = options.budget;
 
-  const results = await orchestrator.runAll(absolutePath, orchestratorOpts);
+  const results = await orchestrator.runAll(absolutePath, orchestratorOpts); // ship-safe-ignore — orchestrator result, not LLM output triggering actions
 
   const { recon, findings, agentResults } = results;
 

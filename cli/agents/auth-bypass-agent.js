@@ -208,7 +208,7 @@ const PATTERNS = [
   {
     rule: 'NO_RATE_LIMIT_LOGIN',
     title: 'No Rate Limiting on Authentication',
-    regex: /(?:\/login|\/signin|\/auth|\/register|\/signup|\/reset-password)\s*['"]/g,
+    regex: /(?<!\w)(?:\/login|\/signin|\/auth|\/register|\/signup|\/reset-password)\s*['"]/g,
     severity: 'medium',
     cwe: 'CWE-307',
     owasp: 'A07:2021',

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { advanceRun, appendTimeline } from '@/lib/guardian/pipeline';
 
@@ -11,9 +12,13 @@ import { advanceRun, appendTimeline } from '@/lib/guardian/pipeline';
  * This is NOT user-facing — it's called internally by the webhook route.
  */
 export async function POST(req: NextRequest) {
-  // Simple secret check to prevent external calls
+  // Simple secret check to prevent external calls — use timing-safe comparison
   const internalSecret = req.headers.get('x-guardian-secret');
-  if (internalSecret !== (process.env.GITHUB_APP_WEBHOOK_SECRET || 'guardian-internal')) {
+  const expected = process.env.GITHUB_APP_WEBHOOK_SECRET || 'guardian-internal';
+  const valid = internalSecret !== null &&
+    internalSecret.length === expected.length &&
+    crypto.timingSafeEqual(Buffer.from(internalSecret), Buffer.from(expected));
+  if (!valid) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
