@@ -5,20 +5,22 @@ import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Ship Safe — Security toolkit for vibe coders',
-  description: 'Scan for secrets, detect code vulnerabilities, audit dependencies, and get a 0-100 security score. Free CLI, no signup required.',
+  title: 'Ship Safe — Find Security Vulnerabilities Before You Ship',
+  description: 'Scan your codebase for secrets, vulnerabilities, and dependency CVEs. Get a 0-100 security score in seconds. Free CLI, no signup required.',
   metadataBase: new URL('https://shipsafe.dev'),
   openGraph: {
-    title: 'Ship Safe — Security toolkit for vibe coders',
-    description: 'Scan for secrets, detect code vulnerabilities, audit dependencies, and get a 0-100 security score.',
+    title: 'Ship Safe — Find Security Vulnerabilities Before You Ship',
+    description: 'Scan your codebase for secrets, vulnerabilities, and dependency CVEs. Get a 0-100 security score in seconds. Free CLI, no signup required.',
     type: 'website',
-    images: [{ url: '/og-shipsafe.jpg', width: 1200, height: 630, alt: 'Ship Safe' }],
+    url: 'https://shipsafe.dev',
+    siteName: 'Ship Safe',
+    images: [{ url: 'https://shipsafe.dev/og-shipsafe.jpg', width: 1200, height: 630, alt: 'Ship Safe — Security scanner for developers' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Ship Safe — Security toolkit for vibe coders',
-    description: 'Scan for secrets, detect code vulnerabilities, audit dependencies, and get a 0-100 security score.',
-    images: ['/og-shipsafe.jpg'],
+    title: 'Ship Safe — Find Security Vulnerabilities Before You Ship',
+    description: 'Scan your codebase for secrets, vulnerabilities, and dependency CVEs. Get a 0-100 security score in seconds. Free CLI, no signup required.',
+    images: ['https://shipsafe.dev/og-shipsafe.jpg'],
   },
 };
 
