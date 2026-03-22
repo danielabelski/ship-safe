@@ -29,7 +29,7 @@ export default async function CheckoutPage({
   }
 
   const planConfig = PLANS[plan];
-  const origin = process.env.NEXTAUTH_URL ?? 'https://shipsafe.dev';
+  const origin = process.env.NEXTAUTH_URL ?? 'https://www.shipsafecli.com';
 
   const checkoutSession = await stripe.checkout.sessions.create({
     mode: 'payment',
