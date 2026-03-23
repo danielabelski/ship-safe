@@ -9,26 +9,26 @@ const steps = [
   },
   {
     num: 2,
-    title: 'Run 16 security agents',
-    body: 'Deploys specialized agents for injection, auth bypass, SSRF, supply chain, config, Supabase RLS, LLM security, mobile, git history, CI/CD, API fuzzing, and recon. Context-aware confidence tuning reduces false positives.',
+    title: 'Run 17 security agents',
+    body: 'Deploys specialized agents for injection, auth bypass, SSRF, supply chain, config, Supabase RLS, LLM/MCP security, agentic AI, RAG, PII, vibe coding, exception handling, mobile, git history, CI/CD, API fuzzing, and recon. Context-aware confidence tuning reduces false positives.',
     connector: true,
   },
   {
     num: 3,
     title: 'Audit dependencies',
-    body: 'Runs your package manager\'s own audit tool — npm, yarn, pnpm, pip, or bundler. Finds known CVEs in your dependency tree and flags vulnerable versions.',
+    body: 'Runs your package manager\'s own audit tool — npm, yarn, pnpm, pip, or bundler. Finds known CVEs and enriches them with EPSS exploit probability scores from FIRST.org so you can prioritize what\'s actually being exploited.',
     connector: true,
   },
   {
     num: 4,
     title: 'Score & remediation plan',
-    body: 'Computes a 0–100 security score across 8 weighted categories. Generates a prioritized remediation plan — CRITICAL first, then HIGH, then MEDIUM — so you know exactly what to fix first.',
+    body: 'Computes a 0–100 security score across 8 OWASP 2025-weighted categories. Generates a prioritized remediation plan — CRITICAL first, then HIGH, then MEDIUM — so you know exactly what to fix first.',
     connector: true,
   },
   {
     num: 5,
-    title: 'HTML report',
-    body: 'Outputs a standalone dark-themed HTML report with every finding, file location, severity, CWE/OWASP mapping, and suggested fix. Share it with your team or attach it to a PR.',
+    title: 'Interactive HTML report',
+    body: 'Outputs a standalone interactive HTML report with severity filtering, text search, collapsible findings, category charts, and click-to-copy ignore annotations. Share it with your team or attach it to a PR.',
     connector: false,
   },
 ];

@@ -4,7 +4,7 @@ import styles from './FAQ.module.css';
 const faqs = [
   {
     q: 'Does it work without an API key?',
-    a: 'Yes. audit, scan, red-team, ci, score, deps, and guard all work fully offline with no API key. AI classification and deep analysis are optional — pass --no-ai to skip it. If you want AI, ship-safe supports Anthropic, OpenAI, Google Gemini, and local Ollama models.',
+    a: 'Yes. audit, scan, red-team, ci, score, deps, diff, vibe-check, benchmark, and guard all work fully offline with no API key. AI classification and deep analysis are optional — pass --no-ai to skip it. If you want AI, ship-safe supports Anthropic, OpenAI, Google Gemini, and local Ollama models.',
   },
   {
     q: 'Is my code sent to an LLM?',
@@ -16,7 +16,7 @@ const faqs = [
   },
   {
     q: 'What about false positives?',
-    a: 'v5.0 has context-aware confidence tuning that automatically downgrades findings in test files, documentation, comments, and example code — reducing false positives by up to 70%. Use --deep for LLM-powered exploitability verification, ship-safe baseline . to accept current findings and only see new regressions, or add # ship-safe-ignore to suppress individual lines.',
+    a: 'v6.0 has context-aware confidence tuning that automatically downgrades findings in test files, documentation, comments, and example code — reducing false positives by up to 70%. Use --deep for LLM-powered exploitability verification, ship-safe baseline . to accept current findings and only see new regressions, or add # ship-safe-ignore to suppress individual lines.',
   },
   {
     q: 'Is the CLI always free?',
@@ -24,7 +24,7 @@ const faqs = [
   },
   {
     q: 'Is it safe to run in CI?',
-    a: "Yes. Use ship-safe ci . for pipeline-optimized output with threshold gating (--threshold 80) and severity-based failure (--fail-on critical). Use --sarif to upload findings to GitHub's Security tab. Exit code 0 = pass, 1 = fail.",
+    a: "Yes. Use ship-safe ci . for pipeline-optimized output with threshold gating (--threshold 80), severity-based failure (--fail-on critical), and --github-pr to auto-post results as a PR comment. Use --sarif to upload findings to GitHub's Security tab. Exit code 0 = pass, 1 = fail.",
   },
 ];
 

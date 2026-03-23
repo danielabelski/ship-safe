@@ -21,7 +21,7 @@ export default function Features() {
             </div>
             <h3 className={styles.cardTitle}>Scan everything</h3>
             <p className={styles.cardDesc}>
-              16 specialized agents scan for secrets, injection, auth bypass, SSRF, supply chain attacks, LLM security, and more. 80+ attack classes across 5 OWASP standards.
+              17 specialized agents scan for secrets, injection, auth bypass, SSRF, supply chain attacks, LLM/MCP security, vibe coding patterns, and more. 80+ attack classes across 5 OWASP standards.
             </p>
             <div className={styles.miniTerminal}>
               <div className={styles.miniHeader}>
@@ -37,7 +37,7 @@ export default function Features() {
                 </div>
                 <div className={styles.miniLine}>
                   <span className={styles.miniOk}>✔</span>
-                  <span>16 agents: 2 findings</span>
+                  <span>17 agents: 2 findings</span>
                   <span className={styles.miniTag} data-level="medium">MEDIUM</span>
                 </div>
                 <div className={styles.miniLine}>
@@ -97,7 +97,7 @@ export default function Features() {
             </div>
             <h3 className={styles.cardTitle}>CI/CD ready</h3>
             <p className={styles.cardDesc}>
-              Drop a one-liner into GitHub Actions. Threshold gating, SARIF output for GitHub Security tab, and exit codes for pipeline control.
+              Drop a one-liner into GitHub Actions. Threshold gating, SARIF output, PR comments, and exit codes for pipeline control.
             </p>
             <div className={styles.yamlBlock}>
               <div className={styles.yamlHeader}>
@@ -107,8 +107,113 @@ export default function Features() {
                 <code>{`- name: Ship Safe Audit
   run: npx ship-safe ci .
     --threshold 75
-    --sarif results.sarif`}</code>
+    --sarif results.sarif
+    --github-pr`}</code>
               </pre>
+            </div>
+          </div>
+
+          {/* Card 4: Diff Scanning */}
+          <div className={`${styles.card} card`} data-animate data-delay="240">
+            <div className={styles.cardIcon}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+              </svg>
+            </div>
+            <h3 className={styles.cardTitle}>Diff scanning</h3>
+            <p className={styles.cardDesc}>
+              Scan only changed files — perfect for pre-commit hooks and PR reviews. Runs in seconds, not minutes.
+            </p>
+            <div className={styles.miniTerminal}>
+              <div className={styles.miniHeader}>
+                <span className={styles.miniDot} style={{ background: 'var(--red)' }} />
+                <span className={styles.miniDot} style={{ background: 'var(--yellow)' }} />
+                <span className={styles.miniDot} style={{ background: 'var(--green)' }} />
+                <span className={styles.miniTitle}>ship-safe diff --staged</span>
+              </div>
+              <div className={styles.miniBody}>
+                <div className={styles.miniLine}>
+                  <span className={styles.miniOk}>✔</span>
+                  <span>4 changed file(s) to scan</span>
+                </div>
+                <div className={styles.miniLine}>
+                  <span className={styles.miniOk}>✔</span>
+                  <span>17 agents: 0 findings</span>
+                </div>
+                <div className={styles.miniLine}>
+                  <span className={styles.miniOk}>✔</span>
+                  <span className={styles.miniDim}>Diff Score: 98/100 A</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 5: Vibe Check */}
+          <div className={`${styles.card} card`} data-animate data-delay="320">
+            <div className={styles.cardIcon}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                <line x1="9" y1="9" x2="9.01" y2="9" />
+                <line x1="15" y1="9" x2="15.01" y2="9" />
+              </svg>
+            </div>
+            <h3 className={styles.cardTitle}>Vibe check</h3>
+            <p className={styles.cardDesc}>
+              Fun emoji security grade with a shareable one-liner and shields.io badge for your README. Built for the vibe coding era.
+            </p>
+            <div className={styles.miniTerminal}>
+              <div className={styles.miniHeader}>
+                <span className={styles.miniDot} style={{ background: 'var(--red)' }} />
+                <span className={styles.miniDot} style={{ background: 'var(--yellow)' }} />
+                <span className={styles.miniDot} style={{ background: 'var(--green)' }} />
+                <span className={styles.miniTitle}>ship-safe vibe-check .</span>
+              </div>
+              <div className={styles.miniBody}>
+                <div className={styles.miniLine}>
+                  <span style={{ fontSize: '1.2rem' }}>✅</span>
+                  <span>Score: 92/100 | Vibes: SOLID</span>
+                </div>
+                <div className={styles.miniLine}>
+                  <span className={styles.miniDim}>🟡 Medium: 2 · 🔵 Low: 1</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 6: Benchmark */}
+          <div className={`${styles.card} card`} data-animate data-delay="400">
+            <div className={styles.cardIcon}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10" />
+                <line x1="12" y1="20" x2="12" y2="4" />
+                <line x1="6" y1="20" x2="6" y2="14" />
+              </svg>
+            </div>
+            <h3 className={styles.cardTitle}>Industry benchmark</h3>
+            <p className={styles.cardDesc}>
+              Compare your security score against industry averages from OWASP, Synopsys, and Snyk. See where you rank and what to improve.
+            </p>
+            <div className={styles.miniTerminal}>
+              <div className={styles.miniHeader}>
+                <span className={styles.miniDot} style={{ background: 'var(--red)' }} />
+                <span className={styles.miniDot} style={{ background: 'var(--yellow)' }} />
+                <span className={styles.miniDot} style={{ background: 'var(--green)' }} />
+                <span className={styles.miniTitle}>ship-safe benchmark .</span>
+              </div>
+              <div className={styles.miniBody}>
+                <div className={styles.miniLine}>
+                  <span>You: 78/100</span>
+                  <span className={styles.miniTag} data-level="low">+26 vs avg</span>
+                </div>
+                <div className={styles.miniLine}>
+                  <span className={styles.miniDim}>Industry median: 52/100</span>
+                </div>
+                <div className={styles.miniLine}>
+                  <span className={styles.miniDim}>Top 25%: 78/100</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

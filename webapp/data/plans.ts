@@ -21,7 +21,7 @@ export const plans: Plan[] = [
     features: [
       'Unlimited cloud scans',
       'Private repos (GitHub, GitLab, upload)',
-      'All 16 security agents',
+      'All 17 security agents',
       'AI deep analysis (bring your own API key)',
       'Scan history + score trends',
       'PDF reports (branded)',
@@ -55,7 +55,7 @@ export const plans: Plan[] = [
     period: '',
     desc: 'On-premise, SSO, SLA, and custom policies.',
     cta: 'Contact us',
-    ctaHref: 'mailto:hello@shipsafe.dev',
+    ctaHref: 'mailto:hello@shipsafecli.com',
     featured: false,
     features: [
       'Everything in Team',
