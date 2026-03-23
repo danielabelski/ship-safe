@@ -16,7 +16,9 @@
  * Maps to: OWASP Agentic AI ASI02 (Tool Misuse), ASI03 (Privilege Abuse)
  */
 
+import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { BaseAgent } from './base-agent.js';
 
 // =============================================================================
@@ -230,7 +232,25 @@ const MCP_CONFIG_FILES = [
   'mcp-config.json',
   'claude_desktop_config.json',
   '.cursor/mcp.json',
+  '.vscode/mcp.json',
 ];
+
+// Well-known official MCP server packages
+const OFFICIAL_MCP_SERVERS = new Set([
+  '@modelcontextprotocol/server-filesystem',
+  '@modelcontextprotocol/server-github',
+  '@modelcontextprotocol/server-gitlab',
+  '@modelcontextprotocol/server-google-maps',
+  '@modelcontextprotocol/server-memory',
+  '@modelcontextprotocol/server-postgres',
+  '@modelcontextprotocol/server-puppeteer',
+  '@modelcontextprotocol/server-slack',
+  '@modelcontextprotocol/server-sqlite',
+  '@modelcontextprotocol/server-brave-search',
+  '@modelcontextprotocol/server-fetch',
+  '@modelcontextprotocol/server-everything',
+  '@modelcontextprotocol/server-sequential-thinking',
+]);
 
 // =============================================================================
 // MCP SECURITY AGENT
@@ -280,6 +300,15 @@ export class MCPSecurityAgent extends BaseAgent {
     for (const file of mcpServerFiles) {
       findings = findings.concat(this._checkServerAuth(file));
     }
+
+    // ── 4. Check MCP configs for typosquatting & over-permissioned servers ─
+    for (const file of configFiles) {
+      findings = findings.concat(this._checkMcpTyposquatting(file));
+      findings = findings.concat(this._checkOverPermissioned(file));
+    }
+
+    // ── 5. Detect shadow MCP configs (not in version control) ───────────
+    findings = findings.concat(this._detectShadowMcpConfigs(rootPath));
 
     return findings;
   }
@@ -352,6 +381,159 @@ export class MCPSecurityAgent extends BaseAgent {
     }
 
     return findings;
+  }
+
+  /**
+   * Detect possible typosquatted MCP server names in config.
+   */
+  _checkMcpTyposquatting(filePath) {
+    const content = this.readFile(filePath);
+    if (!content) return [];
+    const findings = [];
+
+    try {
+      const config = JSON.parse(content);
+      const servers = config.mcpServers || config.servers || {};
+
+      for (const [name, server] of Object.entries(servers)) {
+        const cmd = server.command || '';
+        const args = (server.args || []).join(' ');
+        const fullCmd = `${cmd} ${args}`;
+
+        // Check if server uses an npx package that looks like a typosquat of official ones
+        const npxMatch = fullCmd.match(/npx\s+(?:-[^\s]+\s+)*([^\s]+)/);
+        if (npxMatch) {
+          const pkg = npxMatch[1];
+          for (const official of OFFICIAL_MCP_SERVERS) {
+            const distance = this._levenshtein(pkg, official);
+            if (distance > 0 && distance <= 3 && pkg !== official) {
+              findings.push({
+                file: filePath, line: 1, column: 0,
+                severity: 'critical',
+                category: this.category,
+                rule: 'MCP_TYPOSQUAT_SERVER',
+                title: `MCP: Possible Typosquatted Server "${pkg}"`,
+                description: `MCP server package "${pkg}" is ${distance} char(s) from official "${official}". Could be a supply chain attack.`,
+                matched: pkg,
+                confidence: 'medium',
+                cwe: 'CWE-494',
+                owasp: 'A08:2021',
+                fix: `Verify this is the correct package. Did you mean "${official}"?`,
+              });
+            }
+          }
+        }
+      }
+    } catch { /* not valid JSON */ }
+
+    return findings;
+  }
+
+  /**
+   * Check for over-permissioned MCP servers (filesystem access to / or ~).
+   */
+  _checkOverPermissioned(filePath) {
+    const content = this.readFile(filePath);
+    if (!content) return [];
+    const findings = [];
+
+    try {
+      const config = JSON.parse(content);
+      const servers = config.mcpServers || config.servers || {};
+
+      for (const [name, server] of Object.entries(servers)) {
+        const args = server.args || [];
+        const argsStr = args.join(' ');
+
+        // Check for root/home filesystem access
+        if (/(?:^\/\s|['" ]\/['"]?\s|\/Users\/|\/home\/|\\Users\\|C:\\)/.test(argsStr)) {
+          const hasWideAccess = args.some(a =>
+            a === '/' || a === '~' || a === '%USERPROFILE%' ||
+            /^\/(?:Users|home)\/[^/]+$/.test(a) ||
+            /^[A-Z]:\\(?:Users\\)?[^\\]*$/.test(a)
+          );
+          if (hasWideAccess) {
+            findings.push({
+              file: filePath, line: 1, column: 0,
+              severity: 'high',
+              category: this.category,
+              rule: 'MCP_OVER_PERMISSIONED',
+              title: `MCP: Server "${name}" Has Broad Filesystem Access`,
+              description: `MCP server "${name}" has access to a wide directory scope. A prompt injection attack could read or modify sensitive files.`,
+              matched: argsStr.slice(0, 200),
+              confidence: 'high',
+              cwe: 'CWE-269',
+              owasp: 'A01:2021',
+              fix: 'Restrict filesystem access to the minimum required directory: e.g., the project folder only.',
+            });
+          }
+        }
+      }
+    } catch { /* not valid JSON */ }
+
+    return findings;
+  }
+
+  /**
+   * Detect shadow MCP configs that exist but aren't in .gitignore or git.
+   */
+  _detectShadowMcpConfigs(rootPath) {
+    const findings = [];
+    const home = os.homedir();
+
+    // Check common locations for MCP configs outside version control
+    const homeConfigs = [
+      path.join(home, '.cursor', 'mcp.json'),
+      path.join(home, 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json'),
+      path.join(home, 'AppData', 'Roaming', 'Claude', 'claude_desktop_config.json'),
+    ];
+
+    for (const configPath of homeConfigs) {
+      try {
+        if (fs.existsSync(configPath)) {
+          const content = fs.readFileSync(configPath, 'utf-8');
+          const config = JSON.parse(content);
+          const servers = config.mcpServers || config.servers || {};
+          const serverCount = Object.keys(servers).length;
+
+          if (serverCount > 0) {
+            findings.push({
+              file: configPath, line: 1, column: 0,
+              severity: 'medium',
+              category: this.category,
+              rule: 'MCP_SHADOW_CONFIG',
+              title: `MCP: ${serverCount} Shadow Server(s) in User Config`,
+              description: `Found ${serverCount} MCP server(s) configured outside the project in ${configPath}. These operate outside your project's security controls.`,
+              matched: Object.keys(servers).join(', '),
+              confidence: 'medium',
+              cwe: 'CWE-269',
+              owasp: 'A05:2021',
+              fix: 'Review shadow MCP servers. Move project-specific servers to the project mcp.json and track in version control.',
+            });
+          }
+        }
+      } catch { /* skip */ }
+    }
+
+    return findings;
+  }
+
+  /**
+   * Simple Levenshtein distance for typosquatting detection.
+   */
+  _levenshtein(a, b) {
+    const m = a.length, n = b.length;
+    const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        dp[i][j] = a[i-1] === b[j-1]
+          ? dp[i-1][j-1]
+          : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+      }
+    }
+    return dp[m][n];
   }
 }
 

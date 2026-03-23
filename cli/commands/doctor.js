@@ -21,6 +21,16 @@ const __filename = fileURLToPath(import.meta.url); // ship-safe-ignore — modul
 const __dirname = dirname(__filename);
 const PACKAGE_VERSION = JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf8')).version;
 
+function isNewerVersion(latest, current) {
+  const a = latest.split('.').map(Number);
+  const b = current.split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((a[i] || 0) > (b[i] || 0)) return true;
+    if ((a[i] || 0) < (b[i] || 0)) return false;
+  }
+  return false;
+}
+
 export async function doctorCommand() {
   console.log();
   console.log(chalk.cyan.bold('  Ship Safe Doctor'));
@@ -115,7 +125,7 @@ export async function doctorCommand() {
     const latest = execFileSync('npm', ['view', 'ship-safe', 'version'], {
       encoding: 'utf-8', timeout: 5000, shell: true,
     }).trim();
-    if (latest && latest !== PACKAGE_VERSION) {
+    if (latest && latest !== PACKAGE_VERSION && isNewerVersion(latest, PACKAGE_VERSION)) {
       const msg = ['v', latest, ' available (current: v', PACKAGE_VERSION, ')'].join('');
       info(msg);
     } else if (latest) {

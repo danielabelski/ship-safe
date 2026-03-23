@@ -25,6 +25,11 @@ export { doctorCommand } from './commands/doctor.js';
 // ── v4.3 Commands ─────────────────────────────────────────────────────────────
 export { baselineCommand } from './commands/baseline.js';
 
+// ── v6.0 Commands ─────────────────────────────────────────────────────────────
+export { diffCommand } from './commands/diff.js';
+export { vibeCheckCommand } from './commands/vibe-check.js';
+export { benchmarkCommand } from './commands/benchmark.js';
+
 // ── Patterns ──────────────────────────────────────────────────────────────────
 export { SECRET_PATTERNS, SECURITY_PATTERNS, SKIP_DIRS, SKIP_EXTENSIONS, SKIP_FILENAMES } from './utils/patterns.js';
 
@@ -46,6 +51,8 @@ export { GitHistoryScanner } from './agents/git-history-scanner.js';
 export { CICDScanner } from './agents/cicd-scanner.js';
 export { APIFuzzer } from './agents/api-fuzzer.js';
 export { SupabaseRLSAgent } from './agents/supabase-rls-agent.js';
+export { VibeCodingAgent } from './agents/vibe-coding-agent.js';
+export { ExceptionHandlerAgent } from './agents/exception-handler-agent.js';
 
 // ── Supporting Modules ────────────────────────────────────────────────────────
 export { ScoringEngine, GRADES, CATEGORIES } from './agents/scoring-engine.js';

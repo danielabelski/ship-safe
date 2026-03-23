@@ -120,10 +120,13 @@ export function vulnerabilityFinding(file, line, patternName, severity, matched,
  * Mask the middle of a secret for safe display
  */
 export function maskSecret(secret) {
-  if (secret.length <= 10) {
+  if (secret.length <= 6) {
+    return '***';
+  }
+  if (secret.length <= 12) {
     return secret.substring(0, 3) + '***';
   }
-  return secret.substring(0, 6) + '***' + secret.substring(secret.length - 4);
+  return secret.substring(0, 4) + '***' + secret.substring(secret.length - 4);
 }
 
 /**

@@ -160,7 +160,7 @@ export async function redTeamCommand(targetPath = '.', options = {}) {
 // OUTPUT FORMATTERS
 // =============================================================================
 
-function printResults(scoreResult, findings, recon, agentResults, depVulns, rootPath) {
+function printResults(scoreResult, findings, recon, agentResults, depVulns, rootPath) { // ship-safe-ignore
   const GRADE_COLOR = { A: chalk.green.bold, B: chalk.cyan.bold, C: chalk.yellow.bold, D: chalk.red, F: chalk.red.bold };
   const SEV_COLOR = { critical: chalk.red.bold, high: chalk.yellow, medium: chalk.blue, low: chalk.gray };
 

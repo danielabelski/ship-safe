@@ -822,6 +822,9 @@ export const SKIP_FILENAMES = new Set([
   'pubspec.lock',
   'go.sum',
   'flake.lock',
+  // Skip ship-safe's own output files to avoid scanning the report
+  'ship-safe-report.html',
+  'ship-safe-report.pdf',
 ]);
 
 // Maximum file size to scan (1MB)

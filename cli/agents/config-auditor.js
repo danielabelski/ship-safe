@@ -16,17 +16,9 @@ import { BaseAgent, createFinding } from './base-agent.js';
 // =============================================================================
 
 const DOCKERFILE_PATTERNS = [
-  {
-    rule: 'DOCKER_RUN_AS_ROOT',
-    title: 'Docker: Running as Root',
-    regex: /^(?!.*USER\s+\w).*CMD|ENTRYPOINT/gm,
-    severity: 'high',
-    cwe: 'CWE-250',
-    owasp: 'A05:2021',
-    confidence: 'medium',
-    description: 'No USER instruction found. Container runs as root by default.',
-    fix: 'Add USER nonroot before CMD/ENTRYPOINT',
-  },
+  // DOCKER_RUN_AS_ROOT removed — the per-line negative lookahead was broken
+  // (USER is on a separate line from CMD). The whole-file DOCKER_NO_USER check
+  // in scanDockerfile() handles this correctly.
   {
     rule: 'DOCKER_LATEST_TAG',
     title: 'Docker: Using :latest Tag',

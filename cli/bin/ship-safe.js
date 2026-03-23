@@ -37,6 +37,9 @@ import { auditCommand } from '../commands/audit.js';
 import { doctorCommand } from '../commands/doctor.js';
 import { baselineCommand } from '../commands/baseline.js';
 import { ciCommand } from '../commands/ci.js';
+import { diffCommand } from '../commands/diff.js';
+import { vibeCheckCommand } from '../commands/vibe-check.js';
+import { benchmarkCommand } from '../commands/benchmark.js';
 import { PolicyEngine } from '../agents/policy-engine.js';
 import { SBOMGenerator } from '../agents/sbom-generator.js';
 
@@ -189,7 +192,7 @@ program
 // -----------------------------------------------------------------------------
 program
   .command('audit [path]')
-  .description('Full security audit: secrets + 16 agents + deps + score + deep analysis + remediation plan')
+  .description('Full security audit: secrets + 17 agents + deps + score + deep analysis + remediation plan')
   .option('--json', 'Output results as JSON')
   .option('--sarif', 'Output results in SARIF format')
   .option('--csv', 'Output results as CSV')
@@ -211,11 +214,23 @@ program
   .action(auditCommand);
 
 // -----------------------------------------------------------------------------
+// DIFF COMMAND (v6.0 — Scan only changed files)
+// -----------------------------------------------------------------------------
+program
+  .command('diff [ref]')
+  .description('Scan only changed files (git diff) — fast pre-commit & PR scanning')
+  .option('--staged', 'Scan only staged changes')
+  .option('--json', 'Output results as JSON')
+  .option('-p, --path <path>', 'Project path (default: cwd)')
+  .option('--timeout <ms>', 'Per-agent timeout in milliseconds (default: 30000)', parseInt)
+  .action(diffCommand);
+
+// -----------------------------------------------------------------------------
 // RED TEAM COMMAND (v4.0 — Multi-Agent Security Audit)
 // -----------------------------------------------------------------------------
 program
   .command('red-team [path]')
-  .description('Multi-agent security audit: 16 agents scan for 80+ attack classes')
+  .description('Multi-agent security audit: 17 agents scan for 80+ attack classes')
   .option('--agents <list>', 'Comma-separated list of agents to run')
   .option('--json', 'Output results as JSON')
   .option('--sarif', 'Output results in SARIF format')
@@ -291,7 +306,26 @@ program
   .option('--json', 'JSON output')
   .option('--no-deps', 'Skip dependency audit')
   .option('--baseline', 'Only check new findings (not in baseline)')
+  .option('--github-pr', 'Post findings as a GitHub PR comment (requires gh CLI)')
   .action(ciCommand);
+
+// -----------------------------------------------------------------------------
+// VIBE CHECK COMMAND
+// -----------------------------------------------------------------------------
+program
+  .command('vibe-check [path]')
+  .description('Fun security check with emoji output, shareable score, and badge generator')
+  .option('--badge', 'Generate a shields.io markdown badge for your README')
+  .action(vibeCheckCommand);
+
+// -----------------------------------------------------------------------------
+// BENCHMARK COMMAND
+// -----------------------------------------------------------------------------
+program
+  .command('benchmark [path]')
+  .description('Compare your security score against industry averages')
+  .option('--json', 'Output results as JSON')
+  .action(benchmarkCommand);
 
 // -----------------------------------------------------------------------------
 // DOCTOR COMMAND
@@ -309,11 +343,14 @@ program
 if (process.argv.length === 2) {
   console.log(banner);
   console.log(chalk.yellow('\nQuick start:\n'));
-  console.log(chalk.cyan.bold('  v5.0 — Full Security Audit'));
-  console.log(chalk.white('  npx ship-safe audit .       ') + chalk.gray('# Full audit: secrets + 16 agents + deps + remediation'));
+  console.log(chalk.cyan.bold('  v6.0 — Full Security Audit'));
+  console.log(chalk.white('  npx ship-safe audit .       ') + chalk.gray('# Full audit: secrets + 17 agents + deps + remediation'));
   console.log(chalk.white('  npx ship-safe audit . --deep') + chalk.gray('# LLM-powered taint analysis (Anthropic/Ollama)'));
-  console.log(chalk.white('  npx ship-safe red-team .    ') + chalk.gray('# 16-agent red team scan (80+ attack classes)'));
+  console.log(chalk.white('  npx ship-safe red-team .    ') + chalk.gray('# 17-agent red team scan (80+ attack classes)'));
+  console.log(chalk.white('  npx ship-safe vibe-check .  ') + chalk.gray('# Fun security check with emoji & shareable badge'));
+  console.log(chalk.white('  npx ship-safe benchmark .   ') + chalk.gray('# Compare score against industry averages'));
   console.log(chalk.white('  npx ship-safe ci .          ') + chalk.gray('# CI/CD mode: scan, score, exit code'));
+  console.log(chalk.white('  npx ship-safe diff          ') + chalk.gray('# Scan only changed files (fast pre-commit)'));
   console.log(chalk.white('  npx ship-safe watch .       ') + chalk.gray('# Continuous monitoring mode'));
   console.log(chalk.white('  npx ship-safe sbom .        ') + chalk.gray('# Generate CycloneDX SBOM (CRA-ready)'));
   console.log(chalk.white('  npx ship-safe policy init   ') + chalk.gray('# Create security policy template'));

@@ -87,10 +87,29 @@ export async function depsCommand(targetPath = '.', options = {}) {
     process.exit(0);
   }
 
-  // ── 4. Display findings ───────────────────────────────────────────────────
+  // ── 4. Enrich with EPSS scores ──────────────────────────────────────────
+  const cves = vulns.map(v => v.cve).filter(Boolean);
+  if (cves.length > 0) {
+    const epssSpinner = ora({ text: 'Fetching EPSS exploit probability scores...', color: 'cyan' }).start();
+    try {
+      const epssData = await fetchEPSS(cves);
+      for (const v of vulns) {
+        if (v.cve && epssData[v.cve]) {
+          v.epss = epssData[v.cve].epss;
+          v.percentile = epssData[v.cve].percentile;
+        }
+      }
+      epssSpinner.succeed(chalk.gray(`EPSS scores fetched for ${Object.keys(epssData).length} CVE(s)`));
+    } catch {
+      epssSpinner.stop();
+      // EPSS is optional — continue without it
+    }
+  }
+
+  // ── 5. Display findings ───────────────────────────────────────────────────
   printDepFindings(vulns, pm);
 
-  // ── 5. Optionally fix ─────────────────────────────────────────────────────
+  // ── 6. Optionally fix ─────────────────────────────────────────────────────
   if (options.fix) {
     console.log();
     console.log(chalk.cyan(`  Running: ${pm.fixCommand}`));
@@ -367,6 +386,46 @@ function parseBundlerAudit(text) {
 }
 
 // =============================================================================
+// EPSS (Exploit Prediction Scoring System)
+// =============================================================================
+
+/**
+ * Fetch EPSS scores from FIRST.org API for a list of CVEs.
+ * Returns { 'CVE-2023-1234': { epss: 0.942, percentile: 0.99 }, ... }
+ * API docs: https://www.first.org/epss/api
+ */
+async function fetchEPSS(cves) {
+  if (cves.length === 0) return {};
+
+  // API accepts up to 100 CVEs per request — batch if needed
+  const results = {};
+  const batches = [];
+  for (let i = 0; i < cves.length; i += 100) {
+    batches.push(cves.slice(i, i + 100));
+  }
+
+  for (const batch of batches) {
+    const url = `https://api.first.org/data/v1/epss?cve=${batch.join(',')}`; // ship-safe-ignore — hardcoded FIRST.org API endpoint, CVE IDs are from audit results not user input
+    const response = await fetch(url, { // ship-safe-ignore — EPSS API fetch with fixed base URL
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!response.ok) continue;
+
+    const json = await response.json();
+    for (const entry of (json.data || [])) {
+      results[entry.cve] = {
+        epss: parseFloat(entry.epss),
+        percentile: parseFloat(entry.percentile),
+      };
+    }
+  }
+
+  return results;
+}
+
+// =============================================================================
 // OUTPUT
 // =============================================================================
 
@@ -407,6 +466,16 @@ function printDepFindings(vulns, pm) {
     console.log(chalk.gray(`              ${v.title}`));
     if (v.cve) {
       console.log(chalk.gray(`              ${v.cve}`) + (v.url ? chalk.gray(`  ${v.url}`) : ''));
+    }
+    if (v.epss != null) {
+      const pct = (v.epss * 100).toFixed(1);
+      const epssColor = v.epss >= 0.5 ? chalk.red.bold
+        : v.epss >= 0.1 ? chalk.yellow
+        : chalk.gray;
+      const label = v.epss >= 0.5 ? ' — actively exploited in the wild'
+        : v.epss >= 0.1 ? ' — elevated exploit activity'
+        : '';
+      console.log(epssColor(`              EPSS: ${pct}% exploit probability`) + chalk.gray(label));
     }
     if (v.fix) {
       console.log(chalk.gray('              Fix: ') + chalk.cyan(v.fix));

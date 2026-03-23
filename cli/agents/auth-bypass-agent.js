@@ -25,7 +25,7 @@ const PATTERNS = [
   {
     rule: 'JWT_WEAK_SECRET',
     title: 'JWT Weak HMAC Secret',
-    regex: /jwt\.sign\s*\([^)]*,\s*['"][^'"]{1,15}['"]/g,
+    regex: /jwt\.sign\s*\([^)]{0,200}?,\s*['"][^'"]{1,15}['"]/g,
     severity: 'high',
     cwe: 'CWE-326',
     owasp: 'A02:2021',

@@ -16,22 +16,28 @@ import path from 'path';
 // SCORING CONFIGURATION
 // =============================================================================
 
+// Weights aligned with OWASP Top 10 2025:
+//   A01 Broken Access Control (auth: 15), A02 Security Misconfiguration (config: 8),
+//   A03 Software Supply Chain Failures (supply-chain: 12, deps: 13),
+//   A05 Injection (injection: 15), A07 Auth Failures (secrets: 15),
+//   A10 Mishandling of Exceptional Conditions (→ injection category)
+//   + API Security (10), AI/LLM Security (12) — weights sum to 100
 const CATEGORIES = {
   secrets:       { weight: 15, label: 'Secrets',                deductions: { critical: 25, high: 15, medium: 5 } },
   injection:     { weight: 15, label: 'Code Vulnerabilities',   deductions: { critical: 20, high: 10, medium: 3 } },
-  deps:          { weight: 15, label: 'Dependencies',           deductions: { critical: 20, high: 10, medium: 5, moderate: 5 } },
+  deps:          { weight: 13, label: 'Dependencies',           deductions: { critical: 20, high: 10, medium: 5, moderate: 5 } },
   auth:          { weight: 15, label: 'Auth & Access Control',  deductions: { critical: 20, high: 10, medium: 3 } },
-  config:        { weight: 10, label: 'Configuration',          deductions: { critical: 15, high: 8,  medium: 3 } },
-  'supply-chain':{ weight: 10, label: 'Supply Chain',           deductions: { critical: 15, high: 8,  medium: 3 } },
+  config:        { weight: 8,  label: 'Configuration',          deductions: { critical: 15, high: 8,  medium: 3 } },
+  'supply-chain':{ weight: 12, label: 'Supply Chain',           deductions: { critical: 15, high: 8,  medium: 3 } },
   api:           { weight: 10, label: 'API Security',           deductions: { critical: 15, high: 8,  medium: 3 } },
-  llm:           { weight: 10, label: 'AI/LLM Security',       deductions: { critical: 15, high: 8,  medium: 3 } },
+  llm:           { weight: 12, label: 'AI/LLM Security',       deductions: { critical: 15, high: 8,  medium: 3 } },
 };
 
 // Fallback categories for findings that don't match a known category
 const FALLBACK_CATEGORY_MAP = {
   'secret': 'secrets',
   'vulnerability': 'injection',
-  'ssrf': 'injection',
+  'ssrf': 'injection',        // OWASP 2025: SSRF merged into A01 Broken Access Control
   'history': 'secrets',
   'cicd': 'config',
   'mobile': 'injection',
@@ -39,7 +45,9 @@ const FALLBACK_CATEGORY_MAP = {
   'mcp': 'llm',
   'agentic': 'llm',
   'rag': 'llm',
-  'recon': null, // skip recon findings
+  'vibe': 'injection',        // Vibe coding findings → Code Vulnerabilities
+  'exception': 'injection',   // OWASP A10:2025 — Mishandling of Exceptional Conditions
+  'recon': null,               // skip recon findings
 };
 
 const GRADES = [

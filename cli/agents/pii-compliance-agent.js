@@ -39,7 +39,7 @@ const PATTERNS = [
   {
     rule: 'PII_IN_LOGGER',
     title: 'Privacy: PII in Structured Logger',
-    regex: /(?:logger|log|winston|pino|bunyan|morgan)\.(?:info|warn|error|debug|log)\s*\([\s\S]{0,200}(?:email|password|ssn|creditCard|credit_card|phoneNumber|phone_number|dateOfBirth|date_of_birth)/g,
+    regex: /(?:logger|winston|pino|bunyan|morgan)\.(?:info|warn|error|debug|log)\s*\([\s\S]{0,200}(?:[\.\[\(]email\b|password|ssn|creditCard|credit_card|phoneNumber|phone_number|dateOfBirth|date_of_birth)/g,
     severity: 'high',
     cwe: 'CWE-532',
     owasp: 'A09:2021',
@@ -62,7 +62,7 @@ const PATTERNS = [
   {
     rule: 'PII_IN_ERROR_RESPONSE',
     title: 'Privacy: PII in Error Response to Client',
-    regex: /(?:res\.(?:json|send|status)|response\.(?:json|send)|jsonify)\s*\(\s*(?:\{[\s\S]{0,200}(?:email|password|ssn|creditCard|phone|user|customer|patient)[\s\S]{0,100}\}|err|error)/g,
+    regex: /(?:res\.(?:json|send|status)|response\.(?:json|send)|jsonify)\s*\(\s*(?:\{[\s\S]{0,200}(?:email|password|ssn|creditCard|credit_card|phoneNumber|phone_number|patient|dateOfBirth|date_of_birth)[\s\S]{0,100}\}|err(?:or)?\.(?:stack|message))/g,
     severity: 'high',
     cwe: 'CWE-209',
     owasp: 'A01:2021',
@@ -151,7 +151,7 @@ const PATTERNS = [
   {
     rule: 'PII_EMAIL_HARDCODED',
     title: 'Privacy: Real Email Address Hardcoded',
-    regex: /['"][a-zA-Z0-9._%+-]+@(?!example\.com|test\.com|placeholder|fake|dummy)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}['"]/g,
+    regex: /['"][a-zA-Z0-9._%+-]+@(?!example\.com|example\.org|test\.com|test\.org|testing\.com|localhost|placeholder|fake|dummy|mailinator\.com|noreply|no-reply|sample\.com)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}['"]/g,
     severity: 'medium',
     cwe: 'CWE-312',
     owasp: 'A02:2021',

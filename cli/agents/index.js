@@ -23,6 +23,8 @@ export { MCPSecurityAgent } from './mcp-security-agent.js';
 export { AgenticSecurityAgent } from './agentic-security-agent.js';
 export { RAGSecurityAgent } from './rag-security-agent.js';
 export { PIIComplianceAgent } from './pii-compliance-agent.js';
+export { VibeCodingAgent } from './vibe-coding-agent.js';
+export { ExceptionHandlerAgent } from './exception-handler-agent.js';
 export { VerifierAgent } from './verifier-agent.js';
 export { DeepAnalyzer } from './deep-analyzer.js';
 export { ScoringEngine, GRADES, CATEGORIES } from './scoring-engine.js';
@@ -50,6 +52,8 @@ import { MCPSecurityAgent as MCPSecurityAgentClass } from './mcp-security-agent.
 import { AgenticSecurityAgent as AgenticSecurityAgentClass } from './agentic-security-agent.js';
 import { RAGSecurityAgent as RAGSecurityAgentClass } from './rag-security-agent.js';
 import { PIIComplianceAgent as PIIComplianceAgentClass } from './pii-compliance-agent.js';
+import { VibeCodingAgent as VibeCodingAgentClass } from './vibe-coding-agent.js';
+import { ExceptionHandlerAgent as ExceptionHandlerAgentClass } from './exception-handler-agent.js';
 
 export function buildOrchestrator() {
   const orchestrator = new OrchestratorClass();
@@ -69,6 +73,8 @@ export function buildOrchestrator() {
     new AgenticSecurityAgentClass(),
     new RAGSecurityAgentClass(),
     new PIIComplianceAgentClass(),
+    new VibeCodingAgentClass(),
+    new ExceptionHandlerAgentClass(),
   ]);
   return orchestrator;
 }

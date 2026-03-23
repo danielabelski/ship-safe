@@ -262,6 +262,8 @@ export async function auditCommand(targetPath = '.', options = {}) {
   // Score
   const scoringEngine = new ScoringEngine();
   const scoreResult = scoringEngine.compute(filteredFindings, depVulns);
+  // Round score to 1 decimal place to avoid floating-point noise (e.g., 63.300000000000004)
+  scoreResult.score = Math.round(scoreResult.score * 10) / 10;
   scoringEngine.saveToHistory(absolutePath, scoreResult, suppressions);
 
   const gradeColor = scoreResult.score >= 75 ? chalk.green.bold : scoreResult.score >= 60 ? chalk.yellow.bold : chalk.red.bold;
@@ -421,7 +423,9 @@ export async function auditCommand(targetPath = '.', options = {}) {
     const trend = scoringEngine.getTrend(absolutePath, scoreResult.score);
     if (trend) {
       const arrow = trend.diff > 0 ? chalk.green('↑') : trend.diff < 0 ? chalk.red('↓') : chalk.gray('→');
-      console.log(chalk.gray(`  Trend: ${trend.previousScore} → ${trend.currentScore} ${arrow} (${trend.diff > 0 ? '+' : ''}${trend.diff})`));
+      const roundedDiff = Math.round(trend.diff * 10) / 10;
+      const diffLabel = roundedDiff === 0 ? chalk.gray('no change') : chalk.white(`${roundedDiff > 0 ? '+' : ''}${roundedDiff}`);
+      console.log(chalk.gray(`  Trend: ${trend.previousScore} → ${trend.currentScore} ${arrow} (`) + diffLabel + chalk.gray(')'));
     }
 
     // ── Detailed Comparison ────────────────────────────────────────────────
@@ -561,14 +565,17 @@ function printReport(scoreResult, findings, depVulns, recon, plan, rootPath, fil
     const count = Object.values(cat.counts).reduce((a, b) => a + b, 0);
     const icon = count === 0 ? chalk.green('✔') : chalk.red('✘');
     const status = count === 0 ? chalk.green('clean') : chalk.red(`${count} issue(s)`);
-    const deduction = cat.deduction > 0 ? chalk.red(`-${cat.deduction} pts`) : chalk.gray('+0');
+    const deduction = cat.deduction > 0 ? chalk.red(`-${Math.round(cat.deduction * 10) / 10} pts`) : chalk.gray('+0');
     console.log(`  ${icon}  ${chalk.white(cat.label.padEnd(22))} ${status.padEnd(25)} ${deduction}`);
   }
 
-  // Deps row
-  const depIcon = depVulns.length === 0 ? chalk.green('✔') : chalk.red('✘');
-  const depStatus = depVulns.length === 0 ? chalk.green('clean') : chalk.red(`${depVulns.length} CVE(s)`);
-  console.log(`  ${depIcon}  ${chalk.white('Dependencies'.padEnd(22))} ${depStatus}`);
+  // Deps row — only print if not already included in scoreResult.categories
+  const hasDepsCategory = Object.values(scoreResult.categories).some(c => c.label?.toLowerCase().includes('depend'));
+  if (!hasDepsCategory) {
+    const depIcon = depVulns.length === 0 ? chalk.green('✔') : chalk.red('✘');
+    const depStatus = depVulns.length === 0 ? chalk.green('clean') : chalk.red(`${depVulns.length} CVE(s)`);
+    console.log(`  ${depIcon}  ${chalk.white('Dependencies'.padEnd(22))} ${depStatus}`);
+  }
 
   console.log(chalk.gray(`\n  Files scanned: ${filesScanned} | Findings: ${findings.length} | CVEs: ${depVulns.length}`));
 
