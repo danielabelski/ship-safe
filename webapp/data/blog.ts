@@ -32,7 +32,7 @@ The most common finding by far. AI assistants frequently complete configuration 
 \`\`\`javascript
 // AI-generated config
 const stripe = require('stripe')('sk_live_51ABC...');
-const db = new Pool({ connectionString: 'postgresql://admin:password123@...' });
+const db = new Pool({ connectionString: 'postgresql://admin:pass@...' }); // ship-safe-ignore — example code
 \`\`\`
 
 **Fix:** Always use environment variables. Run \`npx ship-safe scan .\` to catch any that slip through.
