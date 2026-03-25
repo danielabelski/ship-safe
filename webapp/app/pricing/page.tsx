@@ -6,13 +6,66 @@ import ScrollAnimator from '@/components/ScrollAnimator';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Pricing — Ship Safe',
-  description: 'Free CLI tool for everyone. Pro and Team plans for power users and teams.',
+  title: 'Pricing',
+  description: 'Ship Safe pricing: free open-source CLI for everyone. Pro ($9 one-time) and Team ($19/seat one-time) plans for cloud dashboard, GitHub integration, and team collaboration.',
+  keywords: ['Ship Safe pricing', 'security scanner pricing', 'free security tool', 'DevSecOps pricing', 'application security cost'],
+  alternates: {
+    canonical: 'https://www.shipsafecli.com/pricing',
+  },
+};
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Product',
+      name: 'Ship Safe Pro',
+      description: 'Cloud dashboard for developers who ship fast and need full security coverage.',
+      offers: {
+        '@type': 'Offer',
+        price: '9',
+        priceCurrency: 'USD',
+        availability: 'https://schema.org/InStock',
+      },
+    },
+    {
+      '@type': 'Product',
+      name: 'Ship Safe Team',
+      description: 'Team collaboration, shared workspace, and aggregate security scoring.',
+      offers: {
+        '@type': 'Offer',
+        price: '19',
+        priceCurrency: 'USD',
+        availability: 'https://schema.org/InStock',
+        priceSpecification: {
+          '@type': 'UnitPriceSpecification',
+          price: '19',
+          priceCurrency: 'USD',
+          unitText: 'per seat',
+        },
+      },
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: pricingFaq.map((item) => ({
+        '@type': 'Question',
+        name: item.q,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: item.a,
+        },
+      })),
+    },
+  ],
 };
 
 export default function Pricing() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <ScrollAnimator />
       <Nav />
       <main>

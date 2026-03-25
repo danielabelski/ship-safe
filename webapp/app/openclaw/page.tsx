@@ -5,9 +5,12 @@ import ScrollAnimator from '@/components/ScrollAnimator';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'OpenClaw Security Scanner — Ship Safe',
+  title: 'OpenClaw Security Scanner',
   description: 'Secure your OpenClaw setup in 60 seconds. Detect ClawJacked (CVE-2026-25253), malicious skills from ClawHavoc, missing auth, public bindings, and prompt injection in agent configs.',
   keywords: ['OpenClaw security', 'ClawJacked', 'CVE-2026-25253', 'ClawHavoc', 'OpenClaw audit', 'AI agent security', 'MCP security'],
+  alternates: {
+    canonical: 'https://www.shipsafecli.com/openclaw',
+  },
 };
 
 /* ── SVG Icons ─────────────────────────────────────────────────────────────── */

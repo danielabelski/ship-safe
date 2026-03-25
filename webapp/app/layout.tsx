@@ -5,21 +5,28 @@ import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Ship Safe — Find Security Vulnerabilities Before You Ship',
-  description: 'Scan your codebase for secrets, vulnerabilities, and dependency CVEs. Get a 0-100 security score in seconds. Free CLI, no signup required.',
+  title: {
+    default: 'Ship Safe — AI-Powered Security Scanner for Developers',
+    template: '%s | Ship Safe',
+  },
+  description: 'Scan your codebase for secrets, vulnerabilities, and dependency CVEs with 18 AI security agents. Get a 0-100 security score in seconds. Free CLI, no signup required.',
   metadataBase: new URL('https://www.shipsafecli.com'),
+  keywords: ['security scanner', 'code security', 'secret detection', 'vulnerability scanner', 'OWASP 2025', 'AI security', 'LLM security', 'DevSecOps', 'application security', 'dependency CVE scanner', 'open source security tool'],
+  alternates: {
+    canonical: 'https://www.shipsafecli.com',
+  },
   openGraph: {
-    title: 'Ship Safe — Find Security Vulnerabilities Before You Ship',
-    description: 'Scan your codebase for secrets, vulnerabilities, and dependency CVEs. Get a 0-100 security score in seconds. Free CLI, no signup required.',
+    title: 'Ship Safe — AI-Powered Security Scanner for Developers',
+    description: '18 AI security agents scan your codebase for secrets, vulnerabilities, and CVEs in one command. Free and open source.',
     type: 'website',
     url: 'https://www.shipsafecli.com',
     siteName: 'Ship Safe',
-    images: [{ url: 'https://www.shipsafecli.com/api/og', width: 1200, height: 630, alt: 'Ship Safe' }],
+    images: [{ url: 'https://www.shipsafecli.com/api/og', width: 1200, height: 630, alt: 'Ship Safe - AI-Powered Security Scanner' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Ship Safe — Find Security Vulnerabilities Before You Ship',
-    description: 'Scan your codebase for secrets, vulnerabilities, and dependency CVEs. Get a 0-100 security score in seconds. Free CLI, no signup required.',
+    title: 'Ship Safe — AI-Powered Security Scanner for Developers',
+    description: '18 AI security agents scan your codebase for secrets, vulnerabilities, and CVEs in one command. Free and open source.',
     images: ['https://www.shipsafecli.com/api/og'],
   },
 };
