@@ -11,6 +11,154 @@ export interface BlogPost {
 
 export const posts: BlogPost[] = [
   {
+    slug: 'supply-chain-attacks-2026-how-we-hardened-ship-safe',
+    title: 'From Trivy to CanisterWorm: How We Hardened Ship Safe Against the 2026 Supply Chain Attacks',
+    description: 'The Trivy compromise cascaded into CanisterWorm, the first self-spreading npm worm. Here is what happened, why it matters, and exactly how we hardened Ship Safe against the same attack chain.',
+    date: '2026-03-25',
+    author: 'Ship Safe Team',
+    tags: ['supply chain', 'security research', 'CI/CD'],
+    keywords: ['supply chain attack 2026', 'CanisterWorm npm', 'Trivy compromise', 'npm trusted publishing', 'GitHub Actions security', 'npm postinstall attack', 'CI/CD security hardening', 'npm OIDC publishing', 'software supply chain security'],
+    content: `
+In March 2026, a threat group called TeamPCP pulled off one of the most sophisticated supply chain attacks the npm ecosystem has ever seen. It started with a compromised CI token in the Trivy vulnerability scanner and ended with a self-spreading worm infecting over 140 npm packages.
+
+We took this as a wake-up call and spent a week hardening Ship Safe against the exact same attack chain. Here is what happened and what we did about it.
+
+## The Attack Chain
+
+### Stage 1: Trivy GitHub Actions Compromise
+
+Attackers exploited a misconfigured \`pull_request_target\` workflow in the Trivy GitHub Actions repository. Unlike \`pull_request\`, this trigger runs in the context of the base repository, giving attackers access to repository secrets.
+
+They extracted a CI token, then force-pushed malicious code to 75 of 76 version tags in \`aquasecurity/trivy-action\`. Any pipeline referencing those tags (e.g. \`@v1\`, \`@v2\`) executed attacker-controlled code.
+
+### Stage 2: Credential Harvesting
+
+The malicious payload scanned CI runner memory and filesystems for credentials: AWS keys, SSH keys, Kubernetes configs, and npm tokens. CI environments are goldmines because they typically hold publishing credentials.
+
+### Stage 3: CanisterWorm
+
+Less than 24 hours later, stolen npm tokens were used to publish malicious versions of dozens of packages. The payload, dubbed CanisterWorm, had a key innovation: it was self-propagating.
+
+When a developer ran \`npm install\` on an infected package, the \`postinstall\` script would:
+
+1. Steal the developer's npm token from \`~/.npmrc\`
+2. Query npm for all packages that token could publish
+3. Publish malicious patches to every one of those packages
+4. Each infected package then spread the worm to its downstream consumers
+
+The attack expanded to 141 malicious package versions across 66+ packages before discovery.
+
+### Stage 4: LiteLLM (PyPI)
+
+A captured PyPI credential from a project that used the compromised scanner was used to upload malicious versions of LiteLLM (versions 1.82.7 and 1.82.8). A \`.pth\` file executed automatically whenever Python started.
+
+## How We Hardened Ship Safe
+
+We mapped every stage of the attack to a specific defense:
+
+### 1. SHA-Pinned GitHub Actions (blocks Stage 1)
+
+Tag-based references like \`@v4\` can be repointed to malicious commits. We pinned every action in our CI workflow, our published GitHub Action, and the OpenClaw check action to full commit SHAs:
+
+\`\`\`yaml
+# Before (vulnerable to tag repointing)
+uses: actions/setup-node@v4
+
+# After (immutable reference)
+uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+\`\`\`
+
+### 2. Scoped CI Token Permissions (blocks Stage 2)
+
+We added an explicit permissions block to limit what the CI token can access:
+
+\`\`\`yaml
+permissions:
+  contents: read
+\`\`\`
+
+No write access. No packages scope. If our CI token is ever leaked, the blast radius is limited to read-only access to public code.
+
+### 3. Disabled postinstall Scripts (blocks Stage 3)
+
+CanisterWorm's entire propagation mechanism depends on npm's \`postinstall\` lifecycle hook. We disabled it everywhere:
+
+\`\`\`bash
+# CI pipeline
+npm ci --ignore-scripts
+
+# .npmrc (local dev default)
+ignore-scripts=true
+\`\`\`
+
+### 4. OIDC Trusted Publishing (blocks Stage 3 + 4)
+
+Long-lived npm tokens are the root cause. If a token is compromised, an attacker can publish as you forever. We set up npm Trusted Publishing with OIDC:
+
+- No npm token stored anywhere (not in CI, not in secrets)
+- Each publish uses a short-lived, cryptographically-signed token
+- The token is scoped to a specific workflow file, repository, and environment
+- Provenance attestation is automatic, linking every published version to its source commit
+
+### 5. CODEOWNERS for Critical Paths
+
+We added a CODEOWNERS file requiring explicit review for supply-chain-critical files:
+
+\`\`\`
+action.yml              @asamassekou10
+.github/                @asamassekou10
+package.json            @asamassekou10
+package-lock.json       @asamassekou10
+cli/bin/                @asamassekou10
+\`\`\`
+
+### 6. Package Contents Allowlist
+
+Our \`package.json\` uses a strict \`files\` allowlist so only the CLI code ships. No test files, no configs, no marketing content:
+
+\`\`\`json
+"files": ["cli/", "!cli/__tests__/", "checklists/", "configs/", "snippets/", "ai-defense/"]
+\`\`\`
+
+The publish workflow also runs a sensitive-file gate that blocks releases containing \`.env\`, \`.pem\`, or credential files.
+
+### 7. Self-Scanning in CI
+
+Ship Safe scans itself in every CI run. If a supply chain attack injects malicious code, our own scanner catches it before it ships.
+
+## What Ship Safe Detects for You
+
+Ship Safe's CICDScanner and SupplyChainAudit agents detect the same vulnerabilities that enabled this attack:
+
+| Finding | Agent | OWASP |
+|---------|-------|-------|
+| Unpinned GitHub Actions (\`@v1\` instead of \`@sha\`) | CICDScanner | CICD-SEC-9 |
+| \`pull_request_target\` with checkout | CICDScanner | CICD-SEC-4 |
+| Wildcard dependency versions | SupplyChainAudit | A06:2025 |
+| Missing lockfile | SupplyChainAudit | A06:2025 |
+| Suspicious postinstall scripts | SupplyChainAudit | A06:2025 |
+| Typosquatted packages (Levenshtein distance) | SupplyChainAudit | A06:2025 |
+| Leaked npm/PyPI tokens in code | Scanner | A02:2025 |
+| Tokens in git history | GitHistoryScanner | A02:2025 |
+
+Scan your project now:
+
+\`\`\`bash
+npx ship-safe audit .
+\`\`\`
+
+## Key Takeaways
+
+1. **Pin all GitHub Actions to commit SHAs.** Tags are mutable. SHAs are not.
+2. **Disable postinstall scripts by default.** Opt in per-package, not out.
+3. **Use OIDC for publishing.** Long-lived tokens are a single point of failure.
+4. **Your CI pipeline is a high-value target.** Treat it like production infrastructure.
+5. **Scan your own supply chain.** \`npx ship-safe audit .\` catches unpinned actions, wildcard deps, and suspicious scripts in one command.
+
+Ship fast. Ship safe.
+    `.trim(),
+  },
+  {
     slug: 'vibe-coding-security-risks',
     title: 'Vibe Coding Is Fast, But Is It Safe? 7 Security Risks in AI-Generated Code',
     description: 'AI coding tools ship code fast but skip security checks. Here are the 7 most common vulnerabilities in AI-generated code and how to catch them automatically.',

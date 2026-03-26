@@ -24,6 +24,7 @@ export default function Nav() {
           <a href="#how-it-works">How it works</a>
           <a href="#pricing">Pricing</a>
           <Link href="/openclaw">OpenClaw</Link>
+          <Link href="/docs">Docs</Link>
           <Link href="/blog">Blog</Link>
           <Link href="/login" className={styles.navLink}>Log in</Link>
           <Link href="/signup" className={styles.navCta}>Get started</Link>
