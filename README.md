@@ -17,7 +17,11 @@
 
 18 security agents. 80+ attack classes. One command.
 
-**Ship Safe v6.1** is an AI-powered security platform that runs 18 specialized agents in parallel against your codebase — scanning for secrets, injection vulnerabilities, auth bypass, SSRF, supply chain attacks, Supabase RLS misconfigs, Docker/Terraform/Kubernetes misconfigs, CI/CD pipeline poisoning, LLM/agentic AI security, MCP server misuse, RAG poisoning, PII compliance, vibe coding patterns, exception handling, AI agent config security, and more. OWASP 2025 scoring with EPSS exploit probability. LLM-powered deep analysis verifies exploitability of critical findings. Secrets verification probes provider APIs to check if leaked keys are still active. Compliance mapping to SOC 2, ISO 27001, and NIST AI RMF. Built-in threat intelligence feed with offline-first IOC matching. CI integration with GitHub PR comments, threshold gating, and SARIF output.
+**Ship Safe v6.1.1** is an AI-powered security platform that runs 18 specialized agents in parallel against your codebase, scanning for secrets, injection vulnerabilities, auth bypass, SSRF, supply chain attacks, Supabase RLS misconfigs, Docker/Terraform/Kubernetes misconfigs, CI/CD pipeline poisoning, LLM/agentic AI security, MCP server misuse, RAG poisoning, PII compliance, vibe coding patterns, exception handling, AI agent config security, and more. OWASP 2025 scoring with EPSS exploit probability. LLM-powered deep analysis verifies exploitability of critical findings. Secrets verification probes provider APIs to check if leaked keys are still active. Compliance mapping to SOC 2, ISO 27001, and NIST AI RMF. Built-in threat intelligence feed with offline-first IOC matching. CI integration with GitHub PR comments, threshold gating, and SARIF output.
+
+**v6.1.1 highlights:** Supply chain hardening against the [March 2026 Trivy/CanisterWorm attack chain](https://shipsafecli.com/blog/supply-chain-attacks-2026-how-we-hardened-ship-safe). All GitHub Actions SHA-pinned, `postinstall` scripts disabled in CI, OIDC trusted publishing with provenance, CODEOWNERS on critical paths.
+
+[Documentation](https://shipsafecli.com/docs) | [Blog](https://shipsafecli.com/blog) | [Pricing](https://shipsafecli.com/pricing)
 
 ---
 
@@ -554,6 +558,49 @@ LLM security: prompt injection detection, cost protection, system prompt hardeni
 
 ### [`/checklists`](./checklists)
 Manual security audits: launch-day checklist, framework-specific guides.
+
+---
+
+## Add a Security Badge to Your README
+
+Show the world your project is secure. After running `npx ship-safe audit .` or `npx ship-safe vibe-check . --badge`, add one of these to your README:
+
+```markdown
+<!-- Replace GRADE and COLOR with your results -->
+[![Ship Safe](https://img.shields.io/badge/Ship_Safe-A+-22c55e)](https://shipsafecli.com)
+```
+
+| Grade | Badge |
+|-------|-------|
+| A+ | `[![Ship Safe](https://img.shields.io/badge/Ship_Safe-A+-22c55e)](https://shipsafecli.com)` |
+| A | `[![Ship Safe](https://img.shields.io/badge/Ship_Safe-A-22c55e)](https://shipsafecli.com)` |
+| B | `[![Ship Safe](https://img.shields.io/badge/Ship_Safe-B-06b6d4)](https://shipsafecli.com)` |
+| C | `[![Ship Safe](https://img.shields.io/badge/Ship_Safe-C-eab308)](https://shipsafecli.com)` |
+| D | `[![Ship Safe](https://img.shields.io/badge/Ship_Safe-D-ef4444)](https://shipsafecli.com)` |
+| F | `[![Ship Safe](https://img.shields.io/badge/Ship_Safe-F-dc2626)](https://shipsafecli.com)` |
+
+---
+
+## Supply Chain Hardening
+
+Ship Safe practices what it preaches. Our own supply chain is hardened against the [2026 Trivy/CanisterWorm attack chain](https://shipsafecli.com/blog/supply-chain-attacks-2026-how-we-hardened-ship-safe):
+
+| Defense | What It Blocks |
+|---------|---------------|
+| All GitHub Actions pinned to full commit SHAs | Tag repointing (Trivy-style) |
+| `permissions: contents: read` in CI | Excessive token scope |
+| `npm ci --ignore-scripts` in all pipelines | CanisterWorm postinstall propagation |
+| OIDC trusted publishing with provenance | Stolen npm token publishing |
+| CODEOWNERS on `action.yml`, `.github/`, `package.json` | Unauthorized changes to critical paths |
+| Strict `files` allowlist in package.json | Accidental inclusion of secrets/configs |
+| Self-scanning with ship-safe in CI | Malicious code injection |
+| 5 direct dependencies | Minimal transitive attack surface |
+
+Verify provenance on any Ship Safe release:
+
+```bash
+npm audit signatures
+```
 
 ---
 
