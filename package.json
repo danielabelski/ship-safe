@@ -53,6 +53,7 @@
   },
   "files": [
     "cli/",
+    "!cli/__tests__/",
     "checklists/",
     "configs/",
     "snippets/",
