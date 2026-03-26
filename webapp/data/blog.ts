@@ -155,6 +155,18 @@ npx ship-safe audit .
 4. **Your CI pipeline is a high-value target.** Treat it like production infrastructure.
 5. **Scan your own supply chain.** \`npx ship-safe audit .\` catches unpinned actions, wildcard deps, and suspicious scripts in one command.
 
+## Sources
+
+- [Prismor: From Trivy to LiteLLM supply chain attack analysis](https://x.com/prismor_dev/status/2036656716147003861) - the thread that prompted our hardening sprint
+- [The Hacker News: Trivy Supply Chain Attack Triggers Self-Spreading CanisterWorm](https://thehackernews.com/2026/03/trivy-supply-chain-attack-triggers-self.html)
+- [The Hacker News: TeamPCP Backdoors LiteLLM Versions 1.82.7-1.82.8](https://thehackernews.com/2026/03/teampcp-backdoors-litellm-versions.html)
+- [Microsoft Security Blog: Detecting and defending against the Trivy supply chain compromise](https://www.microsoft.com/en-us/security/blog/2026/03/24/detecting-investigating-defending-against-trivy-supply-chain-compromise/)
+- [CrowdStrike: From Scanner to Stealer](https://www.crowdstrike.com/en-us/blog/from-scanner-to-stealer-inside-the-trivy-action-supply-chain-compromise/)
+- [Arctic Wolf: TeamPCP Supply Chain Attack Campaign](https://arcticwolf.com/resources/blog/teampcp-supply-chain-attack-campaign-targets-trivy-checkmarx-kics-and-litellm-potential-downstream-impact-to-additional-projects/)
+- [Kaspersky: Trojanization of Trivy, Checkmarx, and LiteLLM](https://www.kaspersky.com/blog/critical-supply-chain-attack-trivy-litellm-checkmarx-teampcp/55510/)
+- [npm Trusted Publishing Docs](https://docs.npmjs.com/trusted-publishers/)
+- [Aqua Security: Trivy Supply Chain Attack Advisory (GHSA-69fq-xp46-6x23)](https://github.com/aquasecurity/trivy/security/advisories/GHSA-69fq-xp46-6x23)
+
 Ship fast. Ship safe.
     `.trim(),
   },
