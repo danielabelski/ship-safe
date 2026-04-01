@@ -4,12 +4,26 @@ import styles from './openclaw.module.css';
 import ScrollAnimator from '@/components/ScrollAnimator';
 import type { Metadata } from 'next';
 
+const ogImage = 'https://www.shipsafecli.com/api/og?title=OpenClaw+Security+Scanner&description=Detect+ClawJacked%2C+malicious+skills%2C+missing+auth%2C+and+prompt+injection+in+your+agent+configs+in+60+seconds.&label=AI+Agent+Security&badge=CVE-2026-25253';
+
 export const metadata: Metadata = {
   title: 'OpenClaw Security Scanner',
   description: 'Secure your OpenClaw setup in 60 seconds. Detect ClawJacked (CVE-2026-25253), malicious skills from ClawHavoc, missing auth, public bindings, and prompt injection in agent configs.',
   keywords: ['OpenClaw security', 'ClawJacked', 'CVE-2026-25253', 'ClawHavoc', 'OpenClaw audit', 'AI agent security', 'MCP security'],
   alternates: {
     canonical: 'https://www.shipsafecli.com/openclaw',
+  },
+  openGraph: {
+    title: 'OpenClaw Security Scanner — Ship Safe',
+    description: 'Detect ClawJacked, malicious skills, missing auth, and prompt injection in your agent configs in 60 seconds.',
+    url: 'https://www.shipsafecli.com/openclaw',
+    images: [{ url: ogImage, width: 1200, height: 630, alt: 'OpenClaw Security Scanner' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'OpenClaw Security Scanner — Ship Safe',
+    description: 'Detect ClawJacked, malicious skills, missing auth, and prompt injection in your agent configs in 60 seconds.',
+    images: [ogImage],
   },
 };
 

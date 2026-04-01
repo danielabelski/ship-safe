@@ -21,13 +21,13 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://www.shipsafecli.com',
     siteName: 'Ship Safe',
-    images: [{ url: 'https://www.shipsafecli.com/api/og', width: 1200, height: 630, alt: 'Ship Safe - AI-Powered Security Scanner' }],
+    images: [{ url: 'https://www.shipsafecli.com/api/og?title=Ship+Safe&description=18+AI+security+agents+scan+your+codebase+for+secrets%2C+vulnerabilities%2C+and+CVEs+in+one+command.+Free+and+open+source.&label=Security+Scanner&badge=MIT+Open+Source', width: 1200, height: 630, alt: 'Ship Safe - AI-Powered Security Scanner' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Ship Safe — AI-Powered Security Scanner for Developers',
     description: '18 AI security agents scan your codebase for secrets, vulnerabilities, and CVEs in one command. Free and open source.',
-    images: ['https://www.shipsafecli.com/api/og'],
+    images: ['https://www.shipsafecli.com/api/og?title=Ship+Safe&description=18+AI+security+agents+scan+your+codebase+for+secrets%2C+vulnerabilities%2C+and+CVEs+in+one+command.+Free+and+open+source.&label=Security+Scanner&badge=MIT+Open+Source'],
   },
 };
 

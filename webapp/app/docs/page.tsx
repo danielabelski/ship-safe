@@ -2,12 +2,26 @@ import Nav from '@/components/Nav';
 import styles from './docs.module.css';
 import type { Metadata } from 'next';
 
+const ogImage = 'https://www.shipsafecli.com/api/og?title=Ship+Safe+Docs&description=Every+command%2C+agent%2C+and+flag.+Installation%2C+CI%2FCD+integration%2C+hooks%2C+multi-LLM+support%2C+and+API+reference.&label=Documentation&badge=v6.3.0';
+
 export const metadata: Metadata = {
   title: 'Documentation',
   description: 'Complete documentation for Ship Safe: installation, commands, agents, scoring, CI/CD integration, configuration, and API reference.',
   keywords: ['Ship Safe docs', 'Ship Safe documentation', 'security scanner CLI', 'ship-safe commands', 'ship-safe agents', 'DevSecOps documentation'],
   alternates: {
     canonical: 'https://www.shipsafecli.com/docs',
+  },
+  openGraph: {
+    title: 'Ship Safe Documentation',
+    description: 'Every command, agent, and flag. Installation, CI/CD integration, hooks, multi-LLM support, and API reference.',
+    url: 'https://www.shipsafecli.com/docs',
+    images: [{ url: ogImage, width: 1200, height: 630, alt: 'Ship Safe Documentation' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Ship Safe Documentation',
+    description: 'Every command, agent, and flag. Installation, CI/CD integration, hooks, multi-LLM support, and API reference.',
+    images: [ogImage],
   },
 };
 

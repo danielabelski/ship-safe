@@ -5,12 +5,26 @@ import styles from './pricing.module.css';
 import ScrollAnimator from '@/components/ScrollAnimator';
 import type { Metadata } from 'next';
 
+const ogImage = 'https://www.shipsafecli.com/api/og?title=Simple%2C+transparent+pricing.&description=The+CLI+is+always+free+and+open-source.+Pro+%26+Team+plans+for+the+cloud+dashboard%2C+GitHub+integration%2C+and+team+collaboration.&label=Pricing&badge=Free+CLI+forever';
+
 export const metadata: Metadata = {
   title: 'Pricing',
   description: 'Ship Safe pricing: free open-source CLI for everyone. Pro ($9 one-time) and Team ($19/seat one-time) plans for cloud dashboard, GitHub integration, and team collaboration.',
   keywords: ['Ship Safe pricing', 'security scanner pricing', 'free security tool', 'DevSecOps pricing', 'application security cost'],
   alternates: {
     canonical: 'https://www.shipsafecli.com/pricing',
+  },
+  openGraph: {
+    title: 'Simple, transparent pricing — Ship Safe',
+    description: 'The CLI is always free and open-source. Pro & Team plans for the cloud dashboard, GitHub integration, and team collaboration.',
+    url: 'https://www.shipsafecli.com/pricing',
+    images: [{ url: ogImage, width: 1200, height: 630, alt: 'Ship Safe Pricing' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Simple, transparent pricing — Ship Safe',
+    description: 'The CLI is always free and open-source. Pro & Team plans for the cloud dashboard, GitHub integration, and team collaboration.',
+    images: [ogImage],
   },
 };
 
