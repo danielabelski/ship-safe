@@ -9,6 +9,7 @@ import FAQ from '@/components/FAQ';
 import CTA from '@/components/CTA';
 import ScrollAnimator from '@/components/ScrollAnimator';
 import DemoScanner from '@/components/DemoScanner';
+import RecentPosts from '@/components/RecentPosts';
 import { getRepoStats } from '@/lib/stats';
 
 export const metadata: Metadata = {
@@ -36,7 +37,7 @@ const jsonLd = {
       description: '18 AI security agents scan your codebase for secrets, vulnerabilities, and dependency CVEs in one command.',
       url: 'https://www.shipsafecli.com',
       downloadUrl: 'https://www.npmjs.com/package/ship-safe',
-      softwareVersion: '6.2.0',
+      softwareVersion: '6.3.0',
       author: {
         '@type': 'Organization',
         name: 'Ship Safe',
@@ -127,6 +128,7 @@ export default async function Home() {
         <HowItWorks />
         <Features />
         <PricingTeaser />
+        <RecentPosts />
         <FAQ />
       </main>
       <CTA />

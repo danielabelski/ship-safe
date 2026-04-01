@@ -11,34 +11,36 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
+  const latestPost = posts.length > 0 ? new Date(posts[0].date) : new Date('2026-04-01');
+
   return [
     {
       url: baseUrl,
-      lastModified: new Date(),
+      lastModified: latestPost,
       changeFrequency: 'weekly',
       priority: 1,
     },
     {
       url: `${baseUrl}/pricing`,
-      lastModified: new Date(),
+      lastModified: new Date('2026-04-01'),
       changeFrequency: 'monthly',
       priority: 0.9,
     },
     {
       url: `${baseUrl}/openclaw`,
-      lastModified: new Date(),
+      lastModified: new Date('2026-04-01'),
       changeFrequency: 'monthly',
       priority: 0.8,
     },
     {
       url: `${baseUrl}/docs`,
-      lastModified: new Date(),
+      lastModified: latestPost,
       changeFrequency: 'weekly',
       priority: 0.9,
     },
     {
       url: `${baseUrl}/blog`,
-      lastModified: new Date(),
+      lastModified: latestPost,
       changeFrequency: 'weekly',
       priority: 0.8,
     },
