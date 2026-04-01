@@ -216,6 +216,8 @@ program
   .option('--deep', 'LLM-powered taint analysis for critical/high findings')
   .option('--local', 'Use local Ollama model for deep analysis (default: llama3.2)')
   .option('--model <model>', 'LLM model to use for deep/AI analysis')
+  .option('--provider <name>', 'LLM provider: anthropic, openai, google, ollama, groq, together, mistral, cohere, deepseek, xai, lmstudio')
+  .option('--base-url <url>', 'Custom OpenAI-compatible endpoint (e.g. http://localhost:1234/v1/chat/completions)')
   .option('--budget <cents>', 'Max spend in cents for deep analysis (default: 50)', parseInt)
   .option('--verify', 'Check if leaked secrets are still active (probes provider APIs)')
   .option('-v, --verbose', 'Verbose output')
@@ -249,6 +251,8 @@ program
   .option('--deep', 'LLM-powered taint analysis for critical/high findings')
   .option('--local', 'Use local Ollama model for deep analysis (default: llama3.2)')
   .option('--model <model>', 'LLM model for deep analysis')
+  .option('--provider <name>', 'LLM provider: anthropic, openai, google, ollama, groq, together, mistral, cohere, deepseek, xai, lmstudio')
+  .option('--base-url <url>', 'Custom OpenAI-compatible endpoint (e.g. http://localhost:1234/v1/chat/completions)')
   .option('--budget <cents>', 'Max spend in cents for deep analysis (default: 50)', parseInt)
   .option('-v, --verbose', 'Verbose output')
   .action(redTeamCommand);

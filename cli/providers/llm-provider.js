@@ -3,10 +3,14 @@
  * ===================
  *
  * Abstraction layer for LLM providers.
- * Supports: Anthropic (Claude), OpenAI, Google (Gemini), Ollama (local).
+ * Supports: Anthropic (Claude), OpenAI, Google (Gemini), Ollama (local),
+ *           and any OpenAI-compatible endpoint (Groq, Together AI, Mistral API,
+ *           LM Studio, Azure OpenAI, AWS Bedrock via proxy, etc.).
  *
  * USAGE:
  *   const provider = createProvider('anthropic', apiKey);
+ *   const provider = createProvider('groq', apiKey);
+ *   const provider = createProvider('openai', apiKey, { baseUrl: 'https://custom/v1/chat/completions' });
  *   const result = await provider.classify(findings, context);
  */
 
@@ -220,6 +224,31 @@ class OllamaProvider extends BaseLLMProvider {
 }
 
 // =============================================================================
+// OPENAI-COMPATIBLE PROVIDER
+// Handles Groq, Together AI, Mistral API, LM Studio, Azure OpenAI, Bedrock
+// proxy, and any other endpoint that speaks /v1/chat/completions.
+// =============================================================================
+
+// Well-known OpenAI-compatible base URLs and their default models.
+const OPENAI_COMPATIBLE_PRESETS = {
+  groq:       { baseUrl: 'https://api.groq.com/openai/v1/chat/completions',         model: 'llama-3.3-70b-versatile',    envKey: 'GROQ_API_KEY' },
+  together:   { baseUrl: 'https://api.together.xyz/v1/chat/completions',             model: 'meta-llama/Llama-3-70b-chat-hf', envKey: 'TOGETHER_API_KEY' },
+  mistral:    { baseUrl: 'https://api.mistral.ai/v1/chat/completions',               model: 'mistral-large-latest',       envKey: 'MISTRAL_API_KEY' },
+  cohere:     { baseUrl: 'https://api.cohere.com/compatibility/v1/chat/completions', model: 'command-r-plus',             envKey: 'COHERE_API_KEY' },
+  deepseek:   { baseUrl: 'https://api.deepseek.com/v1/chat/completions',             model: 'deepseek-chat',              envKey: 'DEEPSEEK_API_KEY' },
+  perplexity: { baseUrl: 'https://api.perplexity.ai/chat/completions',               model: 'llama-3.1-sonar-large-128k-online', envKey: 'PERPLEXITY_API_KEY' },
+  lmstudio:   { baseUrl: 'http://localhost:1234/v1/chat/completions',                model: null,                         envKey: null },
+  xai:        { baseUrl: 'https://api.x.ai/v1/chat/completions',                    model: 'grok-3-mini',                envKey: 'XAI_API_KEY' },
+};
+
+class OpenAICompatibleProvider extends OpenAIProvider {
+  constructor(name, apiKey, options = {}) {
+    super(apiKey, options);
+    this.name = name;
+  }
+}
+
+// =============================================================================
 // FACTORY
 // =============================================================================
 
@@ -227,11 +256,17 @@ class OllamaProvider extends BaseLLMProvider {
  * Create an LLM provider instance.
  *
  * @param {string} provider — 'anthropic' | 'openai' | 'google' | 'ollama'
- * @param {string} apiKey   — API key (null for Ollama)
+ *                            or any preset: 'groq' | 'together' | 'mistral' |
+ *                            'cohere' | 'deepseek' | 'perplexity' | 'lmstudio' | 'xai'
+ * @param {string} apiKey   — API key (null for Ollama/LM Studio)
  * @param {object} options  — { model, baseUrl }
+ *                            baseUrl overrides the default for any provider.
  */
 export function createProvider(provider, apiKey, options = {}) {
-  switch (provider.toLowerCase()) {
+  const name = provider.toLowerCase();
+
+  // First-class providers
+  switch (name) {
     case 'anthropic':
     case 'claude':
       return new AnthropicProvider(apiKey, options);
@@ -244,26 +279,76 @@ export function createProvider(provider, apiKey, options = {}) {
     case 'ollama':
     case 'local':
       return new OllamaProvider(apiKey, options);
-    default:
-      throw new Error(`Unknown LLM provider: ${provider}. Use: anthropic, openai, google, ollama`);
   }
+
+  // OpenAI-compatible presets
+  if (OPENAI_COMPATIBLE_PRESETS[name]) {
+    const preset = OPENAI_COMPATIBLE_PRESETS[name];
+    return new OpenAICompatibleProvider(
+      // Capitalise for display: "groq" → "Groq"
+      name.charAt(0).toUpperCase() + name.slice(1),
+      apiKey,
+      {
+        baseUrl: options.baseUrl || preset.baseUrl,
+        model:   options.model   || preset.model || 'default',
+      }
+    );
+  }
+
+  // Unknown name but caller supplied a baseUrl — treat as generic OpenAI-compatible
+  if (options.baseUrl) {
+    return new OpenAICompatibleProvider(provider, apiKey, options);
+  }
+
+  throw new Error(
+    `Unknown LLM provider: "${provider}".\n` +
+    `Built-in: anthropic, openai, google, ollama\n` +
+    `Presets:  groq, together, mistral, cohere, deepseek, perplexity, lmstudio, xai\n` +
+    `Custom:   pass any name with --base-url <url>`
+  );
 }
 
 /**
  * Auto-detect the best available LLM provider from environment variables.
+ *
+ * @param {string} rootPath  — Project root (for .env file scan)
+ * @param {object} options   — { provider, baseUrl, model } explicit overrides
  */
-export function autoDetectProvider(rootPath) {
-  // Check env vars
+export function autoDetectProvider(rootPath, options = {}) {
+  // Explicit provider name requested
+  if (options.provider) {
+    const apiKey = resolveApiKey(options.provider, rootPath);
+    return createProvider(options.provider, apiKey, {
+      model:   options.model,
+      baseUrl: options.baseUrl,
+    });
+  }
+
+  // baseUrl supplied without a provider name → openai-compatible with auto key
+  if (options.baseUrl) {
+    const apiKey = process.env.OPENAI_API_KEY || resolveApiKey('openai', rootPath) || '';
+    return new OpenAICompatibleProvider('custom', apiKey, {
+      baseUrl: options.baseUrl,
+      model:   options.model || 'default',
+    });
+  }
+
+  // Standard env-var auto-detection (first match wins)
   const envKeys = {
     ANTHROPIC_API_KEY: 'anthropic',
-    OPENAI_API_KEY: 'openai',
-    GOOGLE_API_KEY: 'google',
-    GEMINI_API_KEY: 'google',
+    OPENAI_API_KEY:    'openai',
+    GOOGLE_API_KEY:    'google',
+    GEMINI_API_KEY:    'google',
+    GROQ_API_KEY:      'groq',
+    TOGETHER_API_KEY:  'together',
+    MISTRAL_API_KEY:   'mistral',
+    DEEPSEEK_API_KEY:  'deepseek',
+    XAI_API_KEY:       'xai',
   };
 
-  for (const [envVar, provider] of Object.entries(envKeys)) {
+  for (const [envVar, providerName] of Object.entries(envKeys)) {
     if (process.env[envVar]) {
-      return createProvider(provider, process.env[envVar]);
+      return createProvider(providerName, process.env[envVar], { model: options.model });
     }
   }
 
@@ -273,9 +358,9 @@ export function autoDetectProvider(rootPath) {
     if (fs.existsSync(envPath)) {
       try {
         const content = fs.readFileSync(envPath, 'utf-8');
-        for (const [envVar, provider] of Object.entries(envKeys)) {
+        for (const [envVar, providerName] of Object.entries(envKeys)) {
           const match = content.match(new RegExp(`^${envVar}\\s*=\\s*["']?([^"'\\s]+)`, 'm'));
-          if (match) return createProvider(provider, match[1]);
+          if (match) return createProvider(providerName, match[1], { model: options.model });
         }
       } catch { /* ignore */ }
     }
@@ -284,4 +369,29 @@ export function autoDetectProvider(rootPath) {
   return null;
 }
 
+/**
+ * Resolve an API key for a given provider name from env or .env file.
+ */
+function resolveApiKey(providerName, rootPath) {
+  const name = providerName.toLowerCase();
+  const preset = OPENAI_COMPATIBLE_PRESETS[name];
+  const envVar = preset?.envKey || `${name.toUpperCase()}_API_KEY`;
+
+  if (process.env[envVar]) return process.env[envVar];
+
+  if (rootPath) {
+    const envPath = path.join(rootPath, '.env');
+    if (fs.existsSync(envPath)) {
+      try {
+        const content = fs.readFileSync(envPath, 'utf-8');
+        const match = content.match(new RegExp(`^${envVar}\\s*=\\s*["']?([^"'\\s]+)`, 'm'));
+        if (match) return match[1];
+      } catch { /* ignore */ }
+    }
+  }
+
+  return null;
+}
+
+export { OPENAI_COMPATIBLE_PRESETS };
 export default { createProvider, autoDetectProvider };

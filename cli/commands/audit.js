@@ -197,6 +197,8 @@ export async function auditCommand(targetPath = '.', options = {}) {
     if (options.deep) orchestratorOpts.deep = true;
     if (options.local) orchestratorOpts.local = true;
     if (options.model) orchestratorOpts.model = options.model;
+    if (options.provider) orchestratorOpts.provider = options.provider;
+    if (options.baseUrl) orchestratorOpts.baseUrl = options.baseUrl;
     if (options.budget) orchestratorOpts.budget = options.budget;
     if (options.verbose) orchestratorOpts.verbose = true;
     if (cacheDiff && cacheDiff.changedFiles.length < allFiles.length) {
@@ -273,7 +275,11 @@ export async function auditCommand(targetPath = '.', options = {}) {
 
   // ── AI Classification (optional, with LLM cache) ───────────────────────
   if (options.ai !== false) {
-    const provider = autoDetectProvider(absolutePath);
+    const provider = autoDetectProvider(absolutePath, {
+      provider: options.provider,
+      baseUrl:  options.baseUrl,
+      model:    options.model,
+    });
     if (provider && filteredFindings.length > 0 && filteredFindings.length <= 50) {
       const aiSpinner = machineOutput ? null : ora({ text: `Classifying with ${provider.name}...`, color: 'cyan' }).start();
       try {

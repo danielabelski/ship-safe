@@ -52,6 +52,8 @@ export async function redTeamCommand(targetPath = '.', options = {}) {
   if (options.deep) orchestratorOpts.deep = true;
   if (options.local) orchestratorOpts.local = true;
   if (options.model) orchestratorOpts.model = options.model;
+  if (options.provider) orchestratorOpts.provider = options.provider;
+  if (options.baseUrl) orchestratorOpts.baseUrl = options.baseUrl;
   if (options.budget) orchestratorOpts.budget = options.budget;
 
   const results = await orchestrator.runAll(absolutePath, orchestratorOpts); // ship-safe-ignore — orchestrator result, not LLM output triggering actions
@@ -86,7 +88,11 @@ export async function redTeamCommand(targetPath = '.', options = {}) {
 
   // ── 5. AI classification (if provider available) ────────────────────────────
   if (options.ai !== false) {
-    const provider = autoDetectProvider(absolutePath);
+    const provider = autoDetectProvider(absolutePath, {
+      provider: options.provider,
+      baseUrl:  options.baseUrl,
+      model:    options.model,
+    });
     if (provider && filteredFindings.length > 0 && filteredFindings.length <= 50) {
       const aiSpinner = ora({ text: `Classifying ${filteredFindings.length} finding(s) with ${provider.name}...`, color: 'cyan' }).start();
       try {

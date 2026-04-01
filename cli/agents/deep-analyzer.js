@@ -100,8 +100,12 @@ export class DeepAnalyzer {
       return new DeepAnalyzer({ provider, ...options });
     }
 
-    // Auto-detect from env
-    const provider = autoDetectProvider(rootPath);
+    // Auto-detect from env, honouring explicit --provider / --base-url / --model
+    const provider = autoDetectProvider(rootPath, {
+      provider: options.provider,
+      baseUrl:  options.baseUrl,
+      model:    options.model,
+    });
     if (!provider) return null;
 
     return new DeepAnalyzer({ provider, ...options });
