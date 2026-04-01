@@ -12,6 +12,38 @@ import fs from 'fs';
 import path from 'path';
 import { BaseAgent, createFinding } from './base-agent.js';
 
+// =============================================================================
+// KNOWN-COMPROMISED PACKAGE IOC LIST
+// Source: TeamPCP/CanisterWorm campaign (March 2026) + prior incidents
+// Format: { name, badVersions: [exact], note }
+// =============================================================================
+const COMPROMISED_PACKAGES = [
+  {
+    name: 'litellm',
+    badVersions: ['1.82.7', '1.82.8'],
+    note: 'TeamPCP supply chain attack (Mar 24 2026). Multi-stage credential stealer targeting SSH keys, cloud tokens, and AI API keys.',
+  },
+  {
+    name: 'axios',
+    badVersions: ['1.8.2'],
+    note: 'TeamPCP/CanisterWorm campaign (Mar 31 2026). Malicious publish delivered a Remote Access Trojan with persistence.',
+  },
+  {
+    name: 'telnyx',
+    badVersions: ['2.1.5'],
+    note: 'TeamPCP campaign (Mar 27 2026). Compromised PyPI release exfiltrated credentials.',
+  },
+];
+
+// Packages that have no reason to depend on ICP/Internet Computer blockchain
+// but CanisterWorm injected @dfinity/agent as its decentralized C2 mechanism
+const ICP_BLOCKCHAIN_PACKAGES = [
+  '@dfinity/agent',
+  '@dfinity/candid',
+  '@dfinity/principal',
+  'ic-agent',
+];
+
 // Common packages that are often typosquatted
 const POPULAR_PACKAGES = [
   'lodash', 'express', 'react', 'axios', 'moment', 'request',
@@ -434,7 +466,29 @@ export class SupplyChainAudit extends BaseAgent {
       } catch { /* skip */ }
     }
 
-    // ── 6. Check Python requirements ──────────────────────────────────────────
+    // ── 6. npm token scope in .npmrc ──────────────────────────────────────────
+    if (fs.existsSync(npmrcPath)) {
+      const content = this.readFile(npmrcPath) || '';
+      // Detect auth tokens stored in .npmrc — a prerequisite for worm spread
+      const tokenLines = content.split('\n').filter(l => /_authToken\s*=/.test(l));
+      for (const line of tokenLines) {
+        const isScopedToPackage = /\/\/registry\.npmjs\.org\/.+:_authToken/.test(line);
+        // Flag tokens that appear to be publish-level (not scoped to a single package)
+        findings.push(createFinding({
+          file: npmrcPath,
+          line: 0,
+          severity: 'high',
+          category: 'supply-chain',
+          rule: 'NPMRC_AUTH_TOKEN_EXPOSED',
+          title: 'npm Auth Token in .npmrc',
+          description: `An npm auth token is stored in .npmrc. ${isScopedToPackage ? 'Verify it is scoped to only the packages it needs to publish.' : 'If this token has publish rights, a compromised install script or dependency can steal it and spread a worm (CanisterWorm attack pattern).'} Commit this file only if absolutely necessary; prefer CI secret injection.`,
+          matched: line.replace(/=.+/, '=***'),
+          fix: 'Use npm token create --cidr-whitelist or scope tokens per-package. Never commit .npmrc with auth tokens.',
+        }));
+      }
+    }
+
+    // ── 7. Check Python requirements ──────────────────────────────────────────
     const reqPath = path.join(rootPath, 'requirements.txt');
     if (fs.existsSync(reqPath)) {
       const content = this.readFile(reqPath) || '';
@@ -473,6 +527,95 @@ export class SupplyChainAudit extends BaseAgent {
           }));
         }
       }
+    }
+
+    // ── 8. Compromised package IOC matching (npm + PyPI) ──────────────────────
+    const iocSources = [];
+
+    // npm packages
+    if (fs.existsSync(pkgPath)) {
+      try {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+        const allDeps = {
+          ...(pkg.dependencies || {}),
+          ...(pkg.devDependencies || {}),
+          ...(pkg.optionalDependencies || {}),
+        };
+        for (const [name, version] of Object.entries(allDeps)) {
+          const ioc = COMPROMISED_PACKAGES.find(c => c.name === name);
+          if (ioc) {
+            // Strip semver range prefix (^, ~, >=, etc.) for comparison
+            const bare = String(version).replace(/^[\^~>=<]+/, '').trim();
+            if (ioc.badVersions.includes(bare)) {
+              iocSources.push({ file: pkgPath, name, version: bare, note: ioc.note });
+            }
+          }
+        }
+      } catch { /* skip */ }
+    }
+
+    // Python requirements.txt
+    if (fs.existsSync(path.join(rootPath, 'requirements.txt'))) {
+      const lines = (this.readFile(path.join(rootPath, 'requirements.txt')) || '').split('\n');
+      for (const line of lines) {
+        const m = line.trim().match(/^([\w-]+)==([\d.]+)/);
+        if (!m) continue;
+        const [, name, version] = m;
+        const ioc = COMPROMISED_PACKAGES.find(c => c.name === name.toLowerCase());
+        if (ioc && ioc.badVersions.includes(version)) {
+          iocSources.push({ file: path.join(rootPath, 'requirements.txt'), name, version, note: ioc.note });
+        }
+      }
+    }
+
+    for (const { file, name, version, note } of iocSources) {
+      findings.push(createFinding({
+        file,
+        line: 0,
+        severity: 'critical',
+        category: 'supply-chain',
+        rule: 'KNOWN_COMPROMISED_PACKAGE',
+        title: `Known-Compromised Package: ${name}@${version}`,
+        description: `${name}@${version} is a known-malicious release. ${note}`,
+        matched: `${name}@${version}`,
+        fix: `Update immediately to the latest safe release and rotate any credentials that may have been exfiltrated.`,
+      }));
+    }
+
+    // ── 9. Blockchain C2 indicators (CanisterWorm / ICP) ──────────────────────
+    if (fs.existsSync(path.join(rootPath, 'node_modules'))) {
+      try {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+        const allDeps = {
+          ...(pkg.dependencies || {}),
+          ...(pkg.devDependencies || {}),
+        };
+        for (const depName of Object.keys(allDeps)) {
+          const depPkgPath = path.join(rootPath, 'node_modules', depName, 'package.json');
+          if (!fs.existsSync(depPkgPath)) continue;
+          try {
+            const depPkg = JSON.parse(fs.readFileSync(depPkgPath, 'utf-8'));
+            const depDeps = {
+              ...(depPkg.dependencies || {}),
+              ...(depPkg.devDependencies || {}),
+            };
+            const suspiciousICP = ICP_BLOCKCHAIN_PACKAGES.filter(p => p in depDeps);
+            if (suspiciousICP.length > 0) {
+              findings.push(createFinding({
+                file: depPkgPath,
+                line: 0,
+                severity: 'critical',
+                category: 'supply-chain',
+                rule: 'BLOCKCHAIN_C2_INDICATOR',
+                title: `Blockchain C2 Indicator in ${depName}: ${suspiciousICP.join(', ')}`,
+                description: `Dependency "${depName}" imports ICP/Internet Computer blockchain packages (${suspiciousICP.join(', ')}). This matches the CanisterWorm attack pattern, which used an ICP canister as a decentralized, takedown-resistant C2 server to coordinate credential exfiltration.`,
+                matched: suspiciousICP.join(', '),
+                fix: 'Immediately audit or remove this dependency. ICP blockchain packages have no legitimate role in most application dependencies.',
+              }));
+            }
+          } catch { /* skip */ }
+        }
+      } catch { /* skip */ }
     }
 
     return findings;

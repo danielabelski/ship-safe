@@ -85,13 +85,13 @@ const PATTERNS = [
   // ── CICD-SEC-8: Ungoverned Usage of 3rd Party Services ────────────────────
   {
     rule: 'CICD_UNPINNED_ACTION',
-    title: 'CI/CD: Unpinned GitHub Action (uses @main/master)',
-    regex: /uses\s*:\s*[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+@(?:main|master|latest|v\d+)\b/g,
+    title: 'CI/CD: Unpinned GitHub Action (mutable tag)',
+    regex: /uses\s*:\s*[\w.-]+\/[\w.-]+@(?![\da-f]{40}\b)[\w./-]+/g,
     severity: 'high',
     cwe: 'CWE-829',
     owasp: 'CICD-SEC-8',
-    description: 'GitHub Action pinned to mutable tag. Pin to a specific commit SHA.',
-    fix: 'Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0',
+    description: 'GitHub Action not pinned to a full commit SHA. Mutable tags (@main, @master, @v1, @v1.2.3) can be force-pushed to malicious commits — the technique used in the 2026 Trivy/TeamPCP attack that compromised 10,000+ pipelines.',
+    fix: 'Pin to full 40-char commit SHA: uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2',
   },
   {
     rule: 'CICD_UNVERIFIED_ACTION',
@@ -142,6 +142,41 @@ const PATTERNS = [
     confidence: 'low',
     description: 'Artifacts/caches used without integrity verification. Consider adding checksums.',
     fix: 'Verify artifact integrity with checksums or signatures',
+  },
+
+  // ── CICD-SEC-6: Credential Exfiltration via Network ───────────────────────
+  {
+    rule: 'CICD_ENV_EXFILTRATION',
+    title: 'CI/CD: Potential Secret/Env Exfiltration',
+    regex: /(?:curl|wget|Invoke-WebRequest|Invoke-RestMethod)\b[^\n]*\$\{\{\s*(?:secrets\.|env\.)[^\}]+\}\}/g,
+    severity: 'critical',
+    cwe: 'CWE-200',
+    owasp: 'CICD-SEC-6',
+    description: 'Network call with a GitHub expression referencing secrets or env vars. This is the exfiltration technique used in the 2026 Trivy/CanisterWorm attack — stolen credentials were encrypted and POSTed to an attacker-controlled endpoint.',
+    fix: 'Never pass secrets directly to curl/wget arguments. Use environment variables and verify the destination URL.',
+  },
+
+  // ── CICD-SEC-2: OIDC Trust Misconfiguration ────────────────────────────────
+  {
+    rule: 'CICD_OIDC_BROAD_SUBJECT',
+    title: 'CI/CD: Overly Broad OIDC Subject Claim',
+    regex: /subject(?:_claim)?\s*[:=]\s*["']repo:[^"']*[*][^"']*["']/gi,
+    severity: 'critical',
+    cwe: 'CWE-284',
+    owasp: 'CICD-SEC-2',
+    description: 'OIDC subject claim uses a wildcard. Any repository or branch matching the pattern can assume this cloud role. In 2026, UNC6426 used a wildcard OIDC trust to escalate from a stolen GitHub PAT to AWS administrator in 72 hours.',
+    fix: 'Restrict the subject claim to a specific repo and branch: repo:owner/repo:ref:refs/heads/main',
+  },
+  {
+    rule: 'CICD_OIDC_MISSING_SUBJECT',
+    title: 'CI/CD: OIDC Token Request Without Subject Restriction',
+    regex: /id-token\s*:\s*write/g,
+    severity: 'medium',
+    cwe: 'CWE-284',
+    owasp: 'CICD-SEC-2',
+    confidence: 'low',
+    description: 'Workflow requests OIDC token (id-token: write). Verify the cloud trust policy restricts the subject claim to specific repos/branches to prevent privilege escalation.',
+    fix: 'Ensure the cloud IAM trust policy sets a specific sub condition, not a wildcard.',
   },
 
   // ── General CI/CD Issues ───────────────────────────────────────────────────
