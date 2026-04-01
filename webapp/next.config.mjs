@@ -20,6 +20,21 @@ const nextConfig = {
     '/api/scan': ['./node_modules/ship-safe/**/*'],
     '/api/og': ['./public/og-shipsafe.jpg'],
   },
+  // Prevent nft from including build-time artifacts in the Lambda bundle.
+  // .next/cache alone is 200+ MB and is never needed at runtime.
+  outputFileTracingExcludes: {
+    '*': [
+      './.next/cache/**/*',
+      './tsconfig.tsbuildinfo',
+      './.next/static/**/*',
+      './node_modules/ship-safe/node_modules/**/*',
+      './node_modules/ship-safe/website/**/*',
+      './node_modules/ship-safe/snippets/**/*',
+      './node_modules/ship-safe/docs/**/*',
+      './node_modules/ship-safe/article-assets/**/*',
+      './node_modules/ship-safe/marketing/**/*',
+    ],
+  },
 };
 
 export default nextConfig;
