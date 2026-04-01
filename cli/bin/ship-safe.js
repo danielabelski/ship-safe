@@ -44,6 +44,7 @@ import { openclawCommand } from '../commands/openclaw.js';
 import { scanSkillCommand } from '../commands/scan-skill.js';
 import { abomCommand } from '../commands/abom.js';
 import { updateIntelCommand } from '../commands/update-intel.js';
+import { hooksCommand } from '../commands/hooks.js';
 import { ABOMGenerator } from '../agents/abom-generator.js';
 import { PolicyEngine } from '../agents/policy-engine.js';
 import { SBOMGenerator } from '../agents/sbom-generator.js';
@@ -368,6 +369,26 @@ program
   .action(abomCommand);
 
 // -----------------------------------------------------------------------------
+// HOOKS COMMAND (Claude Code PreToolUse / PostToolUse integration)
+// -----------------------------------------------------------------------------
+program
+  .command('hooks [action]')
+  .description('Manage Claude Code hooks — real-time security gate on every Write, Edit, and Bash call')
+  .addHelpText('after', `
+Actions:
+  install   Register ship-safe as PreToolUse + PostToolUse hooks in ~/.claude/settings.json
+  remove    Unregister ship-safe hooks
+  status    Show whether hooks are installed
+
+How it works:
+  PreToolUse  — blocks Write/Edit if critical secrets are in the new content;
+                blocks dangerous Bash patterns (curl|bash, credential exfiltration)
+  PostToolUse — scans the file after it is written; injects advisory findings
+                into Claude's context so issues are caught immediately
+`)
+  .action(hooksCommand);
+
+// -----------------------------------------------------------------------------
 // UPDATE-INTEL COMMAND
 // -----------------------------------------------------------------------------
 program
@@ -416,6 +437,7 @@ if (process.argv.length === 2) {
   console.log(chalk.white('  npx ship-safe rotate .      ') + chalk.gray('# Revoke exposed keys (provider guides)'));
   console.log(chalk.white('  npx ship-safe deps .        ') + chalk.gray('# Audit dependencies for CVEs'));
   console.log(chalk.white('  npx ship-safe score .       ') + chalk.gray('# Security health score (0-100)'));
+  console.log(chalk.white('  npx ship-safe hooks install ') + chalk.gray('# Real-time security gate inside Claude Code (PreToolUse/PostToolUse)'));
   console.log(chalk.white('  npx ship-safe guard         ') + chalk.gray('# Block git push if secrets found'));
   console.log(chalk.white('  npx ship-safe init          ') + chalk.gray('# Add security configs to your project'));
   console.log(chalk.white('\n  npx ship-safe --help        ') + chalk.gray('# Show all options'));
