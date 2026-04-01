@@ -3,61 +3,28 @@
  * ship-safe PostToolUse Hook
  * ===========================
  *
- * Runs after Write / Edit / MultiEdit completes. Scans the modified file
- * for secrets and security issues, then returns findings as a message
- * that Claude Code injects back into the conversation context.
+ * Runs after Write / Edit / MultiEdit / NotebookEdit completes successfully.
+ * Scans the written content for secrets and security issues, then returns
+ * findings as a message that Claude Code injects back into the conversation.
  *
- * This is advisory — exit 0 always (PostToolUse cannot block).
- * Claude sees the stdout message and can act on findings immediately.
+ * For Write and Edit, content is read from tool_input (no disk read needed).
+ * For MultiEdit and NotebookEdit, the file is read from disk after the write.
  *
- * Protocol (claw-code / Claude Code hooks spec):
- *   - Input:  JSON payload on stdin
- *   - Exit 0: always (PostToolUse never blocks)
- *   - stdout: message injected into Claude's context (empty = silent)
+ * PostToolUse NEVER blocks — exit 0 always.
+ * Empty stdout = silent (no findings or file skipped).
  *
  * Install via:  npx ship-safe hooks install
  */
 
-import { existsSync, readFileSync } from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-// Same critical patterns as pre-tool-use (inline for startup speed)
-const CRITICAL_PATTERNS = [
-  { name: 'AWS Access Key ID',            severity: 'critical', re: /AKIA[0-9A-Z]{16}/ },
-  { name: 'GitHub PAT (classic)',          severity: 'critical', re: /ghp_[a-zA-Z0-9]{36}/ },
-  { name: 'GitHub OAuth Token',            severity: 'critical', re: /gho_[a-zA-Z0-9]{36}/ },
-  { name: 'GitHub App Token',              severity: 'critical', re: /ghu_[a-zA-Z0-9]{36}|ghs_[a-zA-Z0-9]{36}/ },
-  { name: 'GitHub Fine-Grained PAT',       severity: 'critical', re: /github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59}/ },
-  { name: 'Anthropic API Key',             severity: 'critical', re: /sk-ant-api03-[a-zA-Z0-9\-_]{93}/ },
-  { name: 'OpenAI API Key',                severity: 'critical', re: /sk-[a-zA-Z0-9]{48}/ },
-  { name: 'Stripe Live Secret Key',        severity: 'critical', re: /sk_live_[0-9a-zA-Z]{24,}/ },
-  { name: 'npm Auth Token',                severity: 'critical', re: /npm_[A-Za-z0-9]{36}/ },
-  { name: 'Private Key (PEM)',             severity: 'critical', re: /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/ },
-];
-
-// Broader high-severity patterns only checked post-write (advisory, not blocking)
-const HIGH_PATTERNS = [
-  { name: 'Hardcoded password assignment', severity: 'high',     re: /(?:password|passwd|pwd)\s*[:=]\s*["'][^"']{8,}["']/i },
-  { name: 'Database URL with credentials', severity: 'high',     re: /(?:postgres|mysql|mongodb|redis):\/\/[^:]+:[^@]{4,}@/ },
-  { name: 'Generic high-entropy token',    severity: 'high',     re: /(?:token|secret|key)\s*[:=]\s*["'][A-Za-z0-9+/=_\-]{32,}["']/i },
-];
-
-// Files we should never block or report on (test fixtures, examples)
-const SKIP_PATHS = [
-  /\.test\.[jt]sx?$/,
-  /\.spec\.[jt]sx?$/,
-  /__tests__[/\\]/,
-  /[/\\]tests?[/\\]/,
-  /[/\\]fixtures?[/\\]/,
-  /[/\\]mocks?[/\\]/,
-  /\.example$/,
-  /\.sample$/,
-  /CHANGELOG/i,
-  /\.md$/,
-];
+import { existsSync, readFileSync } from 'fs';
+import {
+  scanCritical,
+  scanHigh,
+  SKIP_PATHS,
+  ENV_FILE_RE,
+  ENV_EXAMPLE_RE,
+} from './patterns.js';
 
 // =============================================================================
 // Main
@@ -74,42 +41,33 @@ async function main() {
 
   const { tool_name, tool_input, tool_result_is_error } = payload;
 
-  // Only scan on successful file writes
   if (tool_result_is_error) process.exit(0);
-  if (!['Write', 'Edit', 'MultiEdit'].includes(tool_name)) process.exit(0);
+  if (!['Write', 'Edit', 'MultiEdit', 'NotebookEdit'].includes(tool_name)) process.exit(0);
 
-  const filePath = tool_input && (tool_input.file_path || tool_input.path);
+  const filePath = tool_input && (tool_input.file_path || tool_input.notebook_path || tool_input.path);
   if (!filePath) process.exit(0);
 
-  // Skip test/example files
+  // Skip example/sample env files entirely
+  if (ENV_EXAMPLE_RE.test(filePath)) process.exit(0);
+
+  // Skip test fixtures, mocks, etc.
   if (SKIP_PATHS.some(p => p.test(filePath))) process.exit(0);
 
-  // Read the file that was just written
-  let fileContent;
-  try {
-    if (!existsSync(filePath)) process.exit(0);
-    fileContent = readFileSync(filePath, 'utf8');
-  } catch {
-    process.exit(0);
-  }
+  // .env files: secrets are expected — no secret scan, but gitignore already
+  // warned in PreToolUse. Silent here.
+  if (ENV_FILE_RE.test(filePath)) process.exit(0);
 
-  const findings = [];
+  // Get content to scan
+  const content = getContent(tool_name, tool_input, filePath);
+  if (!content) process.exit(0);
 
-  for (const { name, severity, re } of [...CRITICAL_PATTERNS, ...HIGH_PATTERNS]) {
-    if (re.test(fileContent)) {
-      findings.push({ name, severity });
-    }
-  }
+  // Run scans
+  const critical = scanCritical(content);
+  const high = scanHigh(content);
 
-  if (findings.length === 0) {
-    // Silent — no output means no noise when everything is clean
-    process.exit(0);
-  }
+  if (critical.length === 0 && high.length === 0) process.exit(0);
 
-  // Format findings as a message Claude Code will inject into context
-  const critical = findings.filter(f => f.severity === 'critical');
-  const high = findings.filter(f => f.severity === 'high');
-
+  // Format advisory message for Claude's context
   const lines = [
     `[ship-safe] Security findings in ${path.basename(filePath)}:`,
     '',
@@ -117,20 +75,54 @@ async function main() {
 
   if (critical.length > 0) {
     lines.push('CRITICAL — rotate these credentials immediately:');
-    critical.forEach(f => lines.push(`  • ${f.name}`));
+    for (const { name, line } of critical) {
+      lines.push(`  • ${name}${line ? ` (line ${line})` : ''}`);
+    }
     lines.push('');
   }
 
   if (high.length > 0) {
     lines.push('HIGH — review these:');
-    high.forEach(f => lines.push(`  • ${f.name}`));
+    for (const { name } of high) {
+      lines.push(`  • ${name}`);
+    }
     lines.push('');
   }
 
   lines.push('Run `npx ship-safe scan .` for full details and auto-fix options.');
 
   process.stdout.write(lines.join('\n'));
-  process.exit(0); // PostToolUse never blocks
+  process.exit(0);
+}
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+/**
+ * Get the content to scan.
+ * Prefer tool_input (avoids a disk read) for Write and Edit.
+ * Fall back to disk read for MultiEdit and NotebookEdit.
+ */
+function getContent(toolName, input, filePath) {
+  if (toolName === 'Write' && input?.content) {
+    return input.content;
+  }
+  if (toolName === 'Edit' && input?.new_string) {
+    // For Edit, scan the full file so we catch pre-existing issues too
+    return readFromDisk(filePath);
+  }
+  // MultiEdit and NotebookEdit — read the final state from disk
+  return readFromDisk(filePath);
+}
+
+function readFromDisk(filePath) {
+  try {
+    if (!existsSync(filePath)) return null;
+    return readFileSync(filePath, 'utf8');
+  } catch {
+    return null;
+  }
 }
 
 function readStdin() {
