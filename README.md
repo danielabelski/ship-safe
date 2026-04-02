@@ -74,8 +74,6 @@ npx ship-safe hooks status
 npx ship-safe hooks remove
 ```
 
-![ship-safe terminal demo](.github/assets/ship%20safe%20terminal.jpg)
-
 ---
 
 ## The `audit` Command
