@@ -55,12 +55,29 @@ const OPENCLAW_GLOBS = [
 ];
 
 // openclaude (github.com/Gitlawb/openclaude) — Claude Code fork with
-// OpenAI-compatible shim. Ships with auth disabled and binds 0.0.0.0:18789.
-const OPENCLAUDE_FILES = [
-  'openclaude.json',
-  'openclaude.config.json',
-  '.openclaude/config.json',
-  '.openclaude/settings.json',
+// OpenAI-compatible provider shim. Config is purely via environment variables
+// (CLAUDE_CODE_USE_OPENAI, OPENAI_BASE_URL, OPENAI_MODEL, OPENAI_API_KEY).
+// The only persistent file artifact is .openclaude-profile.json, which stores
+// named profiles as { name, env: { OPENAI_BASE_URL, OPENAI_API_KEY, ... } }.
+const OPENCLAUDE_PROFILE_FILES = [
+  '.openclaude-profile.json',
+];
+
+// claw-code (github.com/instructkr/claw-code, now ultraworkers/claw-code) —
+// Rust + Python clean-room rewrite of Claude Code's agent harness.
+// CLI tool (`claw` binary). NOT a server — no port binding outside tests.
+// Config files: .claw.json (project root), .claw/settings.json,
+//   .claw/settings.local.json, ~/.claw.json, ~/.claw/settings.json
+// Auth: ANTHROPIC_API_KEY, OPENAI_API_KEY, or XAI_API_KEY env vars.
+// Permission modes: read-only, workspace-write, danger-full-access, prompt, allow.
+// --dangerously-skip-permissions flag disables all permission checks.
+// Sandbox: SandboxConfig with FilesystemIsolationMode (workspace-only default).
+// Hooks: preToolUse / postToolUse arrays in settings JSON.
+// MCP: mcpServers in settings JSON (stdio, sse, http, ws transports).
+const CLAW_CODE_FILES = [
+  '.claw.json',
+  '.claw/settings.json',
+  '.claw/settings.local.json',
 ];
 
 const MEMORY_GLOBS = [
@@ -239,10 +256,16 @@ export class AgentConfigScanner extends BaseAgent {
       findings = findings.concat(this._scanOpenClawConfig(file));
     }
 
-    // ── 3b. Scan openclaude configs ────────────────────────────────────────
+    // ── 3b. Scan openclaude profile files ─────────────────────────────────
     for (const file of discovered.openclaudeFiles) {
       findings = findings.concat(this.scanFileWithPatterns(file, PATTERNS));
-      findings = findings.concat(this._scanOpenClaudeConfig(file));
+      findings = findings.concat(this._scanOpenClaudeProfile(file));
+    }
+
+    // ── 3c. Scan claw-code config files ────────────────────────────────────
+    for (const file of discovered.clawCodeFiles) {
+      findings = findings.concat(this.scanFileWithPatterns(file, PATTERNS));
+      findings = findings.concat(this._scanClawCodeConfig(file));
     }
 
     // ── 4. Scan Claude Code hooks ──────────────────────────────────────────
@@ -312,14 +335,21 @@ export class AgentConfigScanner extends BaseAgent {
       memoryFiles.push(...globbed);
     } catch { /* skip */ }
 
-    // ── openclaude files ────────────────────────────────────────────────────
+    // ── openclaude profile files ─────────────────────────────────────────────
     const openclaudeFiles = [];
-    for (const rel of OPENCLAUDE_FILES) {
+    for (const rel of OPENCLAUDE_PROFILE_FILES) {
       const full = path.join(rootPath, rel);
       if (fs.existsSync(full)) openclaudeFiles.push(full);
     }
 
-    return { rulesFiles, openclawFiles, openclaudeFiles, claudeSettingsFiles, memoryFiles };
+    // ── claw-code config files ────────────────────────────────────────────────
+    const clawCodeFiles = [];
+    for (const rel of CLAW_CODE_FILES) {
+      const full = path.join(rootPath, rel);
+      if (fs.existsSync(full)) clawCodeFiles.push(full);
+    }
+
+    return { rulesFiles, openclawFiles, openclaudeFiles, clawCodeFiles, claudeSettingsFiles, memoryFiles };
   }
 
   // ===========================================================================
@@ -438,110 +468,32 @@ export class AgentConfigScanner extends BaseAgent {
   }
 
   /**
-   * Scan openclaude config files for insecure defaults.
+   * Scan .openclaude-profile.json for security issues.
    *
-   * openclaude (github.com/Gitlawb/openclaude) ships with:
-   *   - auth disabled by default
-   *   - gateway binding to 0.0.0.0:18789 (all interfaces)
-   *   - no tool/MCP allowlist
+   * openclaude (github.com/Gitlawb/openclaude) is a CLI tool, not a server.
+   * There is no config file, no host/port binding, no auth mechanism.
+   * All configuration is via environment variables:
+   *   CLAUDE_CODE_USE_OPENAI=1, OPENAI_BASE_URL, OPENAI_MODEL, OPENAI_API_KEY
    *
-   * Any openclaude instance on a cloud VM is exposed to the public
-   * internet by default. Prompt injection via a malicious file in
-   * the workspace = full machine access.
+   * The only persistent file artifact is .openclaude-profile.json, which stores
+   * named profiles as { name: string, env: { OPENAI_BASE_URL, OPENAI_API_KEY, ... } }.
+   * openclaude ships with this file in its default .gitignore.
+   *
+   * Security risk: if OPENAI_BASE_URL is an http:// (non-TLS) endpoint, all
+   * LLM traffic (prompts, code context, responses) is sent unencrypted.
    */
-  _scanOpenClaudeConfig(filePath) {
+  _scanOpenClaudeProfile(filePath) {
     const content = this.readFile(filePath);
     if (!content) return [];
     const findings = [];
 
-    let config;
-    try { config = JSON.parse(content); } catch { return []; }
+    let profile;
+    try { profile = JSON.parse(content); } catch { return []; }
 
-    // ── Auth explicitly disabled or missing ───────────────────────────────
-    const authVal = config.auth ?? config.authentication ?? config.gateway?.auth;
-    const authDisabled = authVal === false ||
-      (typeof authVal === 'object' && authVal !== null && authVal.enabled === false);
-    const authMissing = authVal === undefined || authVal === null;
+    const env = profile.env || {};
 
-    if (authDisabled) {
-      findings.push(createFinding({
-        file: filePath, line: 1,
-        severity: 'critical',
-        category: this.category,
-        rule: 'OPENCLAUDE_AUTH_DISABLED',
-        title: 'openclaude: Authentication Explicitly Disabled',
-        description:
-          'openclaude is configured with auth: false. Any client on the network can ' +
-          'connect and issue commands — read files, execute shell commands, write code. ' +
-          'openclaude ships with auth off by default; this must be explicitly enabled.',
-        matched: `auth: ${JSON.stringify(authVal)}`,
-        cwe: 'CWE-306',
-        owasp: 'A07:2021',
-        fix: 'Set auth: { enabled: true, apiKey: "<strong-random-key>" } in your openclaude config.',
-      }));
-    } else if (authMissing) {
-      findings.push(createFinding({
-        file: filePath, line: 1,
-        severity: 'critical',
-        category: this.category,
-        rule: 'OPENCLAUDE_AUTH_MISSING',
-        title: 'openclaude: No Authentication Configured',
-        description:
-          'openclaude config has no auth field. The default is unauthenticated — ' +
-          'anyone who can reach the port controls the agent.',
-        matched: 'auth field absent',
-        cwe: 'CWE-306',
-        owasp: 'A07:2021',
-        fix: 'Add auth: { enabled: true, apiKey: "<strong-random-key>" } to your openclaude config.',
-      }));
-    }
-
-    // ── Public binding on default port 18789 ─────────────────────────────
-    const host = config.host ?? config.bind ?? config.gateway?.host ?? '';
-    const port = config.port ?? config.gateway?.port ?? 18789;
-
-    if (host === '0.0.0.0' || host === '') {
-      findings.push(createFinding({
-        file: filePath, line: 1,
-        severity: 'critical',
-        category: this.category,
-        rule: 'OPENCLAUDE_PUBLIC_BINDING',
-        title: `openclaude: Gateway Exposed on ${host || '0.0.0.0'}:${port}`,
-        description:
-          `openclaude is binding to ${host || '0.0.0.0'} (all interfaces) on port ${port}. ` +
-          'On any cloud VM, VPS, or shared network this exposes the agent gateway to the ' +
-          'public internet. Combined with no auth, this gives anyone full agent control.',
-        matched: `host: "${host || '(default 0.0.0.0)'}", port: ${port}`,
-        cwe: 'CWE-668',
-        owasp: 'A05:2021',
-        fix: 'Set host: "127.0.0.1" to restrict to localhost. Use a reverse proxy with TLS and auth for remote access.',
-      }));
-    }
-
-    // ── No tool/MCP allowlist ─────────────────────────────────────────────
-    const hasAllowlist = config.allowedTools ?? config.toolAllowlist ??
-      config.mcpAllowlist ?? config.permissions?.allowedTools;
-    if (!hasAllowlist) {
-      findings.push(createFinding({
-        file: filePath, line: 1,
-        severity: 'high',
-        category: this.category,
-        rule: 'OPENCLAUDE_NO_TOOL_ALLOWLIST',
-        title: 'openclaude: No Tool Allowlist Configured',
-        description:
-          'openclaude has no tool or MCP allowlist. Every tool the agent can reach is ' +
-          'available to any prompt — including prompt injection via malicious files in ' +
-          'the workspace. Snyk ToxicSkills research found 36% of agent skills contain ' +
-          'security flaws including silent data exfiltration.',
-        matched: 'allowedTools / toolAllowlist absent',
-        cwe: 'CWE-269',
-        owasp: 'ASI03',
-        fix: 'Add allowedTools: ["bash", "read", "write"] with only the tools you actually need.',
-      }));
-    }
-
-    // ── Insecure model routing (no base URL validation) ───────────────────
-    const baseUrl = config.baseUrl ?? config.base_url ?? config.provider?.baseUrl ?? '';
+    // ── Insecure provider URL (http:// for non-localhost) ─────────────────
+    const baseUrl = env.OPENAI_BASE_URL || '';
     if (baseUrl && /^http:\/\/(?!localhost|127\.0\.0\.1|::1)/i.test(baseUrl)) {
       findings.push(createFinding({
         file: filePath, line: 1,
@@ -551,13 +503,137 @@ export class AgentConfigScanner extends BaseAgent {
         title: 'openclaude: LLM Provider URL Without TLS',
         description:
           `openclaude routes model calls to ${baseUrl} over plain HTTP. ` +
-          'Prompts, code context, and model responses are transmitted unencrypted. ' +
-          'A network attacker can read or modify all LLM interactions.',
-        matched: baseUrl,
+          'Prompts, code context, and model responses are sent unencrypted. ' +
+          'A network attacker can read or modify all LLM interactions in transit.',
+        matched: `OPENAI_BASE_URL: "${baseUrl}"`,
+        confidence: 'high',
         cwe: 'CWE-319',
         owasp: 'A02:2021',
         fix: 'Use an https:// provider URL. Never route LLM traffic over plaintext HTTP on untrusted networks.',
       }));
+    }
+
+    return findings;
+  }
+
+  /**
+   * Scan claw-code config files (.claw.json, .claw/settings.json, .claw/settings.local.json)
+   * for insecure settings.
+   *
+   * claw-code (ultraworkers/claw-code) is a Rust + Python clean-room rewrite of Claude Code.
+   * It is a CLI tool — no server port binding. Config lives in JSON settings files.
+   *
+   * Checked settings:
+   *   - hooks.preToolUse / hooks.postToolUse: shell hook commands (RCE vector)
+   *   - permissions.dangerouslySkipPermissions / permissionMode: "danger-full-access"
+   *   - sandbox.enabled: false (filesystem isolation disabled)
+   *   - mcpServers with insecure ws:// or http:// remote URLs (MiTM risk)
+   *   - mcpServers using env vars that could expose credentials
+   */
+  _scanClawCodeConfig(filePath) {
+    const content = this.readFile(filePath);
+    if (!content) return [];
+    const findings = [];
+
+    let config;
+    try { config = JSON.parse(content); } catch { return []; }
+
+    // ── Dangerous permission mode ─────────────────────────────────────────
+    const permMode = config.permissionMode ?? config.permissions?.mode ?? '';
+    const skipPerms = config.dangerouslySkipPermissions ??
+      config.permissions?.dangerouslySkipPermissions ?? false;
+
+    if (skipPerms === true || permMode === 'danger-full-access') {
+      findings.push(createFinding({
+        file: filePath, line: 1,
+        severity: 'high',
+        category: this.category,
+        rule: 'CLAW_CODE_SKIP_PERMISSIONS',
+        title: 'claw-code: All Permission Checks Disabled',
+        description:
+          'claw-code is configured with dangerously-skip-permissions or permissionMode: danger-full-access. ' +
+          'Every tool call executes without asking for user confirmation. ' +
+          'A single prompt injection in any file the agent reads can trigger unrestricted shell execution or file writes.',
+        matched: skipPerms ? 'dangerouslySkipPermissions: true' : `permissionMode: "${permMode}"`,
+        confidence: 'high',
+        cwe: 'CWE-269',
+        owasp: 'ASI03',
+        fix: 'Set permissionMode to "workspace-write" or "prompt". Only use danger-full-access in fully isolated environments.',
+      }));
+    }
+
+    // ── Sandbox disabled ──────────────────────────────────────────────────
+    if (config.sandbox?.enabled === false) {
+      findings.push(createFinding({
+        file: filePath, line: 1,
+        severity: 'medium',
+        category: this.category,
+        rule: 'CLAW_CODE_SANDBOX_DISABLED',
+        title: 'claw-code: Filesystem Sandbox Disabled',
+        description:
+          'claw-code sandbox is explicitly disabled. By default claw-code restricts ' +
+          'filesystem access to the workspace directory. With sandbox off, tools can ' +
+          'read and write anywhere on the system.',
+        matched: 'sandbox.enabled: false',
+        confidence: 'high',
+        cwe: 'CWE-732',
+        owasp: 'ASI03',
+        fix: 'Remove sandbox.enabled: false or set filesystem-mode to workspace-only.',
+      }));
+    }
+
+    // ── Hooks with shell commands ──────────────────────────────────────────
+    const hookLists = [
+      ...(config.hooks?.preToolUse || []),
+      ...(config.hooks?.postToolUse || []),
+    ];
+    for (const hook of hookLists) {
+      const cmd = typeof hook === 'string' ? hook : (hook.command || hook.cmd || hook.run || '');
+      if (!cmd) continue;
+      if (/(?:bash\s+-c|sh\s+-c|cmd\s+\/c|powershell\s+-|pwsh\s+-)/i.test(cmd) ||
+          /\|\s*(?:bash|sh|zsh|node|python)/i.test(cmd) ||
+          /(?:curl|wget)\s+https?:\/\/(?!localhost|127\.0\.0\.1)/i.test(cmd)) {
+        findings.push(createFinding({
+          file: filePath, line: 1,
+          severity: 'critical',
+          category: this.category,
+          rule: 'CLAW_CODE_HOOK_SHELL',
+          title: 'claw-code: Dangerous Hook Command',
+          description:
+            'claw-code hook contains a shell execution or remote download command. ' +
+            'A malicious .claw.json in a repository can achieve RCE when anyone ' +
+            'opens the project with claw.',
+          matched: cmd.substring(0, 150),
+          confidence: 'high',
+          cwe: 'CWE-94',
+          owasp: 'ASI04',
+          fix: 'Remove shell execution hooks. Use only safe, scoped commands in claw hooks.',
+        }));
+      }
+    }
+
+    // ── MCP servers with insecure remote URLs ─────────────────────────────
+    const mcpServers = config.mcpServers || {};
+    for (const [name, srv] of Object.entries(mcpServers)) {
+      const url = typeof srv === 'object' ? (srv.url || '') : '';
+      if (/^(?:ws|http):\/\/(?!localhost|127\.0\.0\.1|::1)/i.test(url)) {
+        findings.push(createFinding({
+          file: filePath, line: 1,
+          severity: 'high',
+          category: this.category,
+          rule: 'CLAW_CODE_MCP_INSECURE_URL',
+          title: `claw-code: MCP Server "${name}" Uses Unencrypted Transport`,
+          description:
+            `MCP server "${name}" connects to ${url} over an unencrypted channel (ws:// or http://). ` +
+            'All MCP messages — tool calls, results, and any code context — are sent in plaintext. ' +
+            'A network attacker can intercept or inject MCP responses to hijack the agent.',
+          matched: url,
+          confidence: 'high',
+          cwe: 'CWE-319',
+          owasp: 'A02:2021',
+          fix: 'Use wss:// or https:// for all non-localhost MCP server connections.',
+        }));
+      }
     }
 
     return findings;

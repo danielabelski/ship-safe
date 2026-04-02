@@ -42,6 +42,7 @@ import { vibeCheckCommand } from '../commands/vibe-check.js';
 import { benchmarkCommand } from '../commands/benchmark.js';
 import { openclawCommand } from '../commands/openclaw.js';
 import { scanSkillCommand } from '../commands/scan-skill.js';
+import { scanMcpCommand } from '../commands/scan-mcp.js';
 import { abomCommand } from '../commands/abom.js';
 import { updateIntelCommand } from '../commands/update-intel.js';
 import { hooksCommand } from '../commands/hooks.js';
@@ -365,6 +366,15 @@ program
   .action(scanSkillCommand);
 
 // -----------------------------------------------------------------------------
+// SCAN-MCP COMMAND
+// -----------------------------------------------------------------------------
+program
+  .command('scan-mcp [target]')
+  .description('Analyze an MCP server\'s tool manifest for security issues before connecting')
+  .option('--json', 'Output results as JSON')
+  .action(scanMcpCommand);
+
+// -----------------------------------------------------------------------------
 // ABOM COMMAND
 // -----------------------------------------------------------------------------
 program
@@ -439,6 +449,7 @@ if (process.argv.length === 2) {
   console.log(chalk.white('  npx ship-safe watch .       ') + chalk.gray('# Continuous monitoring mode'));
   console.log(chalk.white('  npx ship-safe openclaw .    ') + chalk.gray('# OpenClaw & agent config security scan'));
   console.log(chalk.white('  npx ship-safe scan-skill <u>') + chalk.gray('# Vet a skill before installing'));
+  console.log(chalk.white('  npx ship-safe scan-mcp <url> ') + chalk.gray('# Vet an MCP server before connecting'));
   console.log(chalk.white('  npx ship-safe abom .        ') + chalk.gray('# Agent Bill of Materials (CycloneDX)'));
   console.log(chalk.white('  npx ship-safe sbom .        ') + chalk.gray('# Generate CycloneDX SBOM (CRA-ready)'));
   console.log(chalk.white('  npx ship-safe legal .        ') + chalk.gray('# Legal risk audit: DMCA, leaked source, IP disputes'));

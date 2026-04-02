@@ -1482,15 +1482,15 @@ describe('LegalRiskAgent', async () => {
     return dir;
   }
 
-  it('flags claw-code (DMCA) in package.json', async () => {
-    const dir = makeNpmProject({ 'claw-code': '^1.0.0', express: '^4.18.0' });
+  it('flags claw-code-js (leaked-source DMCA) in package.json', async () => {
+    const dir = makeNpmProject({ 'claw-code-js': '^1.0.0', express: '^4.18.0' });
     try {
       const agent = new LegalRiskAgent();
       const findings = await agent.analyze({ rootPath: dir, files: [] });
       assert.equal(findings.length, 1);
-      assert.equal(findings[0].rule, 'LEGAL_RISK_DMCA');
+      assert.equal(findings[0].rule, 'LEGAL_RISK_LEAKED_SOURCE');
       assert.equal(findings[0].severity, 'high');
-      assert.ok(findings[0].title.includes('claw-code'));
+      assert.ok(findings[0].title.includes('claw-code-js'));
     } finally { cleanup(dir); }
   });
 
@@ -1532,12 +1532,12 @@ describe('LegalRiskAgent', async () => {
     } finally { cleanup(dir); }
   });
 
-  it('flags claw-code with caret range (strips semver prefix)', async () => {
-    const dir = makeNpmProject({ 'claw-code': '^0.9.0' });
+  it('flags claw-code-js with caret range (strips semver prefix)', async () => {
+    const dir = makeNpmProject({ 'claw-code-js': '^0.9.0' });
     try {
       const agent = new LegalRiskAgent();
       const findings = await agent.analyze({ rootPath: dir, files: [] });
-      // claw-code versions = '*' so any version matches
+      // claw-code-js versions = '*' so any version matches
       assert.equal(findings.length, 1);
     } finally { cleanup(dir); }
   });
@@ -1554,7 +1554,7 @@ describe('LegalRiskAgent', async () => {
   });
 
   it('returns category "legal" on all findings', async () => {
-    const dir = makeNpmProject({ 'claw-code': '1.0.0', 'claw-code-js': '1.0.0' });
+    const dir = makeNpmProject({ 'openclaude': '1.0.0', 'claw-code-js': '1.0.0' });
     try {
       const agent = new LegalRiskAgent();
       const findings = await agent.analyze({ rootPath: dir, files: [] });

@@ -18,9 +18,9 @@
 
 18 security agents. 80+ attack classes. One command.
 
-**Ship Safe v6.2.0** is an AI-powered security platform that runs 18 specialized agents in parallel against your codebase, scanning for secrets, injection vulnerabilities, auth bypass, SSRF, supply chain attacks, Supabase RLS misconfigs, Docker/Terraform/Kubernetes misconfigs, CI/CD pipeline poisoning, LLM/agentic AI security, MCP server misuse, RAG poisoning, PII compliance, vibe coding patterns, exception handling, AI agent config security, and more. OWASP 2025 scoring with EPSS exploit probability. LLM-powered deep analysis verifies exploitability of critical findings. Secrets verification probes provider APIs to check if leaked keys are still active. Compliance mapping to SOC 2, ISO 27001, and NIST AI RMF. Built-in threat intelligence feed with offline-first IOC matching. CI integration with GitHub PR comments, threshold gating, and SARIF output.
+**Ship Safe v6.4.0** is an AI-powered security platform that runs 18 specialized agents in parallel against your codebase, scanning for secrets, injection vulnerabilities, auth bypass, SSRF, supply chain attacks, Supabase RLS misconfigs, Docker/Terraform/Kubernetes misconfigs, CI/CD pipeline poisoning, LLM/agentic AI security, MCP server misuse, RAG poisoning, PII compliance, vibe coding patterns, exception handling, AI agent config security, and more. OWASP 2025 scoring with EPSS exploit probability. LLM-powered deep analysis verifies exploitability of critical findings. Secrets verification probes provider APIs to check if leaked keys are still active. Compliance mapping to SOC 2, ISO 27001, and NIST AI RMF. Built-in threat intelligence feed with offline-first IOC matching. CI integration with GitHub PR comments, threshold gating, and SARIF output.
 
-**v6.2.0 highlights:** Real-time Claude Code hooks (`npx ship-safe hooks install`) block secrets before they land on disk. Universal LLM support — use Groq, Together AI, Mistral, DeepSeek, xAI, Perplexity, LM Studio, or any OpenAI-compatible endpoint for deep analysis. Supply chain IOC matching for known-compromised packages and CanisterWorm-style ICP blockchain C2 indicators.
+**v6.4.0 highlights:** MCP server scanning (`npx ship-safe scan-mcp`) vets tool manifests for prompt injection and credential harvesting before you connect. Detection support for openclaude and claw-code — the two most-starred Claude Code forks from the March 2026 source leak — with accurate config scanning based on their actual architectures. Four new CI/CD patterns flag AI agent danger modes in pipelines. Legal dataset corrected: claw-code reclassified as a clean-room rewrite, not a leaked-source derivative.
 
 [Documentation](https://shipsafecli.com/docs) | [Blog](https://shipsafecli.com/blog) | [Pricing](https://shipsafecli.com/pricing)
 
@@ -169,10 +169,10 @@ npx ship-safe audit .
 | **PIIComplianceAgent** | Compliance | PII detection — SSNs, credit cards, emails, phone numbers in source code, logs, and configs |
 | **VibeCodingAgent** | Code Vulns | AI-generated code patterns — no input validation, empty catch blocks, hardcoded secrets, disabled security features, TODO-auth patterns |
 | **ExceptionHandlerAgent** | Code Vulns | OWASP A10:2025 — empty catch blocks, unhandled promise rejections, missing React error boundaries, leaked stack traces, generic catch-all without rethrow |
-| **AgentConfigScanner** | AI/LLM | AI agent config security — prompt injection in .cursorrules/CLAUDE.md/AGENTS.md/.windsurfrules, malicious Claude Code hooks (CVE-2026), OpenClaw public binding & malicious skills, encoded/obfuscated payloads, data exfiltration instructions, agent memory poisoning |
+| **AgentConfigScanner** | AI/LLM | AI agent config security — prompt injection in .cursorrules/CLAUDE.md/AGENTS.md/.windsurfrules, malicious Claude Code hooks (CVE-2026), OpenClaw public binding & malicious skills, openclaude profile file (`OPENAI_BASE_URL` over http://), claw-code config (`danger-full-access`, disabled sandbox, shell hooks, insecure MCP transports), encoded/obfuscated payloads, data exfiltration instructions, agent memory poisoning |
 | **MobileScanner** | Mobile | OWASP Mobile Top 10 2024 — insecure storage, WebView JS injection, HTTP endpoints, excessive permissions, debug mode |
 | **GitHistoryScanner** | Secrets | Leaked secrets in git commit history (checks if still active in working tree) |
-| **CICDScanner** | CI/CD | OWASP CI/CD Top 10 — pipeline poisoning, unpinned actions, secret logging, self-hosted runners, script injection |
+| **CICDScanner** | CI/CD | OWASP CI/CD Top 10 — pipeline poisoning, unpinned actions, secret logging, self-hosted runners, script injection, AI agent danger flags (`--dangerously-skip-permissions`, insecure provider URLs in CI) |
 | **APIFuzzer** | API | Routes without auth, missing input validation, mass assignment, unrestricted file upload, GraphQL introspection, debug endpoints, missing rate limiting, OpenAPI spec security issues |
 | **ReconAgent** | Recon | Attack surface discovery — frameworks, languages, auth patterns, databases, cloud providers, IaC, CI/CD pipelines |
 
@@ -299,13 +299,13 @@ npx ship-safe audit . --verify
 npx ship-safe doctor
 ```
 
-### OpenClaw Security
+### Agent Security
 
 ```bash
 # Focused OpenClaw security scan
 npx ship-safe openclaw .
 
-# Auto-harden OpenClaw configs (0.0.0.0→127.0.0.1, add auth, ws→wss)
+# Auto-harden OpenClaw configs (0.0.0.0->127.0.0.1, add auth, ws->wss)
 npx ship-safe openclaw . --fix
 
 # Red team: simulate ClawJacked, prompt injection, data exfil attacks
@@ -319,12 +319,34 @@ npx ship-safe scan-skill https://clawhub.io/skills/some-skill
 npx ship-safe scan-skill ./local-skill.json
 npx ship-safe scan-skill --all              # Scan all skills from openclaw.json
 
+# Scan an MCP server's tool manifest before connecting
+npx ship-safe scan-mcp https://your-mcp-server/
+npx ship-safe scan-mcp ./local-manifest.json
+npx ship-safe scan-mcp https://your-mcp-server/ --json
+
+# Legal risk audit — DMCA, leaked-source derivatives (openclaude, claw-code-js), IP disputes
+npx ship-safe legal .
+
 # Generate hardened OpenClaw config
 npx ship-safe init --openclaw
 
 # Generate Agent Bill of Materials (CycloneDX 1.5)
 npx ship-safe abom .
 ```
+
+#### openclaude and claw-code
+
+Ship Safe detects security issues in both major Claude Code forks from the March 2026 source leak.
+
+**openclaude** (`@gitlawb/openclaude`) is a CLI tool that routes Claude Code's toolset through any OpenAI-compatible provider. Its only persistent file artifact is `.openclaude-profile.json`. Ship Safe flags:
+- `OPENAI_BASE_URL` using `http://` for non-localhost endpoints (unencrypted LLM traffic)
+- The profile file present in a project not covered by `.gitignore` (API key exposure risk)
+
+**claw-code** (`ultraworkers/claw-code`) is a clean-room Rust + Python rewrite of Claude Code's agent harness. Its config lives in `.claw.json`, `.claw/settings.json`, and `.claw/settings.local.json`. Ship Safe flags:
+- `permissionMode: danger-full-access` or `dangerouslySkipPermissions: true` (no confirmation on any tool call)
+- `sandbox.enabled: false` (filesystem isolation removed)
+- Hook commands containing shell execution or remote download patterns
+- MCP server connections over `ws://` or `http://` to non-localhost hosts
 
 ### Threat Intelligence
 

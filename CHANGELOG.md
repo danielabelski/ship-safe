@@ -6,6 +6,35 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [6.4.0] — 2026-04-01
+
+### Added
+
+- **`ship-safe scan-mcp [target]`** — new command that fetches and analyzes an MCP server's tool manifest before you connect to it. Accepts a remote URL (queries `tools/list` via JSON-RPC 2.0, with fallbacks to `GET /tools` and root endpoint) or a local manifest file. Checks every tool definition for prompt injection in descriptions, silent exfiltration instructions, credential harvesting patterns, sensitive path references, output suppression, permission escalation, known exfiltration service domains, dangerous tool names (`exec`, `shell`, `bash`, `run_command`), unsafe input schema parameters (`command`, `code`, `script`, `eval`), and tools requiring sensitive credential parameters. Runs threat intel hash and signature matching on the full manifest. Exits non-zero on critical findings for use in CI. `--json` flag for machine-readable output.
+
+- **openclaude detection** — `AgentConfigScanner` now detects `.openclaude-profile.json` (the only persistent file openclaude creates) and flags `OPENAI_BASE_URL` values using plain `http://` for non-localhost endpoints. This covers the real security surface of openclaude: a CLI tool whose config is env-var-only, with the profile file as the sole file artifact. Corrects earlier detection rules that were based on a server architecture openclaude does not have.
+
+- **claw-code detection** — `AgentConfigScanner` now scans `.claw.json`, `.claw/settings.json`, and `.claw/settings.local.json` (the actual config files used by the claw-code Rust/Python rewrite). Detects: `permissionMode: danger-full-access` or `dangerouslySkipPermissions: true` (disables all confirmation dialogs), `sandbox.enabled: false` (removes filesystem isolation), hook commands containing shell execution or remote download patterns (RCE via committed `.claw.json`), and MCP server connections over unencrypted `ws://` or `http://` to non-localhost hosts.
+
+- **CI/CD agent safety patterns** — four new rules in `CICDScanner`:
+  - `CICD_AGENT_SKIP_PERMISSIONS` — flags `--dangerously-skip-permissions` in CI workflow steps (critical)
+  - `CICD_AGENT_INSECURE_PROVIDER` — flags AI agent provider env vars using `http://` for non-localhost (high)
+  - `CICD_OPENCLAUDE_IN_CI` — flags `openclaude` invoked in CI, reminding operators to verify secrets and profile hygiene (medium)
+  - `CICD_CLAW_DANGER_MODE` — flags `claw --dangerously-skip-permissions` in CI (critical)
+
+- **Legal dataset corrections** — removed `claw-code` from `LEGALLY_RISKY_PACKAGES`. The instructkr/claw-code repository has pivoted to a clean-room Rust + Python rewrite and explicitly removed the leaked Anthropic TypeScript. It is not a DMCA-covered derivative. `claw-code-js` and `openclaude`/`openclaude-core` remain flagged as leaked-source derivatives under active enforcement.
+
+- **openclaude and claw-code blog posts** — two new security research posts on the Ship Safe blog: architecture breakdowns, real config surfaces, and concrete risks for teams running either tool.
+
+- **KAIROS blog post** — analysis of the autonomous background agent mode discovered in the leaked Claude Code source. Documents why proactive/heartbeat-loop agents change the threat model for prompt injection, which attack vectors become practical, and what to configure in claw-code and openclaude to reduce exposure.
+
+### Fixed
+
+- **openclaude detection correctness** — previous release incorrectly modeled openclaude as a server with auth/host/port config fields. Replaced with accurate profile-file-based detection. Previous blog post claiming openclaude binds to `0.0.0.0:18789` has been corrected.
+- **claw-code legal classification** — previous release classified claw-code as a DMCA-covered leaked-source derivative. Corrected after reading the actual repository: it is a clean-room rewrite.
+
+---
+
 ## [6.3.0] — 2026-04-01
 
 ### Added

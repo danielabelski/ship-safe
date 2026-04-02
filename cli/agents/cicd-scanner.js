@@ -199,6 +199,48 @@ const PATTERNS = [
     description: 'GitHub expression in run step. Attacker-controlled values can inject shell commands.',
     fix: 'Use environment variables: env: TITLE: ${{ github.event.issue.title }} then run: echo "$TITLE"',
   },
+
+  // ── AI Agent CLI — dangerous flags in CI ──────────────────────────────────
+  {
+    rule: 'CICD_AGENT_SKIP_PERMISSIONS',
+    title: 'CI/CD: AI Agent Running Without Permission Checks',
+    regex: /(?:--dangerously-skip-permissions|--skip-permissions|permissionMode\s*[=:]\s*["']?danger-full-access["']?)/g,
+    severity: 'critical',
+    cwe: 'CWE-269',
+    owasp: 'ASI03',
+    description: 'AI agent CLI flag disables all permission checks. In CI, this means any prompt injection in workspace files can execute arbitrary commands with no confirmation gate.',
+    fix: 'Remove --dangerously-skip-permissions. Use --permission-mode=workspace-write for CI automation or scope tool access with --allowedTools.',
+  },
+  {
+    rule: 'CICD_AGENT_INSECURE_PROVIDER',
+    title: 'CI/CD: AI Agent Routing to Non-TLS Provider',
+    regex: /(?:OPENAI_BASE_URL|ANTHROPIC_BASE_URL|XAI_BASE_URL|CLAUDE_CODE_USE_OPENAI)\s*=\s*["']?http:\/\/(?!localhost|127\.0\.0\.1|::1)/g,
+    severity: 'high',
+    cwe: 'CWE-319',
+    owasp: 'A02:2021',
+    description: 'AI agent provider URL uses plain HTTP for a non-localhost endpoint. All prompts, code context, and model responses are transmitted unencrypted in CI.',
+    fix: 'Use https:// for all non-localhost AI provider base URLs.',
+  },
+  {
+    rule: 'CICD_OPENCLAUDE_IN_CI',
+    title: 'CI/CD: openclaude Running in CI Pipeline',
+    regex: /(?:^|\s)openclaude\s/gm,
+    severity: 'medium',
+    cwe: 'CWE-1188',
+    owasp: 'ASI03',
+    description: 'openclaude (Claude Code fork with OpenAI-compatible shim) is invoked in CI. Verify OPENAI_BASE_URL is https://, OPENAI_API_KEY is stored as a secret, and .openclaude-profile.json is not committed.',
+    fix: 'Ensure OPENAI_API_KEY is a CI secret, OPENAI_BASE_URL uses https://, and .openclaude-profile.json is gitignored.',
+  },
+  {
+    rule: 'CICD_CLAW_DANGER_MODE',
+    title: 'CI/CD: claw-code Running in Danger Mode',
+    regex: /(?:^|\s)claw\s[^\n]*--dangerously-skip-permissions/gm,
+    severity: 'critical',
+    cwe: 'CWE-269',
+    owasp: 'ASI03',
+    description: 'claw-code (Rust/Python Claude Code rewrite) is invoked with --dangerously-skip-permissions in CI. Any prompt injection in the workspace executes without confirmation.',
+    fix: 'Remove --dangerously-skip-permissions. Use --permission-mode=workspace-write for CI automation.',
+  },
 ];
 
 export class CICDScanner extends BaseAgent {

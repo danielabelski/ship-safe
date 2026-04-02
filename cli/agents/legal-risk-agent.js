@@ -38,22 +38,14 @@ export const LEGALLY_RISKY_PACKAGES = [
   // Anthropic's Claude Code source was accidentally leaked. Several repos
   // appeared immediately; Anthropic filed DMCA takedowns but derivatives
   // remain online. Shipping any of these exposes you to IP liability.
+  //
+  // NOTE: The instructkr/claw-code repo (now ultraworkers/claw-code) has since
+  // pivoted to a clean-room Rust + Python rewrite and explicitly removed the
+  // leaked snapshot. The GitHub repo itself is no longer a DMCA concern.
+  // However, any claw-code npm package published in the March 31–April 2 2026
+  // window may have contained the leaked TypeScript source before the pivot.
+  // Flag early versions as a precaution; assess the specific published version.
   // ---------------------------------------------------------------------------
-  {
-    name: 'claw-code',
-    versions: '*',
-    ecosystem: 'npm',
-    risk: 'dmca',
-    severity: 'high',
-    detail:
-      'Derived from leaked Anthropic Claude Code source (March 2026). ' +
-      'Anthropic has filed DMCA takedown notices. Shipping this package ' +
-      'may expose your project to IP infringement liability.',
-    references: [
-      'https://cybernews.com/security/anthropic-claude-code-source-leak/',
-      'https://venturebeat.com/technology/claude-codes-source-code-appears-to-have-leaked-heres-what-we-know',
-    ],
-  },
   {
     name: 'claw-code-js',
     versions: '*',
