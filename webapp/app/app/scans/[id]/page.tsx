@@ -2,6 +2,10 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import {
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+} from 'recharts';
 import s from './scan-detail.module.css';
 
 /* ── Types ────────────────────────────────────────────── */
@@ -83,9 +87,14 @@ interface ScanData {
 
 /* ── Helpers ──────────────────────────────────────────── */
 
-const scoreColor = (n: number) => n >= 80 ? 'var(--green)' : n >= 60 ? 'var(--yellow)' : 'var(--red)';
-
+const scoreColor = (n: number) => n >= 80 ? '#16a34a' : n >= 60 ? '#d97706' : '#dc2626';
 const sevOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+const SEV_COLORS: Record<string, string> = {
+  critical: '#dc2626',
+  high: '#ea580c',
+  medium: '#d97706',
+  low: '#16a34a',
+};
 
 const catIcons: Record<string, string> = {
   secrets: '🔑', injection: '💉', deps: '📦', auth: '🔒',
@@ -93,6 +102,189 @@ const catIcons: Record<string, string> = {
 };
 
 type Tab = 'findings' | 'remediation' | 'deps' | 'agents' | 'raw';
+
+/* ── Score Gauge (SVG semicircle) ─────────────────────── */
+
+function ScoreGauge({ score, grade }: { score: number; grade: string | null }) {
+  const [display, setDisplay] = useState(0);
+  const R = 68;
+  const cx = 90;
+  const cy = 90;
+  const arcLen = Math.PI * R; // half circumference
+  const dashArray = arcLen;
+  const dashOffset = arcLen * (1 - display / 100);
+  const color = scoreColor(score);
+
+  useEffect(() => {
+    const duration = 1600;
+    const start = performance.now();
+    function tick(now: number) {
+      const p = Math.min((now - start) / duration, 1);
+      const ep = 1 - Math.pow(1 - p, 3);
+      setDisplay(Math.round(ep * score));
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }, [score]);
+
+  const label = score >= 90 ? 'Ship it!' : score >= 75 ? 'Looking good' : score >= 60 ? 'Needs work' : 'At risk';
+
+  return (
+    <div className={s.gaugeWrap}>
+      <svg viewBox="0 0 180 100" className={s.gaugeSvg} aria-label={`Security score: ${score} out of 100`}>
+        <defs>
+          <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#dc2626" />
+            <stop offset="40%" stopColor="#d97706" />
+            <stop offset="75%" stopColor="#06b6d4" />
+            <stop offset="100%" stopColor="#16a34a" />
+          </linearGradient>
+          <filter id="gaugeGlow">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+        {/* Track */}
+        <path
+          d={`M ${cx - R} ${cy} A ${R} ${R} 0 0 1 ${cx + R} ${cy}`}
+          fill="none" stroke="#e5e7eb" strokeWidth="10" strokeLinecap="round"
+        />
+        {/* Filled arc */}
+        <path
+          d={`M ${cx - R} ${cy} A ${R} ${R} 0 0 1 ${cx + R} ${cy}`}
+          fill="none"
+          stroke={color}
+          strokeWidth="10"
+          strokeLinecap="round"
+          strokeDasharray={`${dashArray}`}
+          strokeDashoffset={`${dashOffset}`}
+          style={{ transition: 'stroke-dashoffset 1.6s cubic-bezier(0.16,1,0.3,1), stroke 0.4s' }}
+          filter="url(#gaugeGlow)"
+        />
+        {/* Score number */}
+        <text x={cx} y={cy - 10} textAnchor="middle" className={s.gaugeNum} fill={color}>{display}</text>
+        <text x={cx} y={cy + 8} textAnchor="middle" className={s.gaugeDen} fill="#9ca3af">/100</text>
+      </svg>
+      <div className={s.gaugeFooter}>
+        {grade && <span className={s.gaugeGrade} style={{ color }}>{grade}</span>}
+        <span className={s.gaugeLabel} style={{ color }}>{label}</span>
+      </div>
+      <div className={s.gaugeGlowRing} style={{ boxShadow: `0 0 40px ${color}22, 0 0 80px ${color}0a` }} />
+    </div>
+  );
+}
+
+/* ── Severity Donut Chart ─────────────────────────────── */
+
+function SeverityDonut({ findings }: { findings: Finding[] }) {
+  const counts = findings.reduce((acc, f) => {
+    acc[f.severity] = (acc[f.severity] ?? 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const data = (['critical', 'high', 'medium', 'low'] as const)
+    .filter(s => counts[s] > 0)
+    .map(s => ({ name: s, value: counts[s], color: SEV_COLORS[s] }));
+
+  if (data.length === 0) return null;
+
+  return (
+    <div className={s.donutWrap}>
+      <div className={s.donutTitle}>Severity breakdown</div>
+      <ResponsiveContainer width="100%" height={140}>
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="70%"
+            innerRadius={42}
+            outerRadius={58}
+            startAngle={180}
+            endAngle={0}
+            paddingAngle={2}
+            dataKey="value"
+            animationBegin={0}
+            animationDuration={1200}
+          >
+            {data.map((entry, i) => (
+              <Cell key={i} fill={entry.color} stroke="none" />
+            ))}
+          </Pie>
+          <Tooltip
+            formatter={(value, name) => [value, String(name).charAt(0).toUpperCase() + String(name).slice(1)]}
+            contentStyle={{ fontSize: 12, fontFamily: 'var(--font-mono)', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8 }}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+      <div className={s.donutLegend}>
+        {data.map(d => (
+          <div key={d.name} className={s.donutLegendItem}>
+            <span className={s.donutDot} style={{ background: d.color }} />
+            <span className={s.donutLegendName}>{d.name}</span>
+            <span className={s.donutLegendCount}>{d.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── OWASP Category Bar Chart ─────────────────────────── */
+
+function OWASPChart({ categories }: { categories: Record<string, CategoryInfo> }) {
+  const data = Object.entries(categories)
+    .filter(([, c]) => c.findingCount > 0)
+    .sort(([, a], [, b]) => b.findingCount - a.findingCount)
+    .map(([, c]) => ({
+      name: c.label.length > 14 ? c.label.slice(0, 13) + '…' : c.label,
+      findings: c.findingCount,
+      deduction: c.deduction,
+      fill: c.counts.critical > 0 ? SEV_COLORS.critical
+          : c.counts.high > 0    ? SEV_COLORS.high
+          : c.counts.medium > 0  ? SEV_COLORS.medium
+          : SEV_COLORS.low,
+    }));
+
+  if (data.length === 0) return null;
+
+  return (
+    <div className={s.barChartWrap}>
+      <div className={s.barChartTitle}>Findings by category</div>
+      <ResponsiveContainer width="100%" height={data.length * 38 + 20}>
+        <BarChart
+          data={data}
+          layout="vertical"
+          margin={{ top: 0, right: 40, bottom: 0, left: 0 }}
+          barCategoryGap="30%"
+        >
+          <CartesianGrid horizontal={false} stroke="#f3f4f6" />
+          <XAxis
+            type="number"
+            tick={{ fontSize: 11, fontFamily: 'var(--font-mono)', fill: '#9ca3af' }}
+            axisLine={false} tickLine={false}
+            allowDecimals={false}
+          />
+          <YAxis
+            type="category"
+            dataKey="name"
+            width={94}
+            tick={{ fontSize: 11, fontFamily: 'var(--font-sans)', fill: '#6b7280' }}
+            axisLine={false} tickLine={false}
+          />
+          <Tooltip
+            formatter={(v) => [String(v) + ' findings']}
+            contentStyle={{ fontSize: 12, fontFamily: 'var(--font-mono)', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8 }}
+          />
+          <Bar dataKey="findings" radius={[0, 5, 5, 0]} animationBegin={200} animationDuration={1000}>
+            {data.map((entry, i) => (
+              <Cell key={i} fill={entry.fill} fillOpacity={0.85} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
 
 /* ── Scanning Steps (shown during progress) ──────────── */
 
@@ -109,10 +301,8 @@ function ScanProgress({ startedAt }: { startedAt: string }) {
   const [activeStep, setActiveStep] = useState(0);
 
   useEffect(() => {
-    let elapsed = Date.now() - new Date(startedAt).getTime();
+    const elapsed = Date.now() - new Date(startedAt).getTime();
     let cumulative = 0;
-
-    // Figure out which step we should be on based on elapsed time
     let initialStep = 0;
     for (let i = 0; i < SCAN_STEPS.length; i++) {
       cumulative += SCAN_STEPS[i].duration;
@@ -121,15 +311,12 @@ function ScanProgress({ startedAt }: { startedAt: string }) {
     }
     setActiveStep(initialStep);
 
-    // Advance steps on timers
     const timers: ReturnType<typeof setTimeout>[] = [];
     cumulative = 0;
     for (let i = 0; i < SCAN_STEPS.length; i++) {
       cumulative += SCAN_STEPS[i].duration;
       const remaining = cumulative - elapsed;
-      if (remaining > 0) {
-        timers.push(setTimeout(() => setActiveStep(Math.min(i + 1, SCAN_STEPS.length - 1)), remaining));
-      }
+      if (remaining > 0) timers.push(setTimeout(() => setActiveStep(Math.min(i + 1, SCAN_STEPS.length - 1)), remaining));
     }
     return () => timers.forEach(clearTimeout);
   }, [startedAt]);
@@ -139,6 +326,10 @@ function ScanProgress({ startedAt }: { startedAt: string }) {
       <div className={s.progressHeader}>
         <span className={s.pulseOrb} />
         <span className={s.runningText}>Scan in progress</span>
+        <span className={s.progressPct}>{Math.round((activeStep / SCAN_STEPS.length) * 100)}%</span>
+      </div>
+      <div className={s.progressBar}>
+        <div className={s.progressFill} style={{ width: `${(activeStep / SCAN_STEPS.length) * 100}%` }} />
       </div>
       <div className={s.progressSteps}>
         {SCAN_STEPS.map((step, i) => {
@@ -147,7 +338,7 @@ function ScanProgress({ startedAt }: { startedAt: string }) {
             <div key={i} className={`${s.progressStep} ${s[`step_${state}`]}`}>
               <div className={s.stepIndicator}>
                 {state === 'done' ? (
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7l3 3 5-5" stroke="var(--green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="#16a34a" fillOpacity="0.15"/><path d="M3.5 7l2.5 2.5 4.5-4.5" stroke="#16a34a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 ) : state === 'active' ? (
                   <span className={s.stepSpinner} />
                 ) : (
@@ -176,6 +367,7 @@ export default function ScanDetail() {
   const [tab, setTab] = useState<Tab>('findings');
   const [sevFilter, setSevFilter] = useState<string | null>(null);
   const [catFilter, setCatFilter] = useState<string | null>(null);
+  const [expandedFindings, setExpandedFindings] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -193,18 +385,29 @@ export default function ScanDetail() {
     return () => clearInterval(interval);
   }, [params.id]);
 
-  if (loading) {
-    return <div className={s.page}><p style={{ color: 'var(--text-dim)' }}>Loading scan...</p></div>;
+  function toggleFinding(i: number) {
+    setExpandedFindings(prev => {
+      const next = new Set(prev);
+      next.has(i) ? next.delete(i) : next.add(i);
+      return next;
+    });
   }
 
-  if (!scan) {
-    return (
-      <div className={s.page}>
-        <p style={{ color: 'var(--text-dim)' }}>Scan not found.</p>
-        <Link href="/app" className="btn btn-ghost" style={{ marginTop: '1rem' }}>Back to dashboard</Link>
+  if (loading) return (
+    <div className={s.page}>
+      <div className={s.loadingState}>
+        <span className={s.loadingSpinner} />
+        <span>Loading scan…</span>
       </div>
-    );
-  }
+    </div>
+  );
+
+  if (!scan) return (
+    <div className={s.page}>
+      <p style={{ color: 'var(--text-dim)' }}>Scan not found.</p>
+      <Link href="/app" className="btn btn-ghost" style={{ marginTop: '1rem' }}>Back to dashboard</Link>
+    </div>
+  );
 
   const report = scan.report;
   const findings = report?.findings ?? [];
@@ -213,54 +416,55 @@ export default function ScanDetail() {
   const agents = report?.agents ?? [];
   const categories = report?.categories;
 
-  // Apply filters
   const filtered = findings
     .filter(f => !sevFilter || f.severity === sevFilter)
     .filter(f => !catFilter || f.category === catFilter)
     .sort((a, b) => (sevOrder[a.severity] ?? 9) - (sevOrder[b.severity] ?? 9));
 
+  const sevCounts = findings.reduce((acc, f) => { acc[f.severity] = (acc[f.severity] ?? 0) + 1; return acc; }, {} as Record<string, number>);
+
   return (
     <div className={s.page}>
-      {/* Back + Header */}
-      <Link href="/app" className={s.backLink}>← Back to dashboard</Link>
+      {/* Back link */}
+      <Link href="/app" className={s.backLink}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Dashboard
+      </Link>
 
+      {/* Header */}
       <div className={s.header}>
-        <div>
-          <h1>{scan.repo}</h1>
-          <p className={s.meta}>
-            {scan.branch} · {new Date(scan.createdAt).toLocaleString()}
-          </p>
+        <div className={s.headerLeft}>
+          <h1 className={s.repoName}>{scan.repo}</h1>
+          <div className={s.headerMeta}>
+            <span className={s.metaChip}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 3v12"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 01-9 9"/></svg>
+              {scan.branch}
+            </span>
+            <span className={s.metaChip}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              {new Date(scan.createdAt).toLocaleString()}
+            </span>
+            {scan.duration && (
+              <span className={s.metaChip}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                {scan.duration.toFixed(1)}s
+              </span>
+            )}
+          </div>
         </div>
-        {scan.status === 'done' && scan.score !== null && (
-          <div className={s.scoreBadge} style={{
-            background: scoreColor(scan.score) + '10',
-            border: `1px solid ${scoreColor(scan.score)}30`,
-          }}>
-            <span className={s.gradeText} style={{ color: scoreColor(scan.score) }}>{scan.grade}</span>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span className={s.scoreNum} style={{ color: scoreColor(scan.score) }}>{scan.score}/100</span>
-              {scan.duration && <span className={s.duration}>{scan.duration.toFixed(1)}s</span>}
-            </div>
+        {scan.status === 'done' && (
+          <div className={s.actionRow}>
+            <a href={`/api/reports?scanId=${scan.id}&format=pdf`} className={`btn btn-ghost ${s.actionBtn}`} download>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              PDF
+            </a>
+            <a href={`/api/reports?scanId=${scan.id}&format=csv`} className={`btn btn-ghost ${s.actionBtn}`} download>CSV</a>
+            <a href={`/api/reports?scanId=${scan.id}&format=markdown`} className={`btn btn-ghost ${s.actionBtn}`} download>MD</a>
           </div>
         )}
       </div>
 
-      {/* Actions bar */}
-      {scan.status === 'done' && (
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <a href={`/api/reports?scanId=${scan.id}&format=pdf`} className="btn btn-ghost" style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }} download>
-            Download Report
-          </a>
-          <a href={`/api/reports?scanId=${scan.id}&format=csv`} className="btn btn-ghost" style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }} download>
-            Export CSV
-          </a>
-          <a href={`/api/reports?scanId=${scan.id}&format=markdown`} className="btn btn-ghost" style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }} download>
-            Markdown
-          </a>
-        </div>
-      )}
-
-      {/* Running — animated step-by-step progress */}
+      {/* Running */}
       {scan.status === 'running' && <ScanProgress startedAt={scan.createdAt} />}
 
       {/* Pending */}
@@ -278,133 +482,178 @@ export default function ScanDetail() {
       {scan.status === 'failed' && (
         <div className={s.failedBanner}>
           <strong>Scan failed.</strong>
-          {report && typeof report === 'object' && 'error' in report && (
-            <p>{String(report.error)}</p>
-          )}
+          {report && typeof report === 'object' && 'error' in report && <p>{String(report.error)}</p>}
         </div>
       )}
 
-      {/* Done — full results */}
+      {/* ── Done: full results ──────────────────────────── */}
       {scan.status === 'done' && (
         <>
-          {/* Stats */}
-          <div className={s.statsRow}>
-            {[
-              { label: 'Total Findings', value: scan.findings, color: scan.findings > 0 ? 'var(--red)' : 'var(--green)' },
-              { label: 'Secrets', value: scan.secrets, color: scan.secrets > 0 ? 'var(--red)' : 'var(--green)' },
-              { label: 'Code Vulns', value: scan.vulns, color: scan.vulns > 0 ? 'var(--yellow)' : 'var(--green)' },
-              { label: 'CVEs', value: scan.cves, color: scan.cves > 0 ? 'var(--yellow)' : 'var(--green)' },
-            ].map(st => (
-              <div key={st.label} className={s.statCard}>
-                <span className={s.statValue} style={{ color: st.color }}>{st.value}</span>
-                <span className={s.statLabel}>{st.label}</span>
+          {/* Visual summary row: gauge + donut + stats */}
+          <div className={s.summaryRow}>
+            {/* Score gauge */}
+            {scan.score !== null && (
+              <div className={s.gaugeCard}>
+                <ScoreGauge score={scan.score} grade={scan.grade} />
               </div>
-            ))}
+            )}
+
+            {/* Severity donut */}
+            {findings.length > 0 && (
+              <div className={s.donutCard}>
+                <SeverityDonut findings={findings} />
+              </div>
+            )}
+
+            {/* Stat cards */}
+            <div className={s.statCardsCol}>
+              {[
+                { label: 'Total findings', value: scan.findings, icon: '⚑', color: scan.findings > 0 ? 'var(--red)' : 'var(--green)' },
+                { label: 'Secrets', value: scan.secrets, icon: '🔑', color: scan.secrets > 0 ? 'var(--red)' : 'var(--green)' },
+                { label: 'Code vulns', value: scan.vulns, icon: '💉', color: scan.vulns > 0 ? 'var(--sev-high)' : 'var(--green)' },
+                { label: 'CVEs', value: scan.cves, icon: '📦', color: scan.cves > 0 ? 'var(--sev-high)' : 'var(--green)' },
+              ].map(st => (
+                <div key={st.label} className={s.miniStatCard}>
+                  <div>
+                    <span className={s.miniStatValue} style={{ color: st.color }}>{st.value}</span>
+                    <span className={s.miniStatLabel}>{st.label}</span>
+                  </div>
+                  <span className={s.miniStatIcon}>{st.icon}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Category breakdown */}
+          {/* OWASP bar chart */}
+          {categories && Object.keys(categories).some(k => categories[k].findingCount > 0) && (
+            <div className={s.chartSection}>
+              <OWASPChart categories={categories} />
+            </div>
+          )}
+
+          {/* Category cards */}
           {categories && Object.keys(categories).length > 0 && (
-            <div className={s.categories}>
-              {Object.entries(categories).map(([key, cat]) => (
-                <button
-                  key={key}
-                  className={s.catCard}
-                  style={{ cursor: 'pointer', textAlign: 'left' }}
-                  onClick={() => { setCatFilter(catFilter === key ? null : key); setTab('findings'); }}
-                >
-                  <div className={s.catIcon} style={{
-                    background: cat.findingCount > 0 ? 'rgba(220,38,38,0.08)' : 'var(--bg-elevated)',
-                    color: cat.findingCount > 0 ? 'var(--red)' : 'var(--text-dim)',
-                  }}>
-                    {catIcons[key] ?? '🛡️'}
-                  </div>
-                  <div>
-                    <div className={s.catName}>{cat.label}</div>
-                    <div className={s.catCount}>{cat.findingCount} finding{cat.findingCount !== 1 ? 's' : ''}</div>
-                  </div>
-                  {cat.deduction > 0 && (
-                    <span className={s.catDeduction} style={{ color: 'var(--red)' }}>-{cat.deduction}pts</span>
-                  )}
-                </button>
-              ))}
+            <div className={s.catSection}>
+              <div className={s.catSectionTitle}>Category breakdown</div>
+              <div className={s.categories}>
+                {Object.entries(categories).map(([key, cat]) => {
+                  const worstSev = cat.counts.critical > 0 ? 'critical' : cat.counts.high > 0 ? 'high' : cat.counts.medium > 0 ? 'medium' : cat.findingCount > 0 ? 'low' : null;
+                  return (
+                    <button
+                      key={key}
+                      className={`${s.catCard} ${catFilter === key ? s.catCardActive : ''}`}
+                      onClick={() => { setCatFilter(catFilter === key ? null : key); setTab('findings'); }}
+                    >
+                      <div className={s.catIcon} style={{
+                        background: cat.findingCount > 0 ? `${SEV_COLORS[worstSev!]}12` : 'var(--bg-elevated)',
+                        color: cat.findingCount > 0 ? SEV_COLORS[worstSev!] : 'var(--text-dim)',
+                      }}>
+                        {catIcons[key] ?? '🛡️'}
+                      </div>
+                      <div className={s.catInfo}>
+                        <div className={s.catName}>{cat.label}</div>
+                        <div className={s.catCount}>{cat.findingCount} finding{cat.findingCount !== 1 ? 's' : ''}</div>
+                      </div>
+                      {cat.deduction > 0 && <span className={s.catDeduction}>-{cat.deduction}pts</span>}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
           {/* Tabs */}
           <div className={s.tabs}>
-            <button className={`${s.tab} ${tab === 'findings' ? s.active : ''}`} onClick={() => setTab('findings')}>
-              Findings<span className={s.tabCount}>{findings.length}</span>
-            </button>
-            <button className={`${s.tab} ${tab === 'remediation' ? s.active : ''}`} onClick={() => setTab('remediation')}>
-              Fix Plan<span className={s.tabCount}>{remediation.length}</span>
-            </button>
-            {depVulns.length > 0 && (
-              <button className={`${s.tab} ${tab === 'deps' ? s.active : ''}`} onClick={() => setTab('deps')}>
-                CVEs<span className={s.tabCount}>{depVulns.length}</span>
+            {([
+              ['findings', 'Findings', findings.length],
+              ['remediation', 'Fix Plan', remediation.length],
+              ...(depVulns.length > 0 ? [['deps', 'CVEs', depVulns.length]] : []),
+              ...(agents.length > 0 ? [['agents', 'Agents', agents.length]] : []),
+              ['raw', 'Raw JSON', null],
+            ] as [Tab, string, number | null][]).map(([id, label, count]) => (
+              <button
+                key={id}
+                className={`${s.tab} ${tab === id ? s.active : ''}`}
+                onClick={() => setTab(id)}
+              >
+                {label}
+                {count !== null && <span className={s.tabCount}>{count}</span>}
               </button>
-            )}
-            {agents.length > 0 && (
-              <button className={`${s.tab} ${tab === 'agents' ? s.active : ''}`} onClick={() => setTab('agents')}>
-                Agents<span className={s.tabCount}>{agents.length}</span>
-              </button>
-            )}
-            <button className={`${s.tab} ${tab === 'raw' ? s.active : ''}`} onClick={() => setTab('raw')}>
-              Raw JSON
-            </button>
+            ))}
           </div>
 
           {/* Tab: Findings */}
           {tab === 'findings' && (
             <div className={s.findingsSection}>
-              {/* Filters */}
+              {/* Severity filter pills */}
               <div className={s.filterRow}>
-                {['critical', 'high', 'medium', 'low'].map(sev => {
-                  const count = findings.filter(f => f.severity === sev).length;
+                {(['critical', 'high', 'medium', 'low'] as const).map(sev => {
+                  const count = sevCounts[sev] ?? 0;
                   if (count === 0) return null;
                   return (
                     <button
                       key={sev}
-                      className={`${s.filterBtn} ${sevFilter === sev ? s.active : ''}`}
+                      className={`${s.filterPill} ${sevFilter === sev ? s.filterActive : ''}`}
+                      style={sevFilter === sev ? { borderColor: SEV_COLORS[sev], color: SEV_COLORS[sev], background: `${SEV_COLORS[sev]}10` } : {}}
                       onClick={() => setSevFilter(sevFilter === sev ? null : sev)}
                     >
-                      {sev} ({count})
+                      <span className={s.filterDot} style={{ background: SEV_COLORS[sev] }} />
+                      {sev} <span className={s.filterCount}>{count}</span>
                     </button>
                   );
                 })}
                 {catFilter && (
-                  <button className={`${s.filterBtn} ${s.active}`} onClick={() => setCatFilter(null)}>
-                    {categories?.[catFilter]?.label ?? catFilter} ✕
+                  <button
+                    className={`${s.filterPill} ${s.filterActive}`}
+                    onClick={() => setCatFilter(null)}
+                  >
+                    {categories?.[catFilter]?.label ?? catFilter}
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
                   </button>
+                )}
+                {(sevFilter || catFilter) && (
+                  <button className={s.clearFilters} onClick={() => { setSevFilter(null); setCatFilter(null); }}>Clear all</button>
                 )}
               </div>
 
               {filtered.length === 0 ? (
                 <div className={s.emptyTab}>
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                   {findings.length === 0 ? 'No findings — your code looks clean!' : 'No findings match the current filters.'}
                 </div>
               ) : (
                 <div className={s.findingsList}>
                   {filtered.map((f, i) => (
-                    <div key={i} className={s.findingCard}>
+                    <div
+                      key={i}
+                      className={`${s.findingCard} ${s[`sev_${f.severity}`]}`}
+                      onClick={() => toggleFinding(i)}
+                    >
                       <div className={s.findingTop}>
-                        <span className={`${s.severityBadge} ${s[`severity${f.severity.charAt(0).toUpperCase() + f.severity.slice(1)}` as keyof typeof s] ?? ''}`}>
-                          {f.severity}
-                        </span>
+                        <span className={`${s.severityBadge} ${s[`severity_${f.severity}`]}`}>{f.severity}</span>
                         <span className={s.findingTitle}>{f.title}</span>
                         {f.file && (
-                          <span className={s.findingFile}>
-                            {f.file}{f.line ? `:${f.line}` : ''}
-                          </span>
+                          <span className={s.findingFile}>{f.file}{f.line ? `:${f.line}` : ''}</span>
                         )}
+                        <svg className={`${s.chevron} ${expandedFindings.has(i) ? s.chevronOpen : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9l6 6 6-6"/></svg>
                       </div>
-                      {f.description && <p className={s.findingDesc}>{f.description}</p>}
-                      {f.fix && <div className={s.findingFix}>{f.fix}</div>}
-                      <div className={s.findingMeta}>
-                        <span className={s.findingTag}>{f.rule}</span>
-                        {f.cwe && <span className={s.findingTag}>CWE-{f.cwe}</span>}
-                        {f.owasp && <span className={s.findingTag}>{f.owasp}</span>}
-                        <span className={s.findingTag}>{categories?.[f.category]?.label ?? f.category}</span>
-                      </div>
+                      {expandedFindings.has(i) && (
+                        <div className={s.findingExpanded}>
+                          {f.description && <p className={s.findingDesc}>{f.description}</p>}
+                          {f.fix && (
+                            <div className={s.findingFix}>
+                              <span className={s.fixLabel}>Fix</span>
+                              {f.fix}
+                            </div>
+                          )}
+                          <div className={s.findingMeta}>
+                            <span className={s.findingTag}>{f.rule}</span>
+                            {f.cwe && <span className={s.findingTag}>CWE-{f.cwe}</span>}
+                            {f.owasp && <span className={s.findingTag}>{f.owasp}</span>}
+                            <span className={s.findingTag}>{categories?.[f.category]?.label ?? f.category}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -412,36 +661,47 @@ export default function ScanDetail() {
             </div>
           )}
 
-          {/* Tab: Remediation */}
+          {/* Tab: Fix Plan (Kanban columns) */}
           {tab === 'remediation' && (
             <div>
               {remediation.length === 0 ? (
-                <div className={s.emptyTab}>No remediation steps needed.</div>
+                <div className={s.emptyTab}>
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  No remediation steps needed.
+                </div>
               ) : (
-                <div className={s.remediationList}>
-                  {remediation.map((r, i) => (
-                    <div key={i} className={s.remCard}>
-                      <span className={s.remPriority}>{r.priority}</span>
-                      <div className={s.remBody}>
-                        <div className={s.findingTop}>
-                          <span className={`${s.severityBadge} ${s[`severity${r.severity.charAt(0).toUpperCase() + r.severity.slice(1)}` as keyof typeof s] ?? ''}`}>
-                            {r.severity}
-                          </span>
-                          <span className={s.remTitle}>{r.title}</span>
+                <div className={s.kanban}>
+                  {(['critical', 'high', 'medium', 'low'] as const).map(sev => {
+                    const items = remediation.filter(r => r.severity === sev);
+                    if (items.length === 0) return null;
+                    const labels: Record<string, string> = { critical: 'Fix Now', high: 'Fix This Sprint', medium: 'Backlog', low: 'Informational' };
+                    return (
+                      <div key={sev} className={s.kanbanCol}>
+                        <div className={s.kanbanHeader} style={{ borderColor: SEV_COLORS[sev], color: SEV_COLORS[sev] }}>
+                          <span className={s.kanbanDot} style={{ background: SEV_COLORS[sev] }} />
+                          <span>{sev.charAt(0).toUpperCase() + sev.slice(1)}</span>
+                          <span className={s.kanbanSub}>{labels[sev]}</span>
+                          <span className={s.kanbanCount}>{items.length}</span>
                         </div>
-                        <p className={s.remAction}>{r.action}</p>
-                        {r.file && <span className={s.findingFile} style={{ fontSize: '0.72rem' }}>{r.file}</span>}
-                        <div className={s.remMeta}>
-                          {r.effort && (
-                            <span className={`${s.effortBadge} ${s[`effort${r.effort.charAt(0).toUpperCase() + r.effort.slice(1)}` as keyof typeof s] ?? ''}`}>
-                              {r.effort} effort
-                            </span>
-                          )}
-                          {r.categoryLabel && <span className={s.findingTag}>{r.categoryLabel}</span>}
+                        <div className={s.kanbanItems}>
+                          {items.map((r, i) => (
+                            <div key={i} className={s.kanbanCard}>
+                              <div className={s.kanbanCardTop}>
+                                <span className={s.kanbanPriority}>#{r.priority}</span>
+                                {r.effort && (
+                                  <span className={`${s.effortBadge} ${s[`effort_${r.effort}`]}`}>{r.effort}</span>
+                                )}
+                              </div>
+                              <div className={s.kanbanTitle}>{r.title}</div>
+                              <p className={s.kanbanAction}>{r.action}</p>
+                              {r.file && <span className={s.kanbanFile}>{r.file}</span>}
+                              {r.categoryLabel && <span className={s.kanbanCat}>{r.categoryLabel}</span>}
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -455,10 +715,8 @@ export default function ScanDetail() {
               ) : (
                 <div className={s.depVulnList}>
                   {depVulns.map((d, i) => (
-                    <div key={i} className={s.depVuln}>
-                      <span className={`${s.severityBadge} ${s[`severity${d.severity.charAt(0).toUpperCase() + d.severity.slice(1)}` as keyof typeof s] ?? ''}`}>
-                        {d.severity}
-                      </span>
+                    <div key={i} className={`${s.depVuln} ${s[`sev_${d.severity}`]}`}>
+                      <span className={`${s.severityBadge} ${s[`severity_${d.severity}`]}`}>{d.severity}</span>
                       <span className={s.depPkg}>{d.package}</span>
                       <span className={s.depDesc}>{d.description}</span>
                     </div>
@@ -471,17 +729,22 @@ export default function ScanDetail() {
           {/* Tab: Agents */}
           {tab === 'agents' && (
             <div className={s.agentGrid}>
-              {agents.map((a, i) => (
-                <div key={i} className={s.agentCard}>
-                  <span className={s.agentDot} style={{
-                    background: !a.success ? 'var(--red)' : a.findingCount > 0 ? 'var(--yellow)' : 'var(--green)',
-                  }} />
-                  <span className={s.agentName}>{a.agent}</span>
-                  <span className={s.agentFindings}>
-                    {a.success ? `${a.findingCount}` : 'err'}
-                  </span>
-                </div>
-              ))}
+              {agents.map((a, i) => {
+                const color = !a.success ? 'var(--red)' : a.findingCount > 0 ? 'var(--yellow)' : 'var(--green)';
+                return (
+                  <div key={i} className={s.agentCard}>
+                    <div className={s.agentStatus} style={{ background: `${color}15`, borderColor: `${color}30` }}>
+                      <span className={s.agentDot} style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
+                    </div>
+                    <div className={s.agentBody}>
+                      <span className={s.agentName}>{a.agent}</span>
+                      <span className={s.agentFindings} style={{ color }}>
+                        {a.success ? `${a.findingCount} finding${a.findingCount !== 1 ? 's' : ''}` : 'error'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 

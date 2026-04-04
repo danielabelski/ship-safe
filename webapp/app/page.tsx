@@ -9,6 +9,7 @@ import FAQ from '@/components/FAQ';
 import CTA from '@/components/CTA';
 import ScrollAnimator from '@/components/ScrollAnimator';
 import DemoScanner from '@/components/DemoScanner';
+import ThreatMarquee from '@/components/ThreatMarquee';
 import RecentPosts from '@/components/RecentPosts';
 import { getRepoStats } from '@/lib/stats';
 
@@ -127,6 +128,7 @@ export default async function Home() {
         <DemoScanner />
         <HowItWorks />
         <Features />
+        <ThreatMarquee />
         <PricingTeaser />
         <RecentPosts />
         <FAQ />

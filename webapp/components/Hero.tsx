@@ -9,24 +9,30 @@ interface HeroProps {
   downloads?: number;
 }
 
+const FLOAT_CARDS = [
+  { sev: 'critical', title: 'AWS key in .env.example', file: 'config/.env.example', sevColor: '#dc2626' },
+  { sev: 'high',     title: 'SQL injection in query endpoint', file: 'api/users.ts:42', sevColor: '#ea580c' },
+  { sev: 'critical', title: 'JWT secret hardcoded', file: 'auth/middleware.ts:18', sevColor: '#dc2626' },
+  { sev: 'medium',   title: 'Missing rate limiting on login', file: 'routes/auth.ts:91', sevColor: '#d97706' },
+];
+
 export default function Hero({ stars, downloads }: HeroProps) {
   const stats = [
-    { num: '18', label: 'Security agents' },
+    { num: '18',  label: 'Security agents' },
     { num: '80+', label: 'Attack classes' },
-    { num: stars ? formatNumber(stars) : '230+', label: 'GitHub stars' },
+    { num: stars ? formatNumber(stars) : '1.2k+', label: 'GitHub stars' },
     { num: downloads ? formatNumber(downloads) : '8k+', label: 'Weekly downloads' },
   ];
+
   useEffect(() => {
     const scoreEl = document.getElementById('score-val');
     const arcEl = document.getElementById('score-arc') as SVGCircleElement | null;
     if (!scoreEl || !arcEl) return;
-
     function easeOut(t: number) { return 1 - Math.pow(1 - t, 3); }
     const target = 100;
     const fullDash = 251.3;
     const duration = 1800;
     const start = performance.now();
-
     function tick(now: number) {
       const p = Math.min((now - start) / duration, 1);
       const ep = easeOut(p);
@@ -40,22 +46,24 @@ export default function Hero({ stars, downloads }: HeroProps) {
   function handleCopy() {
     navigator.clipboard.writeText('npx ship-safe audit .').then(() => {
       const btn = document.getElementById('hero-copy');
-      if (btn) {
-        btn.style.color = 'var(--green)';
-        setTimeout(() => { btn.style.color = ''; }, 1500);
-      }
+      if (btn) { btn.style.color = 'var(--green)'; setTimeout(() => { btn.style.color = ''; }, 1500); }
     });
   }
 
   return (
     <section className={styles.hero}>
-      <div className={`${styles.heroOrb} ${styles.heroOrb1}`} aria-hidden="true" />
-      <div className={`${styles.heroOrb} ${styles.heroOrb2}`} aria-hidden="true" />
-      <div className={`${styles.heroOrb} ${styles.heroOrb3}`} aria-hidden="true" />
+      {/* Mesh gradient background */}
+      <div className={styles.meshBg} aria-hidden="true" />
+
+      {/* Animated orbs */}
+      <div className={`${styles.orb} ${styles.orb1}`} aria-hidden="true" />
+      <div className={`${styles.orb} ${styles.orb2}`} aria-hidden="true" />
+      <div className={`${styles.orb} ${styles.orb3}`} aria-hidden="true" />
       <div className={styles.heroHorizon} aria-hidden="true" />
 
       <div className={`container ${styles.heroLayout}`}>
-        {/* Left */}
+
+        {/* ── Left ─────────────────────────────────── */}
         <div className={styles.heroLeft}>
           <div className={styles.badge}>
             <span className={styles.badgeDot} />
@@ -64,11 +72,12 @@ export default function Hero({ stars, downloads }: HeroProps) {
 
           <h1 className={styles.h1}>
             Ship code,<br />
-            <span className={styles.h1Line2}>not <span className={styles.gradientText}>vulnerabilities.</span></span>
+            not <span className={styles.gradientText}>vulnerabilities.</span>
           </h1>
 
           <p className={styles.heroSub}>
-            One command finds secrets, code vulns, and CVEs across your entire codebase. 18 AI agents. 80+ attack classes. OWASP 2025 scoring.
+            One command. 18 AI agents. 80+ attack classes. Finds secrets, code vulns,
+            and CVEs across your entire codebase with OWASP&nbsp;2025 scoring.
           </p>
 
           <div className={`install-box ${styles.installBox}`}>
@@ -83,15 +92,39 @@ export default function Hero({ stars, downloads }: HeroProps) {
           </div>
 
           <div className={styles.heroCtas}>
-            <Link href="/signup" className="btn btn-primary"> {/* ship-safe-ignore — navigation Link, not an auth endpoint */}
+            <Link href="/signup" className="btn btn-primary"> {/* ship-safe-ignore */}
               Start for free
             </Link>
-            <a href="#pricing" className="btn btn-ghost">See pricing</a>
+            <a href="#demo" className="btn btn-ghost">See live demo</a>
+          </div>
+
+          {/* Inline stats row */}
+          <div className={styles.statsRow}>
+            {stats.map((s, i) => (
+              <div key={s.label} className={styles.statItem}>
+                {i > 0 && <span className={styles.statSep} aria-hidden="true" />}
+                <span className={styles.statNum}>{s.num}</span>
+                <span className={styles.statLabel}>{s.label}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Right: dashboard card */}
+        {/* ── Right: stacked scan UI ────────────────── */}
         <div className={styles.heroRight} aria-hidden="true">
+
+          {/* Floating threat cards */}
+          {FLOAT_CARDS.map((card, i) => (
+            <div key={i} className={`${styles.floatCard} ${styles[`float${i}`]}`}>
+              <span className={styles.floatSev} style={{ color: card.sevColor, background: `${card.sevColor}12`, borderColor: `${card.sevColor}25` }}>
+                {card.sev}
+              </span>
+              <span className={styles.floatTitle}>{card.title}</span>
+              <span className={styles.floatFile}>{card.file}</span>
+            </div>
+          ))}
+
+          {/* Main dashboard card */}
           <div className={styles.dashCard}>
             <div className={styles.dashHeader}>
               <div className={styles.dashDots}>
@@ -105,12 +138,12 @@ export default function Hero({ stars, downloads }: HeroProps) {
 
             <div className={styles.dashTerminal}>
               {[
-                { icon: '✔', text: 'Secrets: 4 found', tag: 'CRITICAL', tagCls: styles.tagRed },
-                { icon: '✔', text: '18 agents: 23 findings', tag: 'HIGH', tagCls: styles.tagYellow },
-                { icon: '✔', text: 'Dependencies: 3 CVEs', tag: 'HIGH', tagCls: styles.tagYellow },
+                { icon: '✔', text: 'Secrets: 4 found',      tag: 'CRITICAL', tagCls: styles.tagRed },
+                { icon: '✔', text: '18 agents: 23 findings', tag: 'HIGH',     tagCls: styles.tagYellow },
+                { icon: '✔', text: 'Dependencies: 3 CVEs',  tag: 'HIGH',     tagCls: styles.tagYellow },
                 { icon: '✔', text: 'Remediation plan ready', tag: null, dim: true },
               ].map((l, i) => (
-                <div key={i} className={styles.termLine} style={{ animationDelay: `${0.3 + i * 0.25}s` }}>
+                <div key={i} className={styles.termLine} style={{ animationDelay: `${0.3 + i * 0.22}s` }}>
                   <span className={`${styles.termPrompt} ${styles.green}`}>{l.icon}</span>
                   <span className={`${styles.termText} ${l.dim ? styles.dim : ''}`}>{l.text}</span>
                   {l.tag && <span className={`${styles.termTag} ${l.tagCls}`}>{l.tag}</span>}
@@ -125,15 +158,9 @@ export default function Hero({ stars, downloads }: HeroProps) {
                     <circle cx="48" cy="48" r="40" fill="none" stroke="var(--border)" strokeWidth="6" />
                     <circle
                       cx="48" cy="48" r="40"
-                      fill="none"
-                      stroke="url(#scoreGrad)"
-                      strokeWidth="6"
-                      strokeLinecap="round"
-                      strokeDasharray="251.3"
-                      strokeDashoffset="218"
-                      transform="rotate(-90 48 48)"
-                      className={styles.scoreArc}
-                      id="score-arc"
+                      fill="none" stroke="url(#scoreGrad)" strokeWidth="6"
+                      strokeLinecap="round" strokeDasharray="251.3" strokeDashoffset="218"
+                      transform="rotate(-90 48 48)" className={styles.scoreArc} id="score-arc"
                     />
                     <defs>
                       <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -165,7 +192,7 @@ export default function Hero({ stars, downloads }: HeroProps) {
                       <span className={`${styles.metricVal} ${styles.ok}`}>{m.val}</span>
                     </div>
                     <div className={styles.metricBar}>
-                      <div className={`${styles.metricFill} ${styles.fillFull}`} style={{ background: 'var(--green)' }} />
+                      <div className={styles.metricFill} style={{ background: 'var(--green)', width: '100%' }} />
                     </div>
                   </div>
                 ))}
@@ -178,18 +205,8 @@ export default function Hero({ stars, downloads }: HeroProps) {
               <span>All checks passed — ready to push</span>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Inline stats bar */}
-      <div className={`container ${styles.statsBar}`}>
-        {stats.map((s, i) => (
-          <div key={s.label} className={styles.statsItem}>
-            {i > 0 && <span className={styles.statsSep} aria-hidden="true" />}
-            <span className={styles.statsNum}>{s.num}</span>
-            <span className={styles.statsLabel}>{s.label}</span>
-          </div>
-        ))}
+        </div>
       </div>
     </section>
   );
