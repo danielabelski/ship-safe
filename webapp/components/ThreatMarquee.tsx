@@ -9,7 +9,7 @@ const THREATS = [
   { name: 'OIDC Wildcard Condition',    sev: 'critical' },
   { name: 'JWT None Algorithm',         sev: 'critical' },
   { name: 'curl | bash in CI',          sev: 'high'     },
-  { name: 'eval() Injection',           sev: 'high'     },
+  { name: 'eval() Injection',           sev: 'high'     }, // ship-safe-ignore — display label, not executable code
   { name: 'Leaked Token in Commit',     sev: 'critical' },
   { name: 'SSRF via Redirect',          sev: 'high'     },
   { name: 'Prototype Pollution',        sev: 'medium'   },
