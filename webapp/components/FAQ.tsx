@@ -4,7 +4,7 @@ import styles from './FAQ.module.css';
 const faqs = [
   {
     q: 'Does it work without an API key?',
-    a: 'Yes. audit, scan, red-team, ci, score, deps, diff, vibe-check, benchmark, and guard all work fully offline with no API key. AI classification and deep analysis are optional — pass --no-ai to skip it. If you want AI, ship-safe supports Anthropic, OpenAI, Google Gemini, and local Ollama models.',
+    a: 'Yes. audit, scan, red-team, ci, score, deps, diff, vibe-check, benchmark, and guard all work fully offline with no API key. AI classification and deep analysis are optional — pass --no-ai to skip it. If you want AI without a cloud key, run Gemma 4 locally via Ollama (ollama pull gemma4:e4b) and pass --provider gemma4. ship-safe also supports Anthropic, OpenAI, Google Gemini, and any Ollama model.',
   },
   {
     q: 'Is my code sent to an LLM?',

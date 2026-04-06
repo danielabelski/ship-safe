@@ -25,8 +25,15 @@ import { createProvider, autoDetectProvider } from '../providers/llm-provider.js
 // CONSTANTS
 // =============================================================================
 
-/** Max file content to send per finding (tokens are expensive) */
-const MAX_FILE_CHARS = 4000;
+/** Max file content per finding for standard providers (tokens cost money) */
+const MAX_FILE_CHARS_DEFAULT = 4000;
+
+/**
+ * Max file content per finding for large-context providers (Gemma 4 128K–256K).
+ * Sending the full file enables cross-function taint tracing that a 40-line
+ * window cannot catch.
+ */
+const MAX_FILE_CHARS_LARGE_CTX = 80000;
 
 /** Max findings to analyze per run (cost control) */
 const MAX_FINDINGS = 30;
@@ -84,6 +91,14 @@ export class DeepAnalyzer {
     this.verbose = options.verbose || false;
     this.spentCents = 0;
     this.analyzedCount = 0;
+
+    // If the provider advertises a large context window (Gemma 4, etc.),
+    // increase file context and batch size to take full advantage.
+    const ctxWindow = this.provider?.contextWindow ?? 0;
+    this.largeContext = ctxWindow >= 65536;
+    this.maxFileChars = this.largeContext ? MAX_FILE_CHARS_LARGE_CTX : MAX_FILE_CHARS_DEFAULT;
+    // Larger batches for local large-context models (no per-token cost)
+    this.batchSize = this.largeContext ? 15 : 5;
   }
 
   /**
@@ -91,11 +106,11 @@ export class DeepAnalyzer {
    * Returns null if no provider is available.
    */
   static create(rootPath, options = {}) {
-    // --local flag: use Ollama
+    // --local flag: use Gemma 4 via Ollama (structured output, large context)
     if (options.local) {
-      const provider = createProvider('ollama', null, {
-        model: options.model || 'llama3.2',
-        baseUrl: options.ollamaUrl || 'http://localhost:11434/api/chat',
+      const provider = createProvider('gemma4', null, {
+        model:   options.model,
+        baseUrl: options.ollamaUrl,
       });
       return new DeepAnalyzer({ provider, ...options });
     }
@@ -141,11 +156,10 @@ export class DeepAnalyzer {
       toAnalyze.length = Math.max(1, affordable);
     }
 
-    // Batch findings (5 per request to balance cost vs. context)
-    const batchSize = 5;
+    // Batch findings — larger batches for large-context providers (Gemma 4 etc.)
     const results = new Map();
 
-    for (let i = 0; i < toAnalyze.length; i += batchSize) {
+    for (let i = 0; i < toAnalyze.length; i += this.batchSize) {
       // Budget check before each batch
       if (this.spentCents >= this.budgetCents) {
         if (this.verbose) {
@@ -154,7 +168,7 @@ export class DeepAnalyzer {
         break;
       }
 
-      const batch = toAnalyze.slice(i, i + batchSize);
+      const batch = toAnalyze.slice(i, i + this.batchSize);
       const prompt = this._buildPrompt(batch, context);
 
       try {
@@ -261,16 +275,22 @@ ${JSON.stringify(items, null, 2)}`;
       const lines = content.split('\n');
       const lineNum = finding.line || 1;
 
-      // Get a window of ~40 lines around the finding
-      const start = Math.max(0, lineNum - 21);
-      const end = Math.min(lines.length, lineNum + 20);
-      let context = lines.slice(start, end)
-        .map((l, i) => `${start + i + 1}: ${l}`)
-        .join('\n');
+      let context;
+      if (this.largeContext) {
+        // Large-context providers (Gemma 4): send the entire file so the model
+        // can trace taint flows across functions, not just the immediate window.
+        context = lines.map((l, i) => `${i + 1}: ${l}`).join('\n');
+      } else {
+        // Standard providers: 40-line window around the finding
+        const start = Math.max(0, lineNum - 21);
+        const end = Math.min(lines.length, lineNum + 20);
+        context = lines.slice(start, end)
+          .map((l, i) => `${start + i + 1}: ${l}`)
+          .join('\n');
+      }
 
-      // Truncate if too long
-      if (context.length > MAX_FILE_CHARS) {
-        context = context.slice(0, MAX_FILE_CHARS) + '\n... (truncated)';
+      if (context.length > this.maxFileChars) {
+        context = context.slice(0, this.maxFileChars) + '\n... (truncated)';
       }
 
       return context;

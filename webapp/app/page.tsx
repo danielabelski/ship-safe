@@ -4,6 +4,9 @@ import Hero from '@/components/Hero';
 import TrustBar from '@/components/TrustBar';
 import HowItWorks from '@/components/HowItWorks';
 import Features from '@/components/Features';
+import AgentDirectory from '@/components/AgentDirectory';
+import AccuracyBenchmark from '@/components/AccuracyBenchmark';
+import ComparisonTable from '@/components/ComparisonTable';
 import PricingTeaser from '@/components/PricingTeaser';
 import FAQ from '@/components/FAQ';
 import CTA from '@/components/CTA';
@@ -128,7 +131,10 @@ export default async function Home() {
         <DemoScanner />
         <HowItWorks />
         <Features />
+        <AgentDirectory />
         <ThreatMarquee />
+        <AccuracyBenchmark />
+        <ComparisonTable />
         <PricingTeaser />
         <RecentPosts />
         <FAQ />

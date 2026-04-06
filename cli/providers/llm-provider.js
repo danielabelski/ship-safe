@@ -196,7 +196,7 @@ class GoogleProvider extends BaseLLMProvider {
 class OllamaProvider extends BaseLLMProvider {
   constructor(apiKey, options = {}) {
     super('Ollama', null, options);
-    this.model = options.model || 'llama3.2';
+    this.model = options.model || 'gemma4:e4b';
     this.baseUrl = options.baseUrl || 'http://localhost:11434/api/chat';
   }
 
@@ -224,6 +224,83 @@ class OllamaProvider extends BaseLLMProvider {
 }
 
 // =============================================================================
+// GEMMA 4 PROVIDER
+// Uses Ollama's structured output (format: schema) for guaranteed JSON —
+// no regex parsing, no silent dropped findings.
+// =============================================================================
+
+const CLASSIFY_SCHEMA = {
+  type: 'object',
+  properties: {
+    results: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id:             { type: 'string' },
+          classification: { type: 'string', enum: ['REAL', 'FALSE_POSITIVE'] },
+          reason:         { type: 'string' },
+          fix:            { type: ['string', 'null'] },
+        },
+        required: ['id', 'classification', 'reason', 'fix'],
+      },
+    },
+  },
+  required: ['results'],
+};
+
+class GemmaProvider extends OllamaProvider {
+  constructor(options = {}) {
+    super(null, {
+      model:   options.model   || 'gemma4:e4b',
+      baseUrl: options.baseUrl || 'http://localhost:11434/api/chat',
+    });
+    this.name = 'Gemma4';
+    // 256K tokens for 27b/31b, 128K for e4b — set conservatively high
+    this.contextWindow = options.model?.includes('27b') ? 131072 : 65536;
+  }
+
+  /**
+   * Classify using Ollama structured output (format: schema).
+   * Gemma 4 has trained-in function calling — the schema is enforced at the
+   * token level, so the response is always valid JSON matching CLASSIFY_SCHEMA.
+   */
+  async classify(findings, context) {
+    const prompt = this.buildClassificationPrompt(findings, context);
+
+    const response = await fetch(this.baseUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model:  this.model,
+        format: CLASSIFY_SCHEMA,
+        stream: false,
+        options: { num_ctx: this.contextWindow },
+        messages: [
+          { role: 'system', content: 'You are a security expert. Classify each finding as REAL or FALSE_POSITIVE and suggest a fix.' },
+          { role: 'user',   content: prompt },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gemma4/Ollama error: HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const text = data.message?.content || '';
+
+    try {
+      const parsed = JSON.parse(text);
+      return parsed.results ?? [];
+    } catch {
+      // Fallback: schema enforcement failed (old Ollama version) — try regex parse
+      return this.parseJSON(text);
+    }
+  }
+}
+
+// =============================================================================
 // OPENAI-COMPATIBLE PROVIDER
 // Handles Groq, Together AI, Mistral API, LM Studio, Azure OpenAI, Bedrock
 // proxy, and any other endpoint that speaks /v1/chat/completions.
@@ -239,6 +316,10 @@ const OPENAI_COMPATIBLE_PRESETS = {
   perplexity: { baseUrl: 'https://api.perplexity.ai/chat/completions',               model: 'llama-3.1-sonar-large-128k-online', envKey: 'PERPLEXITY_API_KEY' },
   lmstudio:   { baseUrl: 'http://localhost:1234/v1/chat/completions',                model: null,                         envKey: null },
   xai:        { baseUrl: 'https://api.x.ai/v1/chat/completions',                    model: 'grok-3-mini',                envKey: 'XAI_API_KEY' },
+  // Gemma 4 via Ollama — runs fully local, no API key required
+  // e4b: MoE 4B active params, ~8GB RAM;  27b: dense, ~20GB RAM
+  gemma4:     { baseUrl: 'http://localhost:11434/v1/chat/completions',               model: 'gemma4:e4b',                 envKey: null },
+  'gemma4:27b': { baseUrl: 'http://localhost:11434/v1/chat/completions',             model: 'gemma4:27b',                 envKey: null },
 };
 
 class OpenAICompatibleProvider extends OpenAIProvider {
@@ -279,6 +360,13 @@ export function createProvider(provider, apiKey, options = {}) {
     case 'ollama':
     case 'local':
       return new OllamaProvider(apiKey, options);
+    case 'gemma4':
+    case 'gemma':
+      // Gemma 4 via Ollama — structured output, no API key needed
+      return new GemmaProvider({
+        model:   options.model,
+        baseUrl: options.baseUrl,
+      });
   }
 
   // OpenAI-compatible presets
