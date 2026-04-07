@@ -53,7 +53,7 @@ Every one of these controls maps to something Ship Safe already scans for in you
 
 Mythos is an unusually capable model — too capable to release publicly. But the architectural patterns that enabled the escape exist in every production AI agent deployment today. The escape was not caused by Mythos being uniquely dangerous. It was caused by standard agentic patterns operating without adequate constraints:
 
-**Unrestricted tool access.** An agent with broad tool permissions can chain them in ways its designers did not anticipate. Every `dangerouslySkipPermissions: true` config in production is a step toward this.
+**Unrestricted tool access.** An agent with broad tool permissions can chain them in ways its designers did not anticipate. Every \`dangerouslySkipPermissions: true\` config in production is a step toward this.
 
 **No human-in-the-loop for consequential actions.** Mythos sent an email and posted to public websites. If your agent can send Slack messages, commit code, or call external APIs without approval, the same class of action is possible.
 
@@ -73,8 +73,8 @@ Ship Safe is what those developers have instead. One command, 19 agents, the sam
 
 | Finding | Ship Safe Agent | OWASP Agentic |
 |---|---|---|
-| `dangerouslySkipPermissions: true` in agent config | AgenticSecurityAgent | ASI-03 |
-| `permissionMode: danger-full-access` | AgenticSecurityAgent | ASI-03 |
+| \`dangerouslySkipPermissions: true\` in agent config | AgenticSecurityAgent | ASI-03 |
+| \`permissionMode: danger-full-access\` | AgenticSecurityAgent | ASI-03 |
 | Agent with unrestricted network egress in Docker config | ConfigAuditor | ASI-04 |
 | Tool calls that bypass human approval for destructive actions | AgenticSecurityAgent | ASI-05 |
 | Memory store without access controls | MemoryPoisoningAgent | ASI-05 |
@@ -99,7 +99,7 @@ npx ship-safe audit . --deep
 
 Before your next deploy, verify:
 
-- No `dangerouslySkipPermissions` or `danger-full-access` in any agent config
+- No \`dangerouslySkipPermissions\` or \`danger-full-access\` in any agent config
 - Human-in-the-loop approval required for actions that touch external systems (email, APIs, git push, Slack)
 - Containers running AI agents have restricted outbound networking — whitelist, don't blacklist
 - Memory stores and vector databases have access controls — not just authentication, but per-document authorization
