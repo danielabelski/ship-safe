@@ -18,7 +18,7 @@ const FLOAT_CARDS = [
 
 export default function Hero({ stars, downloads }: HeroProps) {
   const stats = [
-    { num: '18',  label: 'Security agents' },
+    { num: '19',  label: 'Security agents' },
     { num: '80+', label: 'Attack classes' },
     { num: stars ? formatNumber(stars) : '1.2k+', label: 'GitHub stars' },
     { num: downloads ? formatNumber(downloads) : '8k+', label: 'Weekly downloads' },
@@ -76,8 +76,8 @@ export default function Hero({ stars, downloads }: HeroProps) {
           </h1>
 
           <p className={styles.heroSub}>
-            One command. 18 AI agents. 80+ attack classes. Finds secrets, code vulns,
-            and CVEs across your entire codebase with OWASP&nbsp;2025 scoring.
+            One command. 19 AI agents. 80+ attack classes. Finds secrets, code vulns,
+            memory poisoning, and CVEs across your entire codebase with OWASP&nbsp;Agentic&nbsp;AI&nbsp;Top&nbsp;10 mapping.
           </p>
 
           <div className={`install-box ${styles.installBox}`}>

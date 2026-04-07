@@ -18,8 +18,8 @@ import { getRepoStats } from '@/lib/stats';
 
 export const metadata: Metadata = {
   title: 'Ship Safe — AI-Powered Security Scanner for Developers',
-  description: '18 AI security agents scan your codebase for secrets, vulnerabilities, and dependency CVEs in one command. OWASP 2025 scoring, LLM threat detection, and compliance mapping. Free and open source.',
-  keywords: ['application security scanner', 'AI security agents', 'secret scanner', 'code vulnerability scanner', 'OWASP 2025', 'LLM security testing', 'prompt injection scanner', 'DevSecOps tool', 'free security scanner', 'open source SAST'],
+  description: '19 AI security agents scan your codebase for secrets, vulnerabilities, memory poisoning, and dependency CVEs in one command. OWASP Agentic AI Top 10 mapping, live advisory feeds, and deep watch mode. Free and open source.',
+  keywords: ['application security scanner', 'AI security agents', 'secret scanner', 'code vulnerability scanner', 'OWASP 2025', 'OWASP Agentic AI Top 10', 'memory poisoning detection', 'LLM security testing', 'prompt injection scanner', 'DevSecOps tool', 'free security scanner', 'open source SAST', 'MCP security scanner'],
   alternates: {
     canonical: 'https://www.shipsafecli.com',
   },
@@ -38,10 +38,10 @@ const jsonLd = {
         price: '0',
         priceCurrency: 'USD',
       },
-      description: '18 AI security agents scan your codebase for secrets, vulnerabilities, and dependency CVEs in one command.',
+      description: '19 AI security agents scan your codebase for secrets, vulnerabilities, memory poisoning, and dependency CVEs in one command.',
       url: 'https://www.shipsafecli.com',
       downloadUrl: 'https://www.npmjs.com/package/ship-safe',
-      softwareVersion: '6.3.0',
+      softwareVersion: '7.0.0',
       author: {
         '@type': 'Organization',
         name: 'Ship Safe',

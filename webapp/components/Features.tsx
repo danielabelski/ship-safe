@@ -21,7 +21,7 @@ export default function Features() {
             </div>
             <h3 className={styles.cardTitle}>Scan everything</h3>
             <p className={styles.cardDesc}>
-              18 specialized agents scan for secrets, injection, auth bypass, SSRF, supply chain attacks, LLM/MCP security, vibe coding patterns, and more. 80+ attack classes across 5 OWASP standards.
+              19 specialized agents scan for secrets, injection, auth bypass, SSRF, supply chain attacks, LLM/MCP security, memory poisoning, vibe coding patterns, and more. 80+ attack classes across 6 OWASP standards including the Agentic AI Top 10.
             </p>
             <div className={styles.miniTerminal}>
               <div className={styles.miniHeader}>

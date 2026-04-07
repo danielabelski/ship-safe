@@ -18,8 +18,8 @@ const steps = [
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
       </svg>
     ),
-    title: 'Run 18 security agents',
-    body: 'Injection, auth bypass, SSRF, supply chain, LLM/MCP, agent config, CI/CD, and more. Context-aware confidence tuning cuts false positives.',
+    title: 'Run 19 security agents',
+    body: 'Injection, auth bypass, SSRF, supply chain, LLM/MCP, memory poisoning, agent config, CI/CD, and more. OWASP Agentic AI Top 10 mapped.',
   },
   {
     num: 3,
