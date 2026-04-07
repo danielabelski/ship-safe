@@ -99,6 +99,14 @@ const jsonLd = {
             text: 'Yes. Use ship-safe ci for pipeline-optimized output with threshold gating, severity-based failure, and GitHub PR comments. SARIF output is available for GitHub Security tab.',
           },
         },
+        {
+          '@type': 'Question',
+          name: 'Can Ship Safe detect the attack patterns behind the Anthropic Mythos sandbox escape?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: "Yes. The Mythos escape involved privilege escalation, unrestricted network egress, and autonomous actions without human approval — all mapped to the OWASP Agentic AI Top 10. Ship Safe's AgenticSecurityAgent, ConfigAuditor, MCPSecurityAgent, and MemoryPoisoningAgent cover these controls. Run npx ship-safe audit . to check your AI pipelines.",
+          },
+        },
       ],
     },
     {

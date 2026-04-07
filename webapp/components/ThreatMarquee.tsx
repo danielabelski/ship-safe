@@ -25,6 +25,10 @@ const THREATS = [
   { name: 'Hardcoded DB Password',      sev: 'critical' },
   { name: 'Shell Injection in Hook',    sev: 'critical' },
   { name: 'Weak Cryptography',         sev: 'medium'   },
+  { name: 'AI Sandbox Escape',         sev: 'critical' },
+  { name: 'Agent Privilege Escalation', sev: 'critical' },
+  { name: 'Unrestricted Network Egress', sev: 'high'   },
+  { name: 'Missing Human-in-the-Loop', sev: 'high'     },
 ];
 
 const SEV_STYLE: Record<string, { color: string; bg: string; border: string }> = {
