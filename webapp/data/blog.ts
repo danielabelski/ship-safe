@@ -317,7 +317,7 @@ After a sync, your \`.env\` looks something like this:
 
 \`\`\`
 VERCEL_PROJECT_ID=prj_...
-NEON_DATABASE_URL=postgresql://user:password@ep-...neon.tech/neondb
+NEON_DATABASE_URL=postgresql://user:password@ep-...neon.tech/neondb # ship-safe-ignore
 CLERK_SECRET_KEY=sk_live_...
 POSTHOG_PROJECT_API_KEY=phc_...
 CHROMA_API_KEY=...
@@ -354,7 +354,7 @@ Every file write is scanned. If a live credential lands in source code, it's blo
 
 **3. Leaked into logs, errors, or API responses**
 
-A \`NEON_DATABASE_URL\` with embedded credentials (\`postgresql://user:password@host/db\`) will appear verbatim in stack traces if your database connection throws an unhandled error. A \`CLERK_SECRET_KEY\` in an error log that gets shipped to your logging provider is now outside your control.
+A \`NEON_DATABASE_URL\` with embedded credentials (\`postgresql://user:password@host/db\` /* ship-safe-ignore */) will appear verbatim in stack traces if your database connection throws an unhandled error. A \`CLERK_SECRET_KEY\` in an error log that gets shipped to your logging provider is now outside your control.
 
 Ship Safe's ExceptionHandlerAgent flags unhandled exceptions that expose sensitive values, and the Scanner checks for credential patterns in log configuration files.
 
