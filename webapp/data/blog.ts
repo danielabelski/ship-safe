@@ -11,6 +11,138 @@ export interface BlogPost {
 
 export const posts: BlogPost[] = [
   {
+    slug: 'stripe-projects-credential-security',
+    title: 'Stripe Projects Gets Your Keys In. Ship Safe Keeps Them There.',
+    description: "Stripe just launched Projects — a CLI tool that provisions your whole dev stack and syncs real credentials into your environment. Here's the security layer every Stripe Projects user needs to add.",
+    date: '2026-04-07',
+    author: 'Ship Safe Team',
+    tags: ['secrets', 'developer tools', 'best practices'],
+    keywords: ['Stripe Projects security', 'stripe projects env pull', 'developer credential security', 'API key sprawl', 'secret scanning', 'Stripe CLI security', 'Supabase credential security', 'Clerk secret key', 'Neon database URL security', 'dot env security'],
+    content: `
+Stripe just announced [Stripe Projects](https://x.com/stripe/status/2037197998074335292) — a CLI plugin that provisions your entire production dev stack from the terminal. Attach Vercel, Neon, Supabase, Clerk, PostHog, Chroma, and more. Stripe handles payment credential handoff. One command syncs all your real keys into your environment:
+
+\`\`\`bash
+stripe projects env --pull
+\`\`\`
+
+Stripe's own announcement calls key sprawl "the biggest security footgun in developer workflows." They're right. And they've solved half the problem: getting credentials out of Slack messages and scattered dashboards and into a single, synced source.
+
+The other half — making sure those credentials don't leak back out — is where Ship Safe comes in.
+
+## What stripe projects env --pull puts in your environment
+
+After a sync, your \`.env\` looks something like this:
+
+\`\`\`
+VERCEL_PROJECT_ID=prj_...
+NEON_DATABASE_URL=postgresql://user:password@ep-...neon.tech/neondb
+CLERK_SECRET_KEY=sk_live_...
+POSTHOG_PROJECT_API_KEY=phc_...
+CHROMA_API_KEY=...
+\`\`\`
+
+These are real credentials for real production accounts. Stripe Projects solved the provisioning and distribution problem. What it doesn't do is watch what happens to those credentials after they land in your repo.
+
+## The four ways keys leak after a sync
+
+**1. Committed to git**
+
+The most common path. A developer runs \`stripe projects env --pull\`, the \`.env\` file appears, and at some point it gets staged. Either \`.gitignore\` was misconfigured, a new machine didn't have the right ignore rules, or someone ran \`git add .\` without thinking.
+
+Ship Safe checks:
+- Is every \`.env\` file covered by \`.gitignore\`?
+- Is the value of any environment variable hardcoded anywhere in source?
+- Is there a git history scan needed to catch keys that were committed then removed?
+
+\`\`\`bash
+npx ship-safe audit .
+\`\`\`
+
+**2. Hardcoded during development**
+
+AI coding tools are fast. They're also eager to complete config placeholders with real-looking values. When a real \`NEON_DATABASE_URL\` is sitting in your shell environment, Cursor or Claude Code might pull it into generated code automatically — or a developer might paste it in "just to test" and forget.
+
+Ship Safe's Claude Code hooks intercept this in real time, before the write hits disk:
+
+\`\`\`bash
+npx ship-safe hooks install
+\`\`\`
+
+Every file write is scanned. If a live credential lands in source code, it's blocked and the agent is prompted to use the environment variable instead.
+
+**3. Leaked into logs, errors, or API responses**
+
+A \`NEON_DATABASE_URL\` with embedded credentials (\`postgresql://user:password@host/db\`) will appear verbatim in stack traces if your database connection throws an unhandled error. A \`CLERK_SECRET_KEY\` in an error log that gets shipped to your logging provider is now outside your control.
+
+Ship Safe's ExceptionHandlerAgent flags unhandled exceptions that expose sensitive values, and the Scanner checks for credential patterns in log configuration files.
+
+**4. Exposed by a coding agent with too much access**
+
+If you're using an AI coding agent with \`dangerouslySkipPermissions\` or broad filesystem access, and your \`.env\` is in the working directory, the agent can read and exfiltrate credentials. This is the attack class the Mythos sandbox escape demonstrated at the frontier level — and it's already possible with current agent tools.
+
+Ship Safe's AgenticSecurityAgent checks your agent configurations for permission modes that would give an agent unconstrained access to your credential files.
+
+## The full credential set Stripe Projects syncs — and what Ship Safe detects
+
+| Stripe Projects Service | Credential Pattern | Ship Safe Detection |
+|---|---|---|
+| Neon / PlanetScale / Turso | \`DATABASE_URL\` with embedded password | Scanner (critical) |
+| Supabase | \`SUPABASE_SERVICE_ROLE_KEY\` (JWT with service_role) | Scanner (critical) |
+| Clerk | \`CLERK_SECRET_KEY\` (\`sk_live_\` prefix) | Scanner (critical) |
+| Vercel | \`VERCEL_TOKEN\` | Scanner (high) |
+| PostHog | \`POSTHOG_PROJECT_API_KEY\` (\`phc_\` prefix) | Scanner (medium) |
+| Chroma | \`CHROMA_API_KEY\` (high-entropy token) | Scanner (medium) |
+| Railway | \`RAILWAY_TOKEN\` | Scanner (medium) |
+| Stripe (the platform itself) | \`sk_live_\` / \`rk_live_\` | Scanner (critical) |
+
+Every one of these patterns is in Ship Safe's scanner. Run \`npx ship-safe audit .\` immediately after \`stripe projects env --pull\` to verify your environment is clean.
+
+## The recommended workflow
+
+\`\`\`bash
+# 1. Provision your stack with Stripe Projects
+stripe projects init my-app
+stripe projects add neon/postgres
+stripe projects add clerk/auth
+stripe projects add supabase/database
+
+# 2. Sync credentials
+stripe projects env --pull
+
+# 3. Immediately verify nothing leaked into source
+npx ship-safe audit .
+
+# 4. Install real-time hooks for ongoing protection
+npx ship-safe hooks install
+
+# 5. Add the audit to your pre-commit hook
+echo "npx ship-safe diff --staged" >> .husky/pre-commit
+\`\`\`
+
+From that point on, every staged file is checked before it can be committed, and every AI-assisted write is scanned before it touches disk.
+
+## One more thing: the .projects manifest
+
+Stripe Projects creates a \`.projects\` configuration in your repo. This file is designed to be committed — it's a manifest of services, not credentials. But it's worth understanding what it contains and doesn't contain before it goes into version control.
+
+Run \`npx ship-safe scan .projects\` to verify the manifest contains no credential values before you push it.
+
+## The bottom line
+
+Stripe Projects is a genuinely useful developer tool. The provisioning story — one CLI, real provider accounts, payment handled by Stripe — removes real friction. Calling out key sprawl as the primary security problem in the announcement shows the team understands the threat model.
+
+Ship Safe is the complement: it watches the other side of that threat model. Credentials in → credentials don't leak out.
+
+\`\`\`bash
+npx ship-safe audit .
+\`\`\`
+
+19 agents. Free and open source.
+
+Ship fast. Ship safe.
+    `.trim(),
+  },
+  {
     slug: 'anthropic-mythos-sandbox-escape-agentic-security',
     title: "Anthropic's Mythos Escaped Its Sandbox. Here's What That Means for Developers.",
     description: "Anthropic's Claude Mythos Preview escaped a secured sandbox, gained internet access, emailed a researcher, and posted exploits publicly. We mapped every step to OWASP Agentic Top 10 — and to the agents Ship Safe already runs.",

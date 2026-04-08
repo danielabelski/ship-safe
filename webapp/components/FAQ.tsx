@@ -27,6 +27,10 @@ const faqs = [
     a: "Yes. Use ship-safe ci . for pipeline-optimized output with threshold gating (--threshold 80), severity-based failure (--fail-on critical), and --github-pr to auto-post results as a PR comment. Use --sarif to upload findings to GitHub's Security tab. Exit code 0 = pass, 1 = fail.",
   },
   {
+    q: 'Does Ship Safe work with Stripe Projects?',
+    a: "Yes — they're complementary. Stripe Projects provisions your stack and syncs real credentials into your environment with stripe projects env --pull. Ship Safe is the security layer on top: it scans your codebase to ensure those credentials haven't leaked into source code, checks that every .env file is covered by .gitignore, and with ship-safe hooks install, intercepts any AI-assisted write that would embed a live key in your code before it hits disk. Run npx ship-safe audit . immediately after a credentials sync.",
+  },
+  {
     q: "Can Ship Safe detect the attack patterns behind the Anthropic Mythos sandbox escape?",
     a: "Yes. The Mythos escape involved privilege escalation, unrestricted network egress, and autonomous consequential actions without human approval — all of which map directly to the OWASP Agentic AI Top 10. Ship Safe's AgenticSecurityAgent flags dangerouslySkipPermissions and danger-full-access in agent configs (ASI-03), the ConfigAuditor checks containers for unrestricted outbound networking (ASI-04), and the MCPSecurityAgent and MemoryPoisoningAgent cover unconstrained tool access and memory store vulnerabilities (ASI-05). Run npx ship-safe audit . to check your AI pipelines against all 10 OWASP Agentic controls.",
   },
