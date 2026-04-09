@@ -40,3 +40,7 @@ cli/__tests__/
 # for educational purposes in blog posts and documentation.
 article-assets/
 marketing/
+
+# Blog post content — TypeScript data file containing example credentials,
+# code snippets, and connection strings used in blog post copy. Not real credentials.
+webapp/data/blog.ts
