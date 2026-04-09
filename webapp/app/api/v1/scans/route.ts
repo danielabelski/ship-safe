@@ -13,18 +13,29 @@ import { join } from 'path';
 
 const execAsync = promisify(exec);
 
-async function resolveUser(req: NextRequest) {
+const PAID_PLANS = ['pro', 'team', 'enterprise'];
+
+async function resolveUser(req: NextRequest): Promise<{ userId: string; plan: string } | null> {
   // Try API key first, then session
   const apiAuth = await authenticateApiKey(req);
-  if (apiAuth) return apiAuth.userId;
+  if (apiAuth) {
+    const user = await prisma.user.findUnique({ where: { id: apiAuth.userId }, select: { plan: true } });
+    return { userId: apiAuth.userId, plan: user?.plan ?? 'free' };
+  }
   const session = await auth();
-  return session?.user?.id ?? null;
+  if (!session?.user?.id) return null;
+  const plan = (session.user as Record<string, unknown>).plan as string ?? 'free';
+  return { userId: session.user.id, plan };
 }
 
 // GET /api/v1/scans — list scans
 export async function GET(req: NextRequest) {
-  const userId = await resolveUser(req);
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const resolved = await resolveUser(req);
+  if (!resolved) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { userId, plan } = resolved;
+  if (!PAID_PLANS.includes(plan)) {
+    return NextResponse.json({ error: 'API access requires a Pro or Team plan. Upgrade at shipsafecli.com/pricing' }, { status: 403 });
+  }
 
   const url = new URL(req.url);
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100);
@@ -63,13 +74,12 @@ export async function GET(req: NextRequest) {
 
 // POST /api/v1/scans — create a scan
 export async function POST(req: NextRequest) {
-  const userId = await resolveUser(req);
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { plan: true } });
-  if (user?.plan !== 'pro' && user?.plan !== 'team' && user?.plan !== 'enterprise') {
+  const resolved = await resolveUser(req);
+  if (!resolved) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { userId, plan } = resolved;
+  if (!PAID_PLANS.includes(plan)) {
     return NextResponse.json(
-      { error: 'Cloud scans require a Pro plan.' },
+      { error: 'API access requires a Pro or Team plan. Upgrade at shipsafecli.com/pricing' },
       { status: 403 },
     );
   }
