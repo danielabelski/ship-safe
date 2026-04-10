@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -96,10 +96,20 @@ const SEV_COLORS: Record<string, string> = {
   low: '#16a34a',
 };
 
-const catIcons: Record<string, string> = {
-  secrets: '🔑', injection: '💉', deps: '📦', auth: '🔒',
-  config: '⚙️', 'supply-chain': '🔗', api: '🌐', llm: '🤖',
-};
+function CatIcon({ k }: { k: string }) {
+  const p = 'currentColor';
+  switch (k) {
+    case 'secrets':      return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={p} strokeWidth="2" strokeLinecap="round"><circle cx="8" cy="15" r="5"/><path d="M13 15h3l1-1 1 1 1-1 1 1v-3l-5-5"/></svg>;
+    case 'injection':    return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={p} strokeWidth="2" strokeLinecap="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>;
+    case 'deps':         return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={p} strokeWidth="2" strokeLinecap="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>;
+    case 'auth':         return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={p} strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>;
+    case 'config':       return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={p} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>;
+    case 'supply-chain': return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={p} strokeWidth="2" strokeLinecap="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>;
+    case 'api':          return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={p} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>;
+    case 'llm':          return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={p} strokeWidth="2" strokeLinecap="round"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/><path d="M12 8v4l3 3"/></svg>;
+    default:             return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={p} strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
+  }
+}
 
 type Tab = 'findings' | 'remediation' | 'deps' | 'agents' | 'raw';
 
@@ -299,6 +309,14 @@ const SCAN_STEPS = [
 
 function ScanProgress({ startedAt }: { startedAt: string }) {
   const [activeStep, setActiveStep] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const tick = () => setElapsed(Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [startedAt]);
 
   useEffect(() => {
     const elapsed = Date.now() - new Date(startedAt).getTime();
@@ -326,7 +344,7 @@ function ScanProgress({ startedAt }: { startedAt: string }) {
       <div className={s.progressHeader}>
         <span className={s.pulseOrb} />
         <span className={s.runningText}>Scan in progress</span>
-        <span className={s.progressPct}>{Math.round((activeStep / SCAN_STEPS.length) * 100)}%</span>
+        <span className={s.progressPct}>{elapsed}s · {Math.round((activeStep / SCAN_STEPS.length) * 100)}%</span>
       </div>
       <div className={s.progressBar}>
         <div className={s.progressFill} style={{ width: `${(activeStep / SCAN_STEPS.length) * 100}%` }} />
@@ -368,6 +386,7 @@ export default function ScanDetail() {
   const [sevFilter, setSevFilter] = useState<string | null>(null);
   const [catFilter, setCatFilter] = useState<string | null>(null);
   const [expandedFindings, setExpandedFindings] = useState<Set<number>>(new Set());
+  const [showRaw, setShowRaw] = useState(false);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -381,7 +400,7 @@ export default function ScanDetail() {
       setLoading(false);
     }
     fetchScan();
-    interval = setInterval(fetchScan, 3000);
+    interval = setInterval(fetchScan, 1000);
     return () => clearInterval(interval);
   }, [params.id]);
 
@@ -507,29 +526,22 @@ export default function ScanDetail() {
 
             {/* Stat cards */}
             <div className={s.statCardsCol}>
-              {[
-                { label: 'Total findings', value: scan.findings, icon: '⚑', color: scan.findings > 0 ? 'var(--red)' : 'var(--green)' },
-                { label: 'Secrets', value: scan.secrets, icon: '🔑', color: scan.secrets > 0 ? 'var(--red)' : 'var(--green)' },
-                { label: 'Code vulns', value: scan.vulns, icon: '💉', color: scan.vulns > 0 ? 'var(--sev-high)' : 'var(--green)' },
-                { label: 'CVEs', value: scan.cves, icon: '📦', color: scan.cves > 0 ? 'var(--sev-high)' : 'var(--green)' },
-              ].map(st => (
+              {([
+                { label: 'Total findings', value: scan.findings, color: scan.findings > 0 ? 'var(--red)' : 'var(--green)', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> },
+                { label: 'Secrets', value: scan.secrets, color: scan.secrets > 0 ? 'var(--red)' : 'var(--green)', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="8" cy="15" r="5"/><path d="M13 15h3l1-1 1 1 1-1 1 1v-3l-5-5"/></svg> },
+                { label: 'Code vulns', value: scan.vulns, color: scan.vulns > 0 ? 'var(--sev-high)' : 'var(--green)', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg> },
+                { label: 'CVEs', value: scan.cves, color: scan.cves > 0 ? 'var(--sev-high)' : 'var(--green)', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg> },
+              ] as { label: string; value: number; color: string; icon: React.ReactNode }[]).map(st => (
                 <div key={st.label} className={s.miniStatCard}>
                   <div>
                     <span className={s.miniStatValue} style={{ color: st.color }}>{st.value}</span>
                     <span className={s.miniStatLabel}>{st.label}</span>
                   </div>
-                  <span className={s.miniStatIcon}>{st.icon}</span>
+                  <span className={s.miniStatIcon} style={{ color: st.color, opacity: 0.5 }}>{st.icon}</span>
                 </div>
               ))}
             </div>
           </div>
-
-          {/* OWASP bar chart */}
-          {categories && Object.keys(categories).some(k => categories[k].findingCount > 0) && (
-            <div className={s.chartSection}>
-              <OWASPChart categories={categories} />
-            </div>
-          )}
 
           {/* Category cards */}
           {categories && Object.keys(categories).length > 0 && (
@@ -548,7 +560,7 @@ export default function ScanDetail() {
                         background: cat.findingCount > 0 ? `${SEV_COLORS[worstSev!]}12` : 'var(--bg-elevated)',
                         color: cat.findingCount > 0 ? SEV_COLORS[worstSev!] : 'var(--text-dim)',
                       }}>
-                        {catIcons[key] ?? '🛡️'}
+                        <CatIcon k={key} />
                       </div>
                       <div className={s.catInfo}>
                         <div className={s.catName}>{cat.label}</div>
@@ -562,24 +574,37 @@ export default function ScanDetail() {
             </div>
           )}
 
+          {/* OWASP bar chart */}
+          {categories && Object.keys(categories).some(k => categories[k].findingCount > 0) && (
+            <div className={s.chartSection}>
+              <OWASPChart categories={categories} />
+            </div>
+          )}
+
           {/* Tabs */}
-          <div className={s.tabs}>
-            {([
-              ['findings', 'Findings', findings.length],
-              ['remediation', 'Fix Plan', remediation.length],
-              ...(depVulns.length > 0 ? [['deps', 'CVEs', depVulns.length]] : []),
-              ...(agents.length > 0 ? [['agents', 'Agents', agents.length]] : []),
-              ['raw', 'Raw JSON', null],
-            ] as [Tab, string, number | null][]).map(([id, label, count]) => (
-              <button
-                key={id}
-                className={`${s.tab} ${tab === id ? s.active : ''}`}
-                onClick={() => setTab(id)}
-              >
-                {label}
-                {count !== null && <span className={s.tabCount}>{count}</span>}
+          <div className={s.tabsRow}>
+            <div className={s.tabs}>
+              {([
+                ['findings', 'Findings', findings.length],
+                ['remediation', 'Fix Plan', remediation.length],
+                ...(depVulns.length > 0 ? [['deps', 'CVEs', depVulns.length]] : []),
+                ...(agents.length > 0 ? [['agents', 'Coverage', agents.length]] : []),
+              ] as [Tab, string, number | null][]).map(([id, label, count]) => (
+                <button
+                  key={id}
+                  className={`${s.tab} ${tab === id ? s.active : ''}`}
+                  onClick={() => setTab(id)}
+                >
+                  {label}
+                  {count !== null && <span className={s.tabCount}>{count}</span>}
+                </button>
+              ))}
+            </div>
+            {report && (
+              <button className={s.rawToggle} onClick={() => setShowRaw(v => !v)}>
+                {showRaw ? 'Hide' : 'Raw JSON'}
               </button>
-            ))}
+            )}
           </div>
 
           {/* Tab: Findings */}
@@ -748,8 +773,8 @@ export default function ScanDetail() {
             </div>
           )}
 
-          {/* Tab: Raw JSON */}
-          {tab === 'raw' && report && (
+          {/* Raw JSON (collapsible) */}
+          {showRaw && report && (
             <div className={s.rawJson}>
               <pre>{JSON.stringify(report, null, 2)}</pre>
             </div>

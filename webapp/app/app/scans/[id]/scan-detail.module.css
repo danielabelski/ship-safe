@@ -276,7 +276,7 @@
   display: block;
   margin-top: 0.15rem;
 }
-.miniStatIcon { font-size: 1.1rem; opacity: 0.6; }
+.miniStatIcon { display: flex; align-items: center; flex-shrink: 0; }
 
 /* ── OWASP chart section ───────────────────────────────── */
 .chartSection {
@@ -325,11 +325,30 @@
 .catDeduction { font-family: var(--font-mono); font-size: 0.68rem; color: var(--red); white-space: nowrap; margin-left: auto; }
 
 /* ── Tabs ──────────────────────────────────────────────── */
+.tabsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
 .tabs {
   display: flex;
   gap: 0;
-  border-bottom: 1px solid var(--border);
 }
+.rawToggle {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.3rem 0.6rem;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  transition: color 0.15s, background 0.15s;
+  margin-right: 0.25rem;
+}
+.rawToggle:hover { color: var(--text-muted); background: var(--bg-elevated); }
 .tab {
   padding: 0.65rem 1.1rem;
   font-size: 0.84rem;
@@ -431,10 +450,10 @@
   border-radius: 4px;
   flex-shrink: 0;
 }
-.severity_critical { background: rgba(220,38,38,0.08); color: var(--sev-critical); border: 1px solid rgba(220,38,38,0.2); }
-.severity_high     { background: rgba(234,88,12,0.08);  color: var(--sev-high);     border: 1px solid rgba(234,88,12,0.2); }
-.severity_medium   { background: rgba(217,119,6,0.08);  color: var(--sev-medium);   border: 1px solid rgba(217,119,6,0.2); }
-.severity_low      { background: rgba(22,163,74,0.08);  color: var(--sev-low);      border: 1px solid rgba(22,163,74,0.2); }
+.severity_critical { background: rgba(220,38,38,0.12); color: var(--sev-critical); border: 1px solid rgba(220,38,38,0.35); }
+.severity_high     { background: rgba(234,88,12,0.12);  color: var(--sev-high);     border: 1px solid rgba(234,88,12,0.35); }
+.severity_medium   { background: rgba(217,119,6,0.12);  color: var(--sev-medium);   border: 1px solid rgba(217,119,6,0.35); }
+.severity_low      { background: rgba(22,163,74,0.12);  color: var(--sev-low);      border: 1px solid rgba(22,163,74,0.35); }
 
 .findingTitle { font-size: 0.88rem; font-weight: 600; flex: 1; }
 .findingFile {
@@ -681,7 +700,8 @@
   .categories { grid-template-columns: repeat(2, 1fr); }
 
   /* Tabs: scrollable */
-  .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 1px; }
+  .tabsRow { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tabs { padding-bottom: 1px; flex-shrink: 0; }
   .tab { white-space: nowrap; padding: 0.5rem 0.7rem; font-size: 0.77rem; }
 
   /* Findings */
