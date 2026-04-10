@@ -2,6 +2,7 @@ import Nav from '@/components/Nav';
 import Link from 'next/link';
 import { posts, getPostBySlug, getAllSlugs } from '@/data/blog';
 import styles from './post.module.css';
+import ShareButtons from './ShareButtons';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
@@ -190,6 +191,7 @@ export default async function BlogPost({ params }: Props) {
   if (!post) notFound();
 
   const morePosts = posts.filter((p) => p.slug !== slug).slice(0, 3);
+  const postUrl = `https://www.shipsafecli.com/blog/${post.slug}`;
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -246,6 +248,7 @@ export default async function BlogPost({ params }: Props) {
               <span>{post.author}</span>
               <span>{new Date(post.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
             </div>
+            <ShareButtons title={post.title} url={postUrl} />
           </header>
 
           <div className={styles.content}>
@@ -253,6 +256,7 @@ export default async function BlogPost({ params }: Props) {
           </div>
 
           <footer className={styles.footer}>
+            <ShareButtons title={post.title} url={postUrl} />
             <div className={styles.cta}>
               <h3>Scan your project now</h3>
               <pre className={styles.ctaCode}><code>npx ship-safe audit .</code></pre>
