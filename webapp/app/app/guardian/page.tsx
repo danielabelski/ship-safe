@@ -52,6 +52,7 @@ export default function GuardianPage() {
   const [triggerRepo, setTriggerRepo] = useState('');
   const [triggerPR, setTriggerPR] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
     const [runsRes, configRes] = await Promise.all([
@@ -61,9 +62,9 @@ export default function GuardianPage() {
     const runsData = await runsRes.json();
     const configData = await configRes.json();
     setRuns(runsData.runs || []);
-    // Use the default (*) config or first config
     const configs = configData.configs || [];
     setConfig(configs.find((c: GuardianConfig) => c.repo === '*') || configs[0] || null);
+    setLoading(false);
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -233,9 +234,22 @@ export default function GuardianPage() {
       {/* Runs */}
       <div className={styles.section}>
         <div className={styles.sectionTitle}>Recent Runs</div>
-        {runs.length === 0 ? (
+        {loading ? (
+          <div className={styles.skeleton}>
+            {[...Array(4)].map((_, i) => <div key={i} className={styles.skeletonRow} />)}
+          </div>
+        ) : runs.length === 0 ? (
           <div className={styles.empty}>
-            No Guardian runs yet. Trigger one manually or enable Guardian on a monitored repo.
+            <div className={styles.emptyIcon}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+            </div>
+            <div className={styles.emptyTitle}>No Guardian runs yet</div>
+            <div className={styles.emptyDesc}>PR Guardian watches your pull requests, diagnoses CI failures, applies fixes, and merges when ready.</div>
+            <div className={styles.emptySteps}>
+              <div className={styles.emptyStep}><span className={styles.emptyStepNum}>1</span>Enter a repo and PR number above and click Run Guardian</div>
+              <div className={styles.emptyStep}><span className={styles.emptyStepNum}>2</span>Guardian scans, diagnoses failures, and optionally commits fixes</div>
+              <div className={styles.emptyStep}><span className={styles.emptyStepNum}>3</span>Auto-merge when all checks pass (configurable above)</div>
+            </div>
           </div>
         ) : (
           <div className={styles.runList}>

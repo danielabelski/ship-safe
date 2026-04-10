@@ -83,7 +83,12 @@ export default function TeamPage() {
   const currentOrg = orgs.find(o => o.id === selectedOrg);
   const isAdmin = currentOrg?.role === 'owner' || currentOrg?.role === 'admin';
 
-  if (loading) return <div className={styles.page}><p style={{ color: 'var(--text-dim)' }}>Loading...</p></div>;
+  if (loading) return (
+    <div className={styles.page}>
+      <div className={styles.header}><div><h1>Team</h1><p className={styles.subtitle}>Manage your organization and team members</p></div></div>
+      <div className={styles.skeleton}>{[...Array(3)].map((_, i) => <div key={i} className={styles.skeletonRow} />)}</div>
+    </div>
+  );
 
   return (
     <div className={styles.page}>
@@ -96,6 +101,7 @@ export default function TeamPage() {
 
       {orgs.length === 0 ? (
         <div className={styles.emptyState}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
           <h3>Create your first organization</h3>
           <p>Organizations let you share scans, set policies, and collaborate with your team.</p>
           <div className={styles.createRow}>

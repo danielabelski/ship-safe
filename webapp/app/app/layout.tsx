@@ -8,6 +8,7 @@ import SignOutButton from './SignOutButton';
 import MobileNav from './MobileNav';
 import NavLinks from './NavLinks';
 import { ToastProvider } from './Toast';
+import KeyboardShortcuts from './KeyboardShortcuts';
 
 export const metadata: Metadata = {
   title: 'Dashboard — Ship Safe',
@@ -71,6 +72,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {children}
         </ToastProvider>
       </main>
+      <KeyboardShortcuts />
     </div>
   );
 }

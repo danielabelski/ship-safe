@@ -390,6 +390,8 @@ export default function ScanDetail() {
   const [expandedFindings, setExpandedFindings] = useState<Set<number>>(new Set());
   const [showRaw, setShowRaw] = useState(false);
   const [rescanning, setRescanning] = useState(false);
+  const [scoreTrend, setScoreTrend] = useState<{ score: number; date: string }[]>([]);
+  const [badgeCopied, setBadgeCopied] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -423,7 +425,20 @@ export default function ScanDetail() {
       if (res.ok) {
         const data = await res.json();
         setScan(data);
-        if (data.status === 'done' || data.status === 'failed') clearInterval(interval);
+        if (data.status === 'done' || data.status === 'failed') {
+          clearInterval(interval);
+          if (data.status === 'done' && data.repo) {
+            fetch(`/api/scans?repo=${encodeURIComponent(data.repo)}&limit=10`)
+              .then(r => r.json())
+              .then(d => {
+                const trend = (d.scans || [])
+                  .filter((sc: { status: string; score: number | null }) => sc.status === 'done' && sc.score !== null)
+                  .map((sc: { score: number; createdAt: string }) => ({ score: sc.score, date: sc.createdAt }))
+                  .reverse();
+                if (trend.length > 1) setScoreTrend(trend);
+              });
+          }
+        }
       }
       setLoading(false);
     }
@@ -469,6 +484,22 @@ export default function ScanDetail() {
     .sort((a, b) => (sevOrder[a.severity] ?? 9) - (sevOrder[b.severity] ?? 9));
 
   const sevCounts = findings.reduce((acc, f) => { acc[f.severity] = (acc[f.severity] ?? 0) + 1; return acc; }, {} as Record<string, number>);
+
+  const topCritical = [...findings]
+    .sort((a, b) => (sevOrder[a.severity] ?? 9) - (sevOrder[b.severity] ?? 9))
+    .slice(0, 3)
+    .filter(f => f.severity === 'critical' || f.severity === 'high');
+
+  const badgeMarkdown = scan.score !== null && scan.grade
+    ? `[![Ship Safe](https://www.shipsafecli.com/api/badge?score=${scan.score}&grade=${scan.grade})](https://www.shipsafecli.com)`
+    : null;
+
+  function copyBadge() {
+    if (!badgeMarkdown) return;
+    navigator.clipboard.writeText(badgeMarkdown);
+    setBadgeCopied(true);
+    setTimeout(() => setBadgeCopied(false), 2000);
+  }
 
   return (
     <div className={s.page}>
@@ -586,6 +617,62 @@ export default function ScanDetail() {
               ))}
             </div>
           </div>
+
+          {/* Fix these first */}
+          {topCritical.length > 0 && (
+            <div className={s.fixFirst}>
+              <div className={s.fixFirstHeader}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <span>Fix these first</span>
+                <span className={s.fixFirstSub}>Top {topCritical.length} priority finding{topCritical.length !== 1 ? 's' : ''}</span>
+              </div>
+              <div className={s.fixFirstItems}>
+                {topCritical.map((f, i) => (
+                  <div key={i} className={s.fixFirstItem}>
+                    <span className={s.sevBadge} style={{ background: SEV_COLORS[f.severity] + '18', color: SEV_COLORS[f.severity], borderColor: SEV_COLORS[f.severity] + '40' }}>{f.severity}</span>
+                    <div className={s.fixFirstBody}>
+                      <div className={s.fixFirstTitle}>{f.title}</div>
+                      <div className={s.fixFirstFile}>{f.file}{f.line ? `:${f.line}` : ''}</div>
+                      {f.fix && <div className={s.fixFirstFix}>{f.fix}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Score trend */}
+          {scoreTrend.length > 1 && (
+            <div className={s.trendSection}>
+              <div className={s.trendTitle}>Score trend for {scan.repo}</div>
+              <div className={s.trendChart}>
+                {scoreTrend.map((pt, i) => {
+                  const prev = i > 0 ? scoreTrend[i - 1].score : pt.score;
+                  const delta = pt.score - prev;
+                  return (
+                    <div key={i} className={s.trendBar} title={`${new Date(pt.date).toLocaleDateString()}: ${pt.score}`}>
+                      <div
+                        className={s.trendFill}
+                        style={{
+                          height: `${pt.score}%`,
+                          background: pt.score >= 80 ? 'var(--green)' : pt.score >= 60 ? 'var(--yellow)' : 'var(--red)',
+                          opacity: i === scoreTrend.length - 1 ? 1 : 0.5,
+                        }}
+                      />
+                      {i === scoreTrend.length - 1 && (
+                        <span className={s.trendLabel}>{pt.score}</span>
+                      )}
+                      {i > 0 && delta !== 0 && i === scoreTrend.length - 1 && (
+                        <span className={s.trendDelta} style={{ color: delta > 0 ? 'var(--green)' : 'var(--red)' }}>
+                          {delta > 0 ? '+' : ''}{delta}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Category cards */}
           {categories && Object.keys(categories).length > 0 && (
@@ -821,6 +908,29 @@ export default function ScanDetail() {
           {showRaw && report && (
             <div className={s.rawJson}>
               <pre>{JSON.stringify(report, null, 2)}</pre>
+            </div>
+          )}
+
+          {/* Badge */}
+          {badgeMarkdown && (
+            <div className={s.badgeSection}>
+              <div className={s.badgeHeader}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                <span>Add a badge to your README</span>
+              </div>
+              <div className={s.badgePreview}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`/api/badge?score=${scan.score}&grade=${scan.grade}`} alt={`Ship Safe ${scan.grade}`} />
+              </div>
+              <div className={s.badgeCode} onClick={copyBadge} title="Click to copy">
+                <code>{badgeMarkdown}</code>
+                <button className={s.badgeCopy}>
+                  {badgeCopied
+                    ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                  }
+                </button>
+              </div>
             </div>
           )}
         </>

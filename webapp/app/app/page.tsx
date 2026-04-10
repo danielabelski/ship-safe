@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import styles from './dashboard.module.css';
 import UpgradeToast from './UpgradeToast';
+import OnboardingChecklist from './OnboardingChecklist';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -19,7 +20,11 @@ export default async function Dashboard() {
 
   const userId = session.user.id;
 
-  const [recentScans, totalScans, aggFindings] = await Promise.all([
+  const plan = (session.user as Record<string, unknown>).plan as string ?? 'free';
+  const isPaid = plan === 'pro' || plan === 'team' || plan === 'enterprise';
+  const freeLimit = parseInt(process.env.FREE_SCAN_LIMIT ?? '1', 10);
+
+  const [recentScans, totalScans, aggFindings, monitoredRepoCount, notification, orgMembership] = await Promise.all([
     prisma.scan.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -35,11 +40,15 @@ export default async function Dashboard() {
       _avg: { score: true },
       _sum: { findings: true },
     }),
+    prisma.monitoredRepo.count({ where: { userId } }),
+    prisma.notificationSetting.findUnique({ where: { userId }, select: { slackWebhookUrl: true } }),
+    prisma.orgMember.count({ where: { userId } }),
   ]);
 
   const avgScore = Math.round(aggFindings._avg.score ?? 0);
   const totalFindings = aggFindings._sum.findings ?? 0;
   const uniqueRepos = new Set(recentScans.map(s => s.repo)).size;
+  const freeExhausted = !isPaid && totalScans >= freeLimit;
 
   function timeAgo(date: Date) {
     const diff = Date.now() - new Date(date).getTime();
@@ -54,6 +63,24 @@ export default async function Dashboard() {
   return (
     <div className={styles.page}>
       <Suspense fallback={null}><UpgradeToast /></Suspense>
+
+      <OnboardingChecklist
+        hasScanned={totalScans > 0}
+        hasMonitoredRepo={monitoredRepoCount > 0}
+        hasSlack={!!notification?.slackWebhookUrl}
+        hasTeam={orgMembership > 0}
+      />
+
+      {freeExhausted && (
+        <div className={styles.upgradeCard}>
+          <div className={styles.upgradeLeft}>
+            <h3>You&apos;ve used your free scan</h3>
+            <p>Upgrade to Pro for unlimited scans, private repos, AI analysis, and API access — one-time payment, no subscription.</p>
+          </div>
+          <Link href="/pricing" className="btn btn-primary">Upgrade to Pro →</Link>
+        </div>
+      )}
+
       <div className={styles.header}>
         <div>
           <h1>Dashboard</h1>

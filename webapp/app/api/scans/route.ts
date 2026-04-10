@@ -11,9 +11,10 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100);
   const cursor = url.searchParams.get('cursor') || undefined;
+  const repo = url.searchParams.get('repo') || undefined;
 
   const scans = await prisma.scan.findMany({
-    where: { userId: session.user.id },
+    where: { userId: session.user.id, ...(repo ? { repo } : {}) },
     orderBy: { createdAt: 'desc' },
     take: limit + 1,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
