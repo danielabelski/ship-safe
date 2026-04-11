@@ -34,14 +34,14 @@
  *       const findings = [];
  *       for (const file of files) {
  *         const content = fs.readFileSync(file, 'utf-8');
- *         if (content.includes('eval(')) {
+ *         if (content.includes('eval(')) { // ship-safe-ignore — JSDoc example, not real eval
  *           findings.push(createFinding({
  *             rule:        'CUSTOM_EVAL',
  *             severity:    'high',
- *             title:       'Dangerous eval() usage',
- *             description: 'eval() can execute arbitrary code',
+ *             title:       'Dangerous eval() usage', // ship-safe-ignore — JSDoc string literal
+ *             description: 'eval() can execute arbitrary code', // ship-safe-ignore — JSDoc string literal
  *             file,
- *             remediation: 'Replace eval() with safer alternatives',
+ *             remediation: 'Replace eval() with safer alternatives', // ship-safe-ignore — JSDoc string literal
  *           }));
  *         }
  *       }
@@ -249,7 +249,7 @@ export default class ${className} extends BaseAgent {
         if (/ship-safe-ignore/i.test(line)) continue; // respect suppression comments
 
         // Example: flag dangerous eval() calls
-        if (/\\beval\\s*\\(/.test(line)) {
+        if (/\\beval\\s*\\(/.test(line)) { // ship-safe-ignore — template example in plugin scaffold, not real eval
           findings.push(createFinding({
             rule:        '${safeName.toUpperCase().replace(/-/g, '_')}',
             severity:    'high',          // critical | high | medium | low
