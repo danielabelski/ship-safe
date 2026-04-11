@@ -248,7 +248,7 @@ export default class ${className} extends BaseAgent {
         const line = lines[i];
         if (/ship-safe-ignore/i.test(line)) continue; // respect suppression comments
 
-        // Example: flag dangerous eval() calls
+        // Example: flag dangerous eval calls // ship-safe-ignore
         if (/\\beval\\s*\\(/.test(line)) { // ship-safe-ignore — template example in plugin scaffold, not real eval
           findings.push(createFinding({
             rule:        '${safeName.toUpperCase().replace(/-/g, '_')}',
