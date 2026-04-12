@@ -127,6 +127,10 @@ function Step2({ state, set }: { state: WizardState; set: (s: Partial<WizardStat
           Registered tools
           <span className={styles.labelHint}>from your Hermes tool registry</span>
         </label>
+        <p className={styles.fieldHelp}>
+          The tools your agent can call — e.g. <code>web_search</code>, <code>code_executor</code>, <code>file_reader</code>.
+          Copy names from your tool registry config. Add a source URL for remote tools so Ship Safe can generate integrity hashes.
+        </p>
         <div className={styles.toolList}>
           {state.tools.map((tool, i) => (
             <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
@@ -161,6 +165,11 @@ function Step2({ state, set }: { state: WizardState; set: (s: Partial<WizardStat
       {/* Memory layers */}
       <div className={styles.field}>
         <label className={styles.label}>Memory layers used</label>
+        <p className={styles.fieldHelp}>
+          Which Hermes memory types your agent uses. <strong>Episodic</strong> = past interactions,{' '}
+          <strong>Semantic</strong> = long-term knowledge, <strong>Working</strong> = current task state.
+          Check all that apply — Ship Safe validates each layer for schema injection attacks.
+        </p>
         <div className={styles.checkGrid}>
           {(['episodic', 'semantic', 'working'] as const).map(layer => {
             const checked = state.memoryLayers.includes(layer);
@@ -181,7 +190,7 @@ function Step2({ state, set }: { state: WizardState; set: (s: Partial<WizardStat
       <div className={styles.toggleRow}>
         <div>
           <div className={styles.toggleLabel}>Uses sub-agents</div>
-          <div className={styles.toggleSub}>Enables multi-agent trust boundary checks (max recursion depth)</div>
+          <div className={styles.toggleSub}>Does your agent spawn child agents? Enables multi-agent trust boundary checks and sets a max recursion depth to prevent runaway chains.</div>
         </div>
         <button
           className={`${styles.toggle} ${state.hasSubAgents ? styles.on : ''}`}
@@ -404,10 +413,13 @@ export default function DeployPage() {
             <span className={styles.hermesDot} />
             Hermes Agent Security
           </div>
+          <a href="/hermes" target="_blank" rel="noopener noreferrer" className={styles.headerLearn}>
+            New to Hermes? Read the guide →
+          </a>
         </div>
         <h1>Deploy 22 security agents</h1>
         <p className={styles.headerSub}>
-          Answer 4 questions. Get a hardened config bundle — allowlists, integrity hashes, and CI — ready to drop into your project.
+          Answer 4 questions. Get a hardened config bundle — allowlists, integrity hashes, and CI — dropped into your project with one command.
         </p>
       </div>
 

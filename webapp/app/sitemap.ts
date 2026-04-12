@@ -40,6 +40,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
+      url: `${baseUrl}/hermes`,
+      lastModified: new Date('2026-04-12'),
+      changeFrequency: 'monthly',
+      priority: 0.85,
+    },
+    {
       url: `${baseUrl}/docs`,
       lastModified: latestPost,
       changeFrequency: 'weekly',

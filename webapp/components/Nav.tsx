@@ -53,6 +53,7 @@ export default function Nav() {
           <a href="#how-it-works">How it works</a>
           <a href="#pricing">Pricing</a>
           <Link href="/openclaw">OpenClaw</Link>
+          <Link href="/hermes">Hermes</Link>
           <Link href="/docs">Docs</Link>
           <Link href="/blog">Blog</Link>
           <Link href="/login" className={styles.navLink}>Log in</Link>
@@ -115,6 +116,7 @@ export default function Nav() {
         <a href="#how-it-works" onClick={close}>How it works</a>
         <a href="#pricing" onClick={close}>Pricing</a>
         <Link href="/openclaw" onClick={close}>OpenClaw</Link>
+        <Link href="/hermes" onClick={close}>Hermes</Link>
         <Link href="/docs" onClick={close}>Docs</Link>
         <Link href="/blog" onClick={close}>Blog</Link>
         <div className={styles.mobileDivider} />
