@@ -253,46 +253,52 @@ export default function ConsolePage() {
             currentEvent = line.slice(7).trim();
           } else if (line.startsWith('data: ')) {
             const raw = line.slice(6);
-            try {
-              const data = JSON.parse(raw);
 
-              if (currentEvent === 'run') {
-                setRunId(data.runId);
+            // Tokens are raw strings; other events are JSON objects.
+            // Try JSON first; fall back to raw string so tokens aren't dropped.
+            let data: unknown;
+            try { data = JSON.parse(raw); } catch { data = raw; }
 
-              } else if (currentEvent === 'token') {
-                const chunk = typeof data === 'string' ? data : '';
-                setMessages(prev => prev.map(m =>
-                  m.id === asstMsgId ? { ...m, content: m.content + chunk } : m
-                ));
+            if (currentEvent === 'run' && data && typeof data === 'object') {
+              setRunId((data as { runId: string }).runId);
 
-              } else if (currentEvent === 'tool_call') {
-                pendingToolCalls.push({ tool: data.tool, args: data.args ?? {} });
-                setMessages(prev => prev.map(m =>
-                  m.id === asstMsgId ? { ...m, toolCalls: [...pendingToolCalls] } : m
-                ));
+            } else if (currentEvent === 'token') {
+              const chunk = typeof data === 'string' ? data : '';
+              setMessages(prev => prev.map(m =>
+                m.id === asstMsgId ? { ...m, content: m.content + chunk } : m
+              ));
 
-              } else if (currentEvent === 'tool_result') {
-                const last = pendingToolCalls[pendingToolCalls.length - 1];
-                if (last && last.tool === data.tool) last.result = data.result;
-                setMessages(prev => prev.map(m =>
-                  m.id === asstMsgId ? { ...m, toolCalls: [...pendingToolCalls] } : m
-                ));
+            } else if (currentEvent === 'tool_call' && data && typeof data === 'object') {
+              const tc = data as { tool: string; args: Record<string, unknown> };
+              pendingToolCalls.push({ tool: tc.tool, args: tc.args ?? {} });
+              setMessages(prev => prev.map(m =>
+                m.id === asstMsgId ? { ...m, toolCalls: [...pendingToolCalls] } : m
+              ));
 
-              } else if (currentEvent === 'error') {
-                setMessages(prev => prev.map(m =>
-                  m.id === asstMsgId
-                    ? { ...m, content: data.message || 'Agent error', streaming: false, error: true }
-                    : m
-                ));
+            } else if (currentEvent === 'tool_result' && data && typeof data === 'object') {
+              const tr = data as { tool: string; result: string };
+              const last = pendingToolCalls[pendingToolCalls.length - 1];
+              if (last && last.tool === tr.tool) last.result = tr.result;
+              setMessages(prev => prev.map(m =>
+                m.id === asstMsgId ? { ...m, toolCalls: [...pendingToolCalls] } : m
+              ));
 
-              } else if (currentEvent === 'done') {
-                setMessages(prev => prev.map(m =>
-                  m.id === asstMsgId ? { ...m, streaming: false } : m
-                ));
-                // Refresh run list
-                loadAgent();
-              }
-            } catch { /* ignore malformed SSE */ }
+            } else if (currentEvent === 'error') {
+              const msg = typeof data === 'object' && data
+                ? (data as { message: string }).message
+                : typeof data === 'string' ? data : 'Agent error';
+              setMessages(prev => prev.map(m =>
+                m.id === asstMsgId
+                  ? { ...m, content: msg, streaming: false, error: true }
+                  : m
+              ));
+
+            } else if (currentEvent === 'done') {
+              setMessages(prev => prev.map(m =>
+                m.id === asstMsgId ? { ...m, streaming: false } : m
+              ));
+              loadAgent();
+            }
           }
         }
       }

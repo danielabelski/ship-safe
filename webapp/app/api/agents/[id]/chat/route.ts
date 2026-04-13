@@ -113,19 +113,22 @@ export async function POST(req: NextRequest, { params }: Params) {
           if (line.startsWith('event: '))      { currentEvent = line.slice(7).trim(); }
           else if (line.startsWith('data: '))  {
             const raw = line.slice(6);
-            try {
-              const parsed = JSON.parse(raw);
-              if (currentEvent === 'token' && typeof parsed === 'string') {
-                fullText += parsed;
-              } else if (currentEvent === 'tool_call') {
-                toolCalls.push({ tool: parsed.tool, args: parsed.args });
-              } else if (currentEvent === 'tool_result') {
-                const last = toolCalls[toolCalls.length - 1];
-                if (last && last.tool === parsed.tool) last.result = parsed.result;
-              } else if (currentEvent === 'done') {
-                tokens = parsed.tokensUsed ?? 0;
-              }
-            } catch {}
+            // Tokens are raw strings; other events are JSON — try JSON, fall back to raw
+            let parsed: unknown;
+            try { parsed = JSON.parse(raw); } catch { parsed = raw; }
+
+            if (currentEvent === 'token') {
+              fullText += typeof parsed === 'string' ? parsed : '';
+            } else if (currentEvent === 'tool_call' && parsed && typeof parsed === 'object') {
+              const tc = parsed as { tool: string; args: unknown };
+              toolCalls.push({ tool: tc.tool, args: tc.args });
+            } else if (currentEvent === 'tool_result' && parsed && typeof parsed === 'object') {
+              const tr = parsed as { tool: string; result: string };
+              const last = toolCalls[toolCalls.length - 1];
+              if (last && last.tool === tr.tool) last.result = tr.result;
+            } else if (currentEvent === 'done' && parsed && typeof parsed === 'object') {
+              tokens = (parsed as { tokensUsed?: number }).tokensUsed ?? 0;
+            }
           }
         }
       }
