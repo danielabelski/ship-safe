@@ -53,19 +53,19 @@ async function addSite(slug, port) {
 
   // 1. Write HTTP-only config
   fs.writeFileSync(file, httpConfig(slug, port), 'utf8');
-  await exec('nginx', ['-t']);
-  await exec('nginx', ['-s', 'reload']);
+  await exec('sudo', ['nginx', '-t']);
+  await exec('sudo', ['nginx', '-s', 'reload']);
 
   // 2. Run certbot to get cert + auto-upgrade config to HTTPS
   try {
-    await exec('certbot', [
-      '--nginx',
+    await exec('sudo', [
+      'certbot', '--nginx',
       '-d', host,
       '--email', CERTBOT_EMAIL,
       '--agree-tos',
       '--no-eff-email',
       '--non-interactive',
-      '--redirect',           // force HTTP→HTTPS redirect
+      '--redirect',
     ]);
   } catch (e) {
     // Cert failed — agent still reachable over HTTP, log and continue
@@ -78,11 +78,10 @@ async function removeSite(slug) {
   const file = siteFile(slug);
   if (fs.existsSync(file)) {
     fs.unlinkSync(file);
-    // Also remove the certbot cert
     try {
-      await exec('certbot', ['delete', '--cert-name', host, '--non-interactive']);
+      await exec('sudo', ['certbot', 'delete', '--cert-name', host, '--non-interactive']);
     } catch {}
-    await exec('nginx', ['-s', 'reload']);
+    await exec('sudo', ['nginx', '-s', 'reload']);
   }
 }
 
