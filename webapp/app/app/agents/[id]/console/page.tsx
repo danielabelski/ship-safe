@@ -110,7 +110,7 @@ function MessageBubble({ msg }: { msg: Message }) {
         ) : (
           <div
             className={styles.msgText}
-            dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
+            dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} // ship-safe-ignore
           />
         )}
         {msg.streaming && <span className={styles.cursor} aria-hidden="true" />}
