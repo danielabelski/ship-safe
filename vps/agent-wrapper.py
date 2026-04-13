@@ -146,13 +146,42 @@ def run_hermes_streaming(message: str, session_id: str, queue: Queue):
             env=env,
         )
 
-        # Stream stdout word-by-word for a real-time feel
+        # Characters used only in hermes box-drawing UI chrome
+        _BOX_CHARS = set("╭╰╮╯│─━┄┊ \t")
+
+        def _is_ui_chrome(line: str) -> bool:
+            """Return True for hermes decoration lines that should not be emitted."""
+            s = line.strip()
+            if not s:
+                return True
+            # Box borders and dividers
+            if s[0] in "╭╰╮╯│":
+                return True
+            if all(c in _BOX_CHARS for c in s):
+                return True
+            # Session metadata footer
+            if s.startswith("session_id:") or s.startswith("Resume this session"):
+                return True
+            if s.startswith("Session:") or s.startswith("Duration:") or s.startswith("Messages:"):
+                return True
+            # Hermes status / warning lines
+            if s.startswith("⚠") or s.startswith("┊") or s.startswith("❌") or s.startswith("✓"):
+                return True
+            if "─── ⚕ Hermes" in s or "⚕ Hermes" in s:
+                return True
+            # Spinner / progress lines
+            if s.startswith("Initializing") or s.startswith("Query:"):
+                return True
+            return False
+
+        # Stream stdout line-by-line, filter chrome, emit word-by-word
         for line in iter(proc.stdout.readline, ""):
             line = line.rstrip("\n")
-            if not line:
+
+            if _is_ui_chrome(line):
                 continue
 
-            # Detect tool call lines in verbose output
+            # Detect tool call lines
             if line.startswith("Calling tool:") or "→ tool:" in line.lower():
                 parts = line.split(":", 1)
                 tool_info = parts[1].strip() if len(parts) > 1 else line
@@ -161,8 +190,7 @@ def run_hermes_streaming(message: str, session_id: str, queue: Queue):
                 queue.put(_sse("tool_result", {"tool": "unknown", "result": line.split(":", 1)[-1].strip()[:500]}))
             else:
                 # Emit word-by-word for streaming UX
-                words = line.split(" ")
-                for word in words:
+                for word in line.split(" "):
                     queue.put(_sse("token", word + " "))
                     tokens_used += 1
                 queue.put(_sse("token", "\n"))
