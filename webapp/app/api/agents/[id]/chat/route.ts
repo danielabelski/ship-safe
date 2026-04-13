@@ -137,7 +137,7 @@ export async function POST(req: NextRequest, { params }: Params) {
           runId:     run.id,
           role:      'assistant',
           content:   fullText,
-          toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+          toolCalls: toolCalls.length > 0 ? (toolCalls as object[]) : undefined,
           tokensUsed: tokens,
         },
       });
