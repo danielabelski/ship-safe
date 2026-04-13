@@ -14,6 +14,7 @@ Config injected via HERMES_CONFIG env var (JSON string).
 
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -150,8 +151,40 @@ def run_hermes_streaming(message: str, session_id: str, queue: Queue):
 
         # Stream stdout line-by-line, emit each full line as one token so that
         # ANSI escape sequences (colors, box-drawing) are never split mid-sequence.
+        #
+        # Hermes output structure:
+        #   [startup banner box]   ← skip (big ASCII art + tools list)
+        #   Query: ...             ← skip
+        #   Initializing agent...  ← skip
+        #   ────────────────────   ← divider: START streaming from here
+        #   [tool use + response]  ← keep
+        #   Resume this session... ← footer: STOP streaming here
+        #
+        # We detect the divider by looking for a line that is purely box-drawing
+        # horizontal chars (─ U+2500) or dashes, optionally with ANSI escape codes.
+        _ANSI_STRIP = re.compile(r'\x1b\[[0-9;]*[mK]')
+        _DIVIDER_RE = re.compile(r'^[─\-─═]{10,}$')
+        _FOOTER_PREFIXES = ("Resume this session", "Session:", "Duration:", "Messages:")
+
+        past_divider = False
+
         for line in iter(proc.stdout.readline, ""):
             line = line.rstrip("\n")
+            bare = _ANSI_STRIP.sub("", line).strip()
+
+            # Once we hit the footer, stop emitting
+            if past_divider and any(bare.startswith(p) for p in _FOOTER_PREFIXES):
+                break
+
+            # Wait for the divider line before emitting anything
+            if not past_divider:
+                if _DIVIDER_RE.match(bare):
+                    past_divider = True
+                    # Emit the divider itself so users see the visual separator
+                    queue.put(_sse("token", line + "\n"))
+                    tokens_used += 1
+                continue
+
             # Detect tool call lines
             if line.startswith("Calling tool:") or "→ tool:" in line.lower():
                 parts = line.split(":", 1)
