@@ -233,6 +233,8 @@ program
   .option('--include-legal', 'Also run the legal risk scan (DMCA, leaked source, IP disputes)')
   .option('--agentic [iterations]', 'Agentic scan→fix→verify loop (default: 3 iterations, target score: 75)', (v) => v ? parseInt(v) : true)
   .option('--agentic-target <score>', 'Target security score for agentic loop (default: 75)', parseInt)
+  .option('--hermes-only', 'Run only Hermes-relevant agents (llm + supply-chain categories) for fast CI')
+  .option('--fail-below <threshold>', 'Exit 1 if score is below threshold (number or "baseline")')
   .option('-v, --verbose', 'Verbose output')
   .action(auditCommand);
 

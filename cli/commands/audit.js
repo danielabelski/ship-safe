@@ -190,6 +190,15 @@ export async function auditCommand(targetPath = '.', options = {}) {
 
   // ── Phase 2: Agent Scan ───────────────────────────────────────────────────
   const orchestrator = await buildOrchestratorAsync(absolutePath, { quiet: true });
+
+  // --hermes-only: filter to llm + supply-chain category agents only
+  if (options.hermesOnly && orchestrator.agents) {
+    const hermesCategories = new Set(['llm', 'supply-chain']);
+    orchestrator.agents = orchestrator.agents.filter(a =>
+      hermesCategories.has(a.category) || hermesCategories.has(a.constructor?.category)
+    );
+  }
+
   const registeredAgentCount = orchestrator.agents?.length || 15;
   const agentSpinner = machineOutput ? null : ora({ text: chalk.white(`[Phase 2/4] Running ${registeredAgentCount} security agents...`), color: 'cyan' }).start();
   let agentFindings = [];
@@ -567,7 +576,30 @@ export async function auditCommand(targetPath = '.', options = {}) {
     }
   }
 
-  process.exit(scoreResult.score >= 75 ? 0 : 1);
+  // ── Exit code logic ─────────────────────────────────────────────────────
+  let threshold = 75;
+  if (options.failBelow !== undefined) {
+    if (options.failBelow === 'baseline') {
+      // Read baseline score from .ship-safe/hermes-baseline.json
+      const baselinePath = path.join(absolutePath, '.ship-safe', 'hermes-baseline.json');
+      try {
+        const baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf-8'));
+        threshold = baseline.score || 0;
+        if (!machineOutput) {
+          console.log(chalk.gray(`  Baseline threshold: ${threshold}/100 (from ${baselinePath})`));
+        }
+      } catch {
+        if (!machineOutput) {
+          console.log(chalk.yellow(`  Warning: could not read baseline — using score 0 as threshold`));
+        }
+        threshold = 0;
+      }
+    } else {
+      threshold = parseInt(options.failBelow, 10) || 75;
+    }
+  }
+
+  process.exit(scoreResult.score >= threshold ? 0 : 1);
 }
 
 /**
