@@ -149,48 +149,35 @@ def run_hermes_streaming(message: str, session_id: str, queue: Queue):
             env=env,
         )
 
-        # Stream stdout line-by-line, emit each full line as one token so that
-        # ANSI escape sequences (colors, box-drawing) are never split mid-sequence.
+        # Stream stdout line-by-line. In subprocess/pipe mode hermes outputs:
+        #   [blank]
+        #   ╭─ ⚕ Hermes ───╮   ← response box
+        #   response text
+        #   [blank]
+        #   session_id: ...    ← noise
         #
-        # Hermes output structure:
-        #   [startup banner box]   ← skip (big ASCII art + tools list)
-        #   Query: ...             ← skip
-        #   Initializing agent...  ← skip
-        #   ────────────────────   ← divider: START streaming from here
-        #   [tool use + response]  ← keep
-        #   Resume this session... ← footer: STOP streaming here
-        #
-        # We detect the divider by looking for a line that is purely box-drawing
-        # horizontal chars (─ U+2500) or dashes, optionally with ANSI escape codes.
-        _ANSI_STRIP = re.compile(r'\x1b\[[0-9;]*[mK]')
-        _DIVIDER_RE = re.compile(r'^[─\-─═]{10,}$')
-        _FOOTER_PREFIXES = ("Resume this session", "Session:", "Duration:", "Messages:")
-
-        past_divider = False
+        # Just stream all lines, skipping specific known-noise patterns.
+        _ANSI_STRIP = re.compile(r'\x1b\[[0-9;]*[mJKHA-Z]|\x1b\[\?[0-9;]*[hl]|\x1b\[2J|\x1b\[H')
+        _SKIP_RE = re.compile(
+            r'^session_id:|^Resume this session|^hermes --resume'
+            r'|^Session:\s|^Duration:\s|^Messages:\s'
+            r'|^Query:\s|^Initializing agent'
+        )
 
         for line in iter(proc.stdout.readline, ""):
             line = line.rstrip("\n")
             bare = _ANSI_STRIP.sub("", line).strip()
 
-            # Once we hit the footer, stop emitting
-            if past_divider and any(bare.startswith(p) for p in _FOOTER_PREFIXES):
-                break
-
-            # Wait for the divider line before emitting anything
-            if not past_divider:
-                if _DIVIDER_RE.match(bare):
-                    past_divider = True
-                    # Emit the divider itself so users see the visual separator
-                    queue.put(_sse("token", line + "\n"))
-                    tokens_used += 1
+            # Skip noise lines
+            if _SKIP_RE.match(bare):
                 continue
 
             # Detect tool call lines
-            if line.startswith("Calling tool:") or "→ tool:" in line.lower():
+            if "Calling tool:" in line or "→ tool:" in line.lower():
                 parts = line.split(":", 1)
                 tool_info = parts[1].strip() if len(parts) > 1 else line
                 queue.put(_sse("tool_call", {"tool": tool_info, "args": {}}))
-            elif line.startswith("Tool result:") or "← result:" in line.lower():
+            elif "Tool result:" in line or "← result:" in line.lower():
                 queue.put(_sse("tool_result", {"tool": "unknown", "result": line.split(":", 1)[-1].strip()[:500]}))
             else:
                 queue.put(_sse("token", line + "\n"))
@@ -201,7 +188,8 @@ def run_hermes_streaming(message: str, session_id: str, queue: Queue):
         stderr_out = proc.stderr.read()
         if proc.returncode != 0 and tokens_used == 0:
             # Only surface stderr as error if we got no output at all
-            queue.put(_sse("error", {"message": stderr_out[:400] if stderr_out else "Agent returned no output"}))
+            err_msg = stderr_out[:400] if stderr_out else f"Agent returned no output (rc={proc.returncode})"
+            queue.put(_sse("error", {"message": err_msg}))
 
         queue.put(_sse("done", {"tokensUsed": tokens_used}))
 
