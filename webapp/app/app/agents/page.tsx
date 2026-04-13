@@ -1,0 +1,110 @@
+import Link from 'next/link';
+import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { redirect } from 'next/navigation';
+import styles from './agents.module.css';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = { title: 'Agents — Ship Safe' };
+
+function timeAgo(date: Date | string) {
+  const s = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+
+function statusLabel(status: string) {
+  if (status === 'deployed') return { label: 'Live', cls: 'statusLive' };
+  if (status === 'stopped')  return { label: 'Stopped', cls: 'statusStopped' };
+  if (status === 'failed')   return { label: 'Failed', cls: 'statusFailed' };
+  return { label: 'Draft', cls: 'statusDraft' };
+}
+
+export default async function AgentsPage() {
+  const session = await auth();
+  if (!session?.user?.id) redirect('/login');
+
+  const agents = await prisma.agent.findMany({
+    where: { userId: session.user.id },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      deployments: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: { status: true, securityScore: true, createdAt: true, subdomain: true },
+      },
+    },
+  });
+
+  return (
+    <div className={styles.page}>
+      <div className={styles.header}>
+        <div>
+          <h1>Agents</h1>
+          <p className={styles.subtitle}>Build, configure, and deploy Hermes agents from one place.</p>
+        </div>
+        <Link href="/app/agents/new" className={styles.newBtn}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Agent
+        </Link>
+      </div>
+
+      {agents.length === 0 ? (
+        <div className={styles.empty}>
+          <div className={styles.emptyIcon}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+          </div>
+          <div className={styles.emptyTitle}>No agents yet</div>
+          <div className={styles.emptyDesc}>Create your first Hermes agent. Define its tools, memory, and delegation settings — then deploy it to a live URL.</div>
+          <Link href="/app/agents/new" className={styles.emptyCta}>Create your first agent →</Link>
+        </div>
+      ) : (
+        <div className={styles.grid}>
+          {agents.map(agent => {
+            const lastDeploy = agent.deployments[0];
+            const { label, cls } = statusLabel(agent.status);
+            const tools = (agent.tools as Array<{ name: string }>) ?? [];
+            return (
+              <Link key={agent.id} href={`/app/agents/${agent.id}`} className={styles.card}>
+                <div className={styles.cardTop}>
+                  <div className={styles.cardName}>{agent.name}</div>
+                  <span className={`${styles.statusBadge} ${styles[cls]}`}>{label}</span>
+                </div>
+                {agent.description && (
+                  <div className={styles.cardDesc}>{agent.description}</div>
+                )}
+                <div className={styles.cardMeta}>
+                  <span className={styles.metaItem}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    {tools.length} tool{tools.length !== 1 ? 's' : ''}
+                  </span>
+                  <span className={styles.metaItem}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+                    {agent.memoryProvider}
+                  </span>
+                  {lastDeploy && (
+                    <span className={styles.metaItem}>
+                      {timeAgo(lastDeploy.createdAt)}
+                    </span>
+                  )}
+                  {lastDeploy?.securityScore != null && (
+                    <span className={styles.scoreChip} style={{ color: lastDeploy.securityScore >= 80 ? 'var(--green)' : lastDeploy.securityScore >= 60 ? 'var(--yellow)' : 'var(--red)' }}>
+                      {lastDeploy.securityScore}/100
+                    </span>
+                  )}
+                </div>
+                {lastDeploy?.subdomain && (
+                  <div className={styles.cardUrl}>{lastDeploy.subdomain}.shipsafecli.com</div>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
