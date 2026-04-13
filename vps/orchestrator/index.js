@@ -47,9 +47,29 @@ function savePorts(ports) {
   fs.writeFileSync(PORTS_FILE, JSON.stringify(ports, null, 2));
 }
 
-function allocatePort(agentId) {
-  const ports = loadPorts();
-  const used  = new Set(Object.values(ports));
+/** Get ports actually bound by running Docker containers — source of truth. */
+async function getDockerBoundPorts() {
+  try {
+    const { stdout } = await exec('docker', [
+      'ps', '--format', '{{.Ports}}',
+    ]);
+    const used = new Set();
+    for (const line of stdout.split('\n')) {
+      const m = line.match(/127\.0\.0\.1:(\d+)->/g);
+      if (m) m.forEach(s => used.add(parseInt(s.match(/(\d+)->/)[1], 10)));
+    }
+    return used;
+  } catch {
+    return new Set();
+  }
+}
+
+async function allocatePort(agentId) {
+  const ports      = loadPorts();
+  const fileUsed   = new Set(Object.values(ports));
+  const dockerUsed = await getDockerBoundPorts();
+  const used       = new Set([...fileUsed, ...dockerUsed]);
+
   for (let p = PORT_START; p <= PORT_END; p++) {
     if (!used.has(p)) {
       ports[agentId] = p;
@@ -170,7 +190,7 @@ const server = http.createServer(async (req, res) => {
     releasePort(agentId);
 
     let port;
-    try { port = allocatePort(agentId); } catch (e) { return send(res, 503, { error: e.message }); }
+    try { port = await allocatePort(agentId); } catch (e) { return send(res, 503, { error: e.message }); }
 
     const agentConfig = { tools, memoryProvider, maxDepth };
 
