@@ -6,6 +6,7 @@ import s from './settings.module.css';
 import type { Metadata } from 'next';
 import UpgradeButton from './UpgradeButton';
 import NotificationSettings from './NotificationSettings';
+import AgentAlerts from './AgentAlerts';
 import ApiKeys from './ApiKeys';
 
 export const metadata: Metadata = {
@@ -103,6 +104,14 @@ export default async function Settings() {
           <h2>Notifications</h2>
         </div>
         <NotificationSettings />
+      </div>
+
+      {/* Agent Alerts & Integrations */}
+      <div className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2>Agent Alerts &amp; Integrations</h2>
+        </div>
+        <AgentAlerts />
       </div>
 
       {/* API Keys */}

@@ -24,6 +24,7 @@ model User {
   auditLogs     AuditLog[]
   notifications NotificationSetting?
   agents        Agent[]
+  agentTeams    AgentTeam[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -183,15 +184,21 @@ model Webhook {
 }
 
 model NotificationSetting {
-  id              String  @id @default(cuid())
-  userId          String  @unique
-  emailOnComplete Boolean @default(true)
-  emailOnCritical Boolean @default(true)
-  emailDigest     String  @default("weekly") // off | daily | weekly
-  slackWebhookUrl String?
-  slackOnComplete Boolean @default(false)
-  slackOnCritical Boolean @default(true)
-  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String  @id @default(cuid())
+  userId               String  @unique
+  emailOnComplete      Boolean @default(true)
+  emailOnCritical      Boolean @default(true)
+  emailDigest          String  @default("weekly") // off | daily | weekly
+  slackWebhookUrl      String?
+  slackOnComplete      Boolean @default(false)
+  slackOnCritical      Boolean @default(true)
+  // Agent-specific alerts
+  agentSlackOnCritical Boolean @default(true)
+  agentSlackOnHigh     Boolean @default(false)
+  agentEmailOnCritical Boolean @default(true)
+  // GitHub integration
+  githubToken          String? // Personal access token for creating issues
+  user                 User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // ── GitHub App ───────────────────────────────────────────
@@ -266,27 +273,49 @@ model GuardianConfig {
 // ── Hermes Agent Studio ──────────────────────────────────
 
 model Agent {
-  id             String       @id @default(cuid())
-  userId         String
-  orgId          String?
-  name           String
-  slug           String       @unique
-  description    String?
-  tools          Json         @default("[]")    // [{ name: string, sourceUrl?: string }]
-  memoryProvider String       @default("builtin") // builtin | honcho | hindsight | mem0 | none
-  maxDepth       Int          @default(2)
-  skills         Json         @default("[]")
-  envVars        Json         @default("{}")    // { KEY: "value" }
-  ciProvider     String       @default("none")  // github | gitlab | none
-  status         String       @default("draft") // draft | deployed | stopped | failed
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deployments    Deployment[]
-  triggers       Trigger[]
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id              String            @id @default(cuid())
+  userId          String
+  orgId           String?
+  name            String
+  slug            String            @unique
+  description     String?
+  tools           Json              @default("[]")    // [{ name: string, sourceUrl?: string }]
+  memoryProvider  String            @default("builtin") // builtin | honcho | hindsight | mem0 | none
+  maxDepth        Int               @default(2)
+  skills          Json              @default("[]")
+  envVars         Json              @default("{}")    // { KEY: "value" }
+  ciProvider      String            @default("none")  // github | gitlab | none
+  status          String            @default("draft") // draft | deployed | stopped | failed
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deployments     Deployment[]
+  triggers        Trigger[]
+  findings        Finding[]
+  teamMemberships AgentTeamMember[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([orgId])
+}
+
+model Finding {
+  id          String   @id @default(cuid())
+  agentId     String
+  runId       String
+  severity    String   // critical | high | medium | low | info
+  title       String
+  location    String?
+  cve         String?
+  remediation String?  @db.Text
+  status      String   @default("open") // open | acknowledged | fixed | false_positive
+  agent       Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  run         AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([agentId, createdAt(sort: Desc)])
+  @@index([runId])
+  @@index([severity, status])
 }
 
 model Trigger {
@@ -328,14 +357,23 @@ model AgentRun {
   id           String        @id @default(cuid())
   deploymentId String
   triggerId    String?       // set when fired by a Trigger
+  teamRunId    String?       // set when part of a team run
+  parentRunId  String?       // set when spawned by lead agent
+  role         String?       // role in team: lead | pen_tester | red_team | secrets | cve_analyst | custom
   tokensUsed   Int?
   status       String        @default("running") // running | completed | error
   deployment   Deployment    @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+  teamRun      TeamRun?      @relation(fields: [teamRunId], references: [id], onDelete: SetNull)
+  parentRun    AgentRun?     @relation("RunTree", fields: [parentRunId], references: [id], onDelete: SetNull)
+  childRuns    AgentRun[]    @relation("RunTree")
   messages     ChatMessage[]
+  findings     Finding[]
   startedAt    DateTime      @default(now())
   completedAt  DateTime?
 
   @@index([deploymentId, startedAt(sort: Desc)])
+  @@index([teamRunId])
+  @@index([parentRunId])
 }
 
 model ChatMessage {
@@ -349,6 +387,56 @@ model ChatMessage {
   createdAt  DateTime @default(now())
 
   @@index([runId, createdAt])
+}
+
+// ── Agent Teams ─────────────────────────────────────────
+
+model AgentTeam {
+  id          String            @id @default(cuid())
+  userId      String
+  orgId       String?
+  name        String
+  description String?
+  members     AgentTeamMember[]
+  runs        TeamRun[]
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([orgId])
+}
+
+model AgentTeamMember {
+  id      String    @id @default(cuid())
+  teamId  String
+  agentId String
+  role    String    // lead | pen_tester | red_team | secrets | cve_analyst | custom
+  label   String?   // optional custom display label
+  order   Int       @default(0)
+  team    AgentTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  agent   Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, agentId])
+  @@index([teamId])
+  @@index([agentId])
+}
+
+model TeamRun {
+  id          String     @id @default(cuid())
+  teamId      String
+  userId      String
+  target      String     // what's being analyzed (repo, description, task)
+  status      String     @default("running") // running | completed | error
+  phase       String     @default("planning") // planning | delegating | synthesizing | done
+  report      String?    @db.Text
+  agentRuns   AgentRun[]
+  team        AgentTeam  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  startedAt   DateTime   @default(now())
+  completedAt DateTime?
+
+  @@index([teamId, startedAt(sort: Desc)])
+  @@index([userId, startedAt(sort: Desc)])
 }
 
 // ── Payments ────────────────────────────────────────────

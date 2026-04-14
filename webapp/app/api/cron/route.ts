@@ -12,12 +12,17 @@ import { Cron } from 'croner';
  * Protected by CRON_SECRET (set in Vercel env vars).
  */
 export async function GET(req: NextRequest) {
+  // Vercel Cron sends its own Authorization header in production.
+  // CRON_SECRET is REQUIRED — if unset, reject all requests to prevent
+  // unauthenticated cron triggers (resource exhaustion vector).
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get('authorization') ?? '';
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  if (!secret) {
+    console.error('[cron] CRON_SECRET env var is not set — refusing to run');
+    return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
+  }
+  const auth = req.headers.get('authorization') ?? '';
+  if (auth !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const now = new Date();

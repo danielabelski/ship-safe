@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { saveFindings } from '@/lib/save-findings';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -90,7 +91,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   // Stream back to browser while collecting response in background
   const [browserStream, collectorStream] = agentRes.body.tee();
 
-  // Background: parse SSE stream and save assistant message to DB
+  // Background: parse SSE stream and save assistant message + findings to DB
   (async () => {
     try {
       const reader    = collectorStream.getReader();
@@ -98,6 +99,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       let   fullText  = '';
       let   tokens    = 0;
       const toolCalls: Array<{ tool: string; args: unknown; result?: string }> = [];
+      const findings:  Array<{ severity: string; title: string; location?: string; cve?: string; remediation?: string }> = [];
       let   pending   = '';
 
       while (true) {
@@ -113,7 +115,6 @@ export async function POST(req: NextRequest, { params }: Params) {
           if (line.startsWith('event: '))      { currentEvent = line.slice(7).trim(); }
           else if (line.startsWith('data: '))  {
             const raw = line.slice(6);
-            // Tokens are raw strings; other events are JSON — try JSON, fall back to raw
             let parsed: unknown;
             try { parsed = JSON.parse(raw); } catch { parsed = raw; }
 
@@ -126,11 +127,18 @@ export async function POST(req: NextRequest, { params }: Params) {
               const tr = parsed as { tool: string; result: string };
               const last = toolCalls[toolCalls.length - 1];
               if (last && last.tool === tr.tool) last.result = tr.result;
+            } else if (currentEvent === 'finding' && parsed && typeof parsed === 'object') {
+              findings.push(parsed as typeof findings[0]);
             } else if (currentEvent === 'done' && parsed && typeof parsed === 'object') {
               tokens = (parsed as { tokensUsed?: number }).tokensUsed ?? 0;
             }
           }
         }
+      }
+
+      // Save findings (deduplicated)
+      if (findings.length > 0) {
+        await saveFindings({ agentId: agent.id, runId: run.id, findings });
       }
 
       // Save assistant reply

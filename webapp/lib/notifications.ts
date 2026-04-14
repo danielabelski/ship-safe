@@ -274,6 +274,118 @@ export async function notifyGuardianComplete(run: GuardianResult) {
   }, run.orgId);
 }
 
+/* ── Agent Finding Alerts ─────────────────────────────── */
+
+interface AgentFindingEntry {
+  severity:    string;
+  title:       string;
+  location?:   string | null;
+  cve?:        string | null;
+  remediation?: string | null;
+}
+
+export async function notifyAgentFindings(opts: {
+  userId:    string;
+  agentId:   string;
+  agentName: string;
+  findings:  AgentFindingEntry[];
+}) {
+  const { userId, agentId, agentName, findings } = opts;
+  if (findings.length === 0) return;
+
+  const hasCritical = findings.some(f => f.severity === 'critical');
+  const hasHigh     = findings.some(f => f.severity === 'high');
+
+  const settings = await prisma.notificationSetting.findUnique({
+    where: { userId },
+    include: { user: { select: { email: true } } },
+  });
+  if (!settings) return;
+
+  const appUrl = process.env.AUTH_URL || 'https://www.shipsafecli.com';
+  const findingsUrl = `${appUrl}/app/agents/${agentId}?tab=findings`;
+
+  // ── Slack ───────────────────────────────────────────────
+  const shouldSlack =
+    settings.slackWebhookUrl &&
+    ((hasCritical && settings.agentSlackOnCritical) ||
+     (hasHigh     && settings.agentSlackOnHigh));
+
+  if (shouldSlack && settings.slackWebhookUrl) {
+    const critCount = findings.filter(f => f.severity === 'critical').length;
+    const highCount = findings.filter(f => f.severity === 'high').length;
+    const lines = findings
+      .filter(f => ['critical','high'].includes(f.severity))
+      .slice(0, 5)
+      .map(f => `• *[${f.severity.toUpperCase()}]* ${f.title}${f.location ? ` — \`${f.location}\`` : ''}`)
+      .join('\n');
+
+    await fetch(settings.slackWebhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        blocks: [
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: `:rotating_light: *Agent findings — ${agentName}*\n` +
+                    (critCount ? `*${critCount} critical* ` : '') +
+                    (highCount ? `*${highCount} high* ` : '') +
+                    `issue${findings.length > 1 ? 's' : ''} detected`,
+            },
+          },
+          ...(lines ? [{ type: 'section', text: { type: 'mrkdwn', text: lines } }] : []),
+          {
+            type: 'actions',
+            elements: [{ type: 'button', text: { type: 'plain_text', text: 'View Findings' }, url: findingsUrl }],
+          },
+        ],
+      }),
+    }).catch(console.error);
+  }
+
+  // ── Email ───────────────────────────────────────────────
+  const shouldEmail = hasCritical && settings.agentEmailOnCritical && settings.user.email;
+
+  if (shouldEmail && settings.user.email) {
+    const rows = findings
+      .filter(f => ['critical','high'].includes(f.severity))
+      .slice(0, 10)
+      .map(f => `<tr>
+        <td style="padding:8px 0;color:${f.severity==='critical'?'#ef4444':'#f97316'};font-weight:700;text-transform:uppercase;font-size:11px">${f.severity}</td>
+        <td style="padding:8px 0;font-size:13px">${f.title}</td>
+        ${f.location ? `<td style="padding:8px 0;font-size:12px;font-family:monospace;color:#71717a">${f.location}</td>` : '<td></td>'}
+      </tr>`)
+      .join('');
+
+    const html = `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;background:#09090b;color:#fafafa;border-radius:12px;overflow:hidden">
+        <div style="padding:24px;border-bottom:1px solid #27272a">
+          <h2 style="margin:0;font-size:16px">🚨 Agent Findings — ${agentName}</h2>
+        </div>
+        <div style="padding:24px">
+          <p style="font-size:13px;color:#a1a1aa;margin:0 0 16px">${findings.length} finding${findings.length>1?'s':''} detected during the latest run.</p>
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr>
+              <th style="text-align:left;font-size:11px;color:#71717a;padding-bottom:8px">SEV</th>
+              <th style="text-align:left;font-size:11px;color:#71717a;padding-bottom:8px">TITLE</th>
+              <th style="text-align:left;font-size:11px;color:#71717a;padding-bottom:8px">LOCATION</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <a href="${findingsUrl}" style="display:inline-block;margin-top:20px;padding:10px 24px;background:#22d3ee;color:#09090b;font-weight:700;border-radius:8px;text-decoration:none;font-size:13px">View All Findings</a>
+        </div>
+      </div>`;
+
+    await sendEmail(
+      settings.user.email,
+      `🚨 ${findings.filter(f=>f.severity==='critical').length} critical finding${findings.filter(f=>f.severity==='critical').length>1?'s':''} in ${agentName}`,
+      html,
+    );
+  }
+}
+
 export async function notifyGuardianBlocked(run: GuardianResult, reason: string) {
   await dispatchWebhooks('guardian.blocked', {
     runId: run.id,

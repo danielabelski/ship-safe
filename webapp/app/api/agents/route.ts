@@ -7,13 +7,22 @@ function toSlug(name: string, suffix?: string) {
   return suffix ? `${base}-${suffix}` : base;
 }
 
-/** GET /api/agents — list agents for current user */
+/** GET /api/agents — list agents for current user + shared via orgs */
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const orgIds = await prisma.orgMember
+    .findMany({ where: { userId: session.user.id }, select: { orgId: true } })
+    .then(ms => ms.map(m => m.orgId));
+
   const agents = await prisma.agent.findMany({
-    where: { userId: session.user.id },
+    where: {
+      OR: [
+        { userId: session.user.id },
+        ...(orgIds.length > 0 ? [{ orgId: { in: orgIds } }] : []),
+      ],
+    },
     orderBy: { createdAt: 'desc' },
     include: {
       deployments: {

@@ -32,5 +32,9 @@ export const config = {
     '/api/fix/:path*',
     '/api/guardian/:path*',
     '/api/v1/key/:path*',
+    '/api/agents/:path*',
+    '/api/findings/:path*',
+    '/api/teams/:path*',
+    '/api/team-runs/:path*',
   ],
 };

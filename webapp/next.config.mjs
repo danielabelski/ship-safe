@@ -8,6 +8,13 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Fix: webpack enhanced-resolve on Windows calls readlink() inside dynamic route
+  // directories like [id] and gets EISDIR. Disabling symlinks resolving works
+  // around this. Linux/Vercel builds are unaffected.
+  webpack(config) {
+    config.resolve.symlinks = false;
+    return config;
+  },
   // Pin trace root to webapp/ so Next.js doesn't crawl into the parent monorepo.
   // Vercel sets its own root, so this only matters for local Windows builds.
   outputFileTracingRoot: resolve(__dirname),

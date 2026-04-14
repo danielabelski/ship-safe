@@ -105,11 +105,37 @@ def _sse(event: str, data) -> str:
     return f"event: {event}\ndata: {payload}\n\n"
 
 
+_FINDING_INSTRUCTIONS = (
+    "When you discover a security issue, output it on its own line using EXACTLY "
+    "this format (valid JSON after 'FINDING:'):\n"
+    "FINDING: {\"severity\":\"critical|high|medium|low|info\","
+    "\"title\":\"short description\","
+    "\"location\":\"file:line or component (optional)\","
+    "\"cve\":\"CVE-XXXX-XXXXX (optional)\","
+    "\"remediation\":\"how to fix it\"}\n"
+    "Output one FINDING line per issue. Do not wrap them in code blocks.\n\n"
+)
+
+_DELEGATE_INSTRUCTIONS = (
+    "When you need to delegate a sub-task to a team member, output it on its own line "
+    "using EXACTLY this format (valid JSON after 'DELEGATE:'):\n"
+    "DELEGATE: {\"role\":\"pen_tester|red_team|secrets|cve_analyst|custom\","
+    "\"task\":\"specific task description for this team member\"}\n"
+    "Output one DELEGATE line per delegation. Do not wrap in code blocks.\n\n"
+)
+
+_FINDING_RE  = re.compile(r'^FINDING:\s*(\{.*\})\s*$')
+_DELEGATE_RE = re.compile(r'^DELEGATE:\s*(\{.*\})\s*$')
+
+
 def _build_hermes_args(message: str, session_id: str) -> list:
-    """Build the hermes CLI argument list."""
-    # Provider was already resolved during bootstrap — use 'auto' here and
-    # let hermes pick it up from config.yaml / .env.
-    args = ["hermes", "chat", "-q", message, "-Q", "--source", "tool"]
+    """Build the hermes CLI argument list. Prepend finding + delegation instructions."""
+    is_team_run = AGENT_CONFIG.get("isTeamRun", False)
+    extra = _FINDING_INSTRUCTIONS
+    if is_team_run:
+        extra += _DELEGATE_INSTRUCTIONS
+    augmented = extra + message
+    args = ["hermes", "chat", "-q", augmented, "--source", "tool"]
 
     max_depth = AGENT_CONFIG.get("maxDepth", 2)
     if max_depth:
@@ -172,6 +198,26 @@ def run_hermes_streaming(message: str, session_id: str, queue: Queue):
 
             # Skip noise lines
             if _SKIP_RE.match(bare):
+                continue
+
+            # Detect structured finding lines — strip from visible output
+            finding_match = _FINDING_RE.match(bare)
+            if finding_match:
+                try:
+                    finding = json.loads(finding_match.group(1))
+                    queue.put(_sse("finding", finding))
+                except json.JSONDecodeError:
+                    pass  # malformed — skip silently
+                continue
+
+            # Detect delegation lines — strip from visible output
+            delegate_match = _DELEGATE_RE.match(bare)
+            if delegate_match:
+                try:
+                    delegation = json.loads(delegate_match.group(1))
+                    queue.put(_sse("delegation", delegation))
+                except json.JSONDecodeError:
+                    pass  # malformed — skip silently
                 continue
 
             # Detect tool call lines

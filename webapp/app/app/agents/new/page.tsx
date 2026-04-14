@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './new.module.css';
+import TEMPLATES from '@/lib/agent-templates';
 
 const HERMES_TOOLS = [
   { name: 'web_search',     label: 'Web Search',     desc: 'Search the internet' },
@@ -24,7 +25,7 @@ const MEMORY_OPTIONS = [
 
 const LLM_KEYS = ['ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'OPENROUTER_API_KEY'];
 
-type Step = 1 | 2 | 3;
+type Step = 0 | 1 | 2 | 3;
 
 interface EnvVar { key: string; value: string }
 
@@ -47,7 +48,7 @@ export default function NewAgentPage() {
     { key: 'ANTHROPIC_API_KEY', value: '' },
   ]);
 
-  const [step, setStep]       = useState<Step>(1);
+  const [step, setStep]       = useState<Step>(0);
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState('');
 
@@ -95,6 +96,17 @@ export default function NewAgentPage() {
     }
   }
 
+  function applyTemplate(templateId: string) {
+    const tpl = TEMPLATES.find(t => t.id === templateId);
+    if (!tpl) { setStep(1); return; }
+    setName(tpl.name);
+    setDesc(tpl.description);
+    setTools(tpl.tools);
+    setMem(tpl.memoryProvider);
+    setDepth(tpl.maxDepth);
+    setStep(1);
+  }
+
   const canStep1 = name.trim().length >= 2;
   const hasLLMKey = envVars.some(
     e => LLM_KEYS.includes(e.key.trim().toUpperCase()) && e.value.trim().length > 0
@@ -113,11 +125,11 @@ export default function NewAgentPage() {
 
       {/* Step indicator */}
       <div className={styles.steps}>
-        {(['Identity', 'Configuration', 'Environment'] as const).map((label, i) => {
-          const n = (i + 1) as Step;
+        {(['Template', 'Identity', 'Configuration', 'Environment'] as const).map((label, i) => {
+          const n = i as Step;
           return (
             <div key={label} className={`${styles.stepItem} ${step === n ? styles.stepActive : step > n ? styles.stepDone : ''}`}>
-              <div className={styles.stepNum}>{step > n ? '✓' : n}</div>
+              <div className={styles.stepNum}>{step > n ? '✓' : n + 1}</div>
               <span>{label}</span>
             </div>
           );
@@ -125,6 +137,36 @@ export default function NewAgentPage() {
       </div>
 
       <div className={styles.card}>
+        {/* ── Step 0: Template picker ──────────────────────────── */}
+        {step === 0 && (
+          <div className={styles.stepBody}>
+            <div className={styles.field}>
+              <label className={styles.label}>Start from a template</label>
+              <span className={styles.hint}>Pick a pre-configured security agent or start from scratch.</span>
+            </div>
+            <div className={styles.templateGrid}>
+              {TEMPLATES.map(tpl => (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  className={styles.templateCard}
+                  onClick={() => applyTemplate(tpl.id)}
+                >
+                  <span className={styles.templateIcon}>{tpl.icon}</span>
+                  <span className={styles.templateName}>{tpl.name}</span>
+                  <span className={styles.templateDesc}>{tpl.description}</span>
+                  <span className={styles.templateHint}>{tpl.promptHint}</span>
+                </button>
+              ))}
+            </div>
+            <div className={styles.actions}>
+              <button className={styles.ghostBtn} type="button" onClick={() => setStep(1)}>
+                Skip — start from scratch →
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ── Step 1: Identity ────────────────────────────────── */}
         {step === 1 && (
           <div className={styles.stepBody}>
@@ -164,6 +206,7 @@ export default function NewAgentPage() {
             </div>
 
             <div className={styles.actions}>
+              <button className={styles.ghostBtn} onClick={() => setStep(0)} type="button">← Templates</button>
               <button className={styles.primaryBtn} onClick={() => setStep(2)} disabled={!canStep1}>
                 Continue →
               </button>

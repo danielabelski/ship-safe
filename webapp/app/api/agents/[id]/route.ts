@@ -4,8 +4,26 @@ import { prisma } from '@/lib/prisma';
 
 type Params = { params: Promise<{ id: string }> };
 
+/** Returns the agent if the user owns it (for write ops). */
 async function getAgentForUser(id: string, userId: string) {
   return prisma.agent.findFirst({ where: { id, userId } });
+}
+
+/** Returns the agent if the user owns it OR is a member of its org (for read ops). */
+async function getAgentForUserOrOrg(id: string, userId: string) {
+  const orgIds = await prisma.orgMember
+    .findMany({ where: { userId }, select: { orgId: true } })
+    .then(ms => ms.map(m => m.orgId));
+
+  return prisma.agent.findFirst({
+    where: {
+      id,
+      OR: [
+        { userId },
+        ...(orgIds.length > 0 ? [{ orgId: { in: orgIds } }] : []),
+      ],
+    },
+  });
 }
 
 /** GET /api/agents/[id] */
@@ -14,8 +32,18 @@ export async function GET(_req: NextRequest, { params }: Params) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
+  const orgIds = await prisma.orgMember
+    .findMany({ where: { userId: session.user.id }, select: { orgId: true } })
+    .then(ms => ms.map(m => m.orgId));
+
   const agent = await prisma.agent.findFirst({
-    where: { id, userId: session.user.id },
+    where: {
+      id,
+      OR: [
+        { userId: session.user.id },
+        ...(orgIds.length > 0 ? [{ orgId: { in: orgIds } }] : []),
+      ],
+    },
     include: {
       deployments: {
         orderBy: { createdAt: 'desc' },
@@ -29,7 +57,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
   });
 
   if (!agent) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  return NextResponse.json({ agent });
+  const isOwner = agent.userId === session.user.id;
+  return NextResponse.json({ agent, isOwner });
 }
 
 /** PATCH /api/agents/[id] */

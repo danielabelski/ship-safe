@@ -24,7 +24,10 @@ export default async function Dashboard() {
   const isPaid = plan === 'pro' || plan === 'team' || plan === 'enterprise';
   const freeLimit = parseInt(process.env.FREE_SCAN_LIMIT ?? '1', 10);
 
-  const [recentScans, totalScans, aggFindings, monitoredRepoCount, notification, orgMembership] = await Promise.all([
+  const [
+    recentScans, totalScans, aggFindings, monitoredRepoCount, notification, orgMembership,
+    liveAgents, openFindingCounts, recentAgentFindings,
+  ] = await Promise.all([
     prisma.scan.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -43,12 +46,31 @@ export default async function Dashboard() {
     prisma.monitoredRepo.count({ where: { userId } }),
     prisma.notificationSetting.findUnique({ where: { userId }, select: { slackWebhookUrl: true } }),
     prisma.orgMember.count({ where: { userId } }),
+    // Agent-specific queries
+    prisma.agent.count({ where: { userId, status: 'running' } }),
+    prisma.finding.groupBy({
+      by: ['severity'],
+      where: { agent: { userId }, status: 'open' },
+      _count: { _all: true },
+    }),
+    prisma.finding.findMany({
+      where: { agent: { userId }, status: 'open' },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      include: {
+        agent: { select: { id: true, name: true } },
+      },
+    }),
   ]);
 
   const avgScore = Math.round(aggFindings._avg.score ?? 0);
   const totalFindings = aggFindings._sum.findings ?? 0;
   const uniqueRepos = new Set(recentScans.map(s => s.repo)).size;
   const freeExhausted = !isPaid && totalScans >= freeLimit;
+
+  const findingSummary = { critical: 0, high: 0, medium: 0, low: 0, info: 0 } as Record<string, number>;
+  for (const c of openFindingCounts) findingSummary[c.severity] = (findingSummary[c.severity] ?? 0) + c._count._all;
+  const totalOpenFindings = Object.values(findingSummary).reduce((a, b) => a + b, 0);
 
   function timeAgo(date: Date) {
     const diff = Date.now() - new Date(date).getTime();
@@ -106,6 +128,57 @@ export default async function Dashboard() {
           </div>
         ))}
       </div>
+
+      {/* ── Agent Security Overview ── */}
+      {(liveAgents > 0 || totalOpenFindings > 0) && (
+        <div className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <h2>Agent Security</h2>
+            <Link href="/app/findings" className={styles.seeAll}>
+              {totalOpenFindings > 0 ? `${totalOpenFindings} open findings →` : 'View all →'}
+            </Link>
+          </div>
+
+          <div className={styles.agentStatsRow}>
+            <div className={styles.agentStat}>
+              <span className={styles.agentStatValue} style={{ color: liveAgents > 0 ? 'var(--green)' : 'var(--text-dim)' }}>
+                {liveAgents}
+              </span>
+              <span className={styles.agentStatLabel}>Live agents</span>
+            </div>
+            {(['critical','high','medium','low'] as const).map(sev => {
+              const n = findingSummary[sev] ?? 0;
+              if (n === 0) return null;
+              const colors: Record<string,string> = { critical:'var(--red)', high:'#f97316', medium:'var(--yellow)', low:'var(--green)' };
+              return (
+                <div key={sev} className={styles.agentStat}>
+                  <span className={styles.agentStatValue} style={{ color: colors[sev] }}>{n}</span>
+                  <span className={styles.agentStatLabel}>{sev}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {recentAgentFindings.length > 0 && (
+            <div className={styles.findingsList}>
+              {recentAgentFindings.map(f => {
+                const sevColors: Record<string,string> = { critical:'#ef4444', high:'#f97316', medium:'#ca8a04', low:'#16a34a', info:'#818cf8' };
+                return (
+                  <Link key={f.id} href={`/app/agents/${f.agent.id}?tab=findings`} className={styles.findingRow}>
+                    <span
+                      className={styles.findingSevDot}
+                      style={{ background: sevColors[f.severity] ?? 'var(--text-dim)' }}
+                    />
+                    <span className={styles.findingTitle}>{f.title}</span>
+                    <span className={styles.findingAgent}>{f.agent.name}</span>
+                    <span className={styles.findingTime}>{timeAgo(f.createdAt)}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Deploy Hermes Agents promo */}
       <div className={styles.hermesCard}>

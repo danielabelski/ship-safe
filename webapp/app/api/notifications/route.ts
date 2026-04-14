@@ -18,8 +18,17 @@ export async function GET() {
     });
   }
 
-  return NextResponse.json(settings);
+  // Never return raw github token
+  const { githubToken, ...rest } = settings;
+  return NextResponse.json({ ...rest, githubTokenSet: !!githubToken });
 }
+
+const ALLOWED = [
+  'emailOnComplete', 'emailOnCritical', 'emailDigest',
+  'slackWebhookUrl', 'slackOnComplete', 'slackOnCritical',
+  'agentSlackOnCritical', 'agentSlackOnHigh', 'agentEmailOnCritical',
+  'githubToken',
+] as const;
 
 // PUT — update notification settings
 export async function PUT(req: NextRequest) {
@@ -27,35 +36,20 @@ export async function PUT(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const {
-    emailOnComplete,
-    emailOnCritical,
-    emailDigest,
-    slackWebhookUrl,
-    slackOnComplete,
-    slackOnCritical,
-  } = body;
+
+  // Build update object from allowed fields only
+  const update: Record<string, unknown> = {};
+  for (const key of ALLOWED) {
+    if (key in body) update[key] = body[key];
+  }
 
   const settings = await prisma.notificationSetting.upsert({
-    where: { userId: session.user.id },
-    create: {
-      userId: session.user.id,
-      ...(emailOnComplete !== undefined && { emailOnComplete }),
-      ...(emailOnCritical !== undefined && { emailOnCritical }),
-      ...(emailDigest !== undefined && { emailDigest }),
-      ...(slackWebhookUrl !== undefined && { slackWebhookUrl }),
-      ...(slackOnComplete !== undefined && { slackOnComplete }),
-      ...(slackOnCritical !== undefined && { slackOnCritical }),
-    },
-    update: {
-      ...(emailOnComplete !== undefined && { emailOnComplete }),
-      ...(emailOnCritical !== undefined && { emailOnCritical }),
-      ...(emailDigest !== undefined && { emailDigest }),
-      ...(slackWebhookUrl !== undefined && { slackWebhookUrl }),
-      ...(slackOnComplete !== undefined && { slackOnComplete }),
-      ...(slackOnCritical !== undefined && { slackOnCritical }),
-    },
+    where:  { userId: session.user.id },
+    create: { userId: session.user.id, ...update },
+    update,
   });
 
-  return NextResponse.json(settings);
+  // Never return the raw github token — return a masked indicator
+  const { githubToken, ...rest } = settings;
+  return NextResponse.json({ ...rest, githubTokenSet: !!githubToken });
 }

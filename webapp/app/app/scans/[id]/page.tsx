@@ -393,7 +393,48 @@ export default function ScanDetail() {
   const [scoreTrend, setScoreTrend] = useState<{ score: number; date: string }[]>([]);
   const [badgeCopied, setBadgeCopied] = useState(false);
   const { toast } = useToast();
+
+  // Investigate modal
+  const [investigateOpen,    setInvestigateOpen]    = useState(false);
+  const [liveAgents,         setLiveAgents]         = useState<{ id: string; name: string }[]>([]);
+  const [selectedAgentId,    setSelectedAgentId]    = useState('');
+  const [investigating,      setInvestigating]      = useState(false);
   const router = useRouter();
+
+  // Fetch live agents when investigate modal opens
+  function openInvestigate() {
+    setInvestigateOpen(true);
+    fetch('/api/agents?status=running')
+      .then(r => r.json())
+      .then(d => {
+        const agents = (d.agents ?? []) as { id: string; name: string; status: string }[];
+        setLiveAgents(agents.filter(a => a.status === 'running' || a.status === 'deployed'));
+        if (agents.length > 0) setSelectedAgentId(agents[0].id);
+      })
+      .catch(() => {});
+  }
+
+  async function handleInvestigate() {
+    if (!selectedAgentId || !scan) return;
+    setInvestigating(true);
+    try {
+      const res = await fetch(`/api/scans/${scan.id}/investigate`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ agentId: selectedAgentId }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast(data.error || 'Failed to start investigation', 'error'); return; }
+      toast('Investigation started!', 'success');
+      setInvestigateOpen(false);
+      // Navigate to agent console
+      window.open(`/app/agents/${data.agentId}/console`, '_blank');
+    } catch {
+      toast('Network error', 'error');
+    } finally {
+      setInvestigating(false);
+    }
+  }
 
   async function handleRescan() {
     if (!scan) return;
@@ -543,6 +584,12 @@ export default function ScanDetail() {
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5"/></svg>
               )}
               {rescanning ? 'Starting…' : 'Scan again'}
+            </button>
+          )}
+          {scan.status === 'done' && (scan.findings > 0 || scan.secrets > 0) && (
+            <button className={`btn btn-primary ${s.actionBtn}`} onClick={openInvestigate}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+              Investigate
             </button>
           )}
           {scan.status === 'done' && (
@@ -934,6 +981,60 @@ export default function ScanDetail() {
             </div>
           )}
         </>
+      )}
+
+      {/* ── Investigate modal ── */}
+      {investigateOpen && (
+        <div className={s.investigateOverlay} onClick={() => setInvestigateOpen(false)}>
+          <div className={s.investigateModal} onClick={e => e.stopPropagation()}>
+            <div className={s.investigateHeader}>
+              <span className={s.investigateTitle}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                Investigate with Agent
+              </span>
+              <button className={s.investigateClose} onClick={() => setInvestigateOpen(false)}>×</button>
+            </div>
+            <div className={s.investigateBody}>
+              <p className={s.investigateDesc}>
+                Select a running security agent to investigate the critical and high findings from this scan.
+                The agent will receive the full scan context and produce detailed findings.
+              </p>
+
+              {liveAgents.length === 0 ? (
+                <div className={s.investigateEmpty}>
+                  No running agents found.{' '}
+                  <a href="/app/agents" className={s.investigateLink}>Deploy an agent first →</a>
+                </div>
+              ) : (
+                <div className={s.investigateSelect}>
+                  <label className={s.investigateLabel}>Agent</label>
+                  <select
+                    className={s.investigateSelectInput}
+                    value={selectedAgentId}
+                    onChange={e => setSelectedAgentId(e.target.value)}
+                  >
+                    {liveAgents.map(a => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className={s.investigateActions}>
+                <button className={`btn btn-ghost ${s.actionBtn}`} onClick={() => setInvestigateOpen(false)}>
+                  Cancel
+                </button>
+                <button
+                  className={`btn btn-primary ${s.actionBtn}`}
+                  onClick={handleInvestigate}
+                  disabled={investigating || !selectedAgentId}
+                >
+                  {investigating ? 'Starting…' : 'Start Investigation →'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
