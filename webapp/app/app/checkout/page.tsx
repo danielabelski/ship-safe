@@ -32,9 +32,12 @@ export default async function CheckoutPage({
   const origin = process.env.NEXTAUTH_URL ?? 'https://www.shipsafecli.com';
 
   const checkoutSession = await stripe.checkout.sessions.create({
-    mode: 'payment',
+    mode: 'subscription',
     customer_email: session.user.email,
     line_items: [{ price: planConfig.priceId, quantity: 1 }],
+    subscription_data: {
+      metadata: { userId: session.user.id, plan },
+    },
     metadata: { userId: session.user.id, plan },
     success_url: `${origin}/app?upgraded=${plan}`,
     cancel_url: `${origin}/pricing`,
