@@ -1,6 +1,6 @@
 # Ship Safe Plugin for Claude Code
 
-Security audit your projects directly inside Claude Code. 18 agents, 80+ attack classes, zero setup.
+Security audit your projects directly inside Claude Code. 22 agents, 80+ attack classes, zero setup.
 
 ## Install
 
@@ -12,7 +12,7 @@ claude plugin add github:asamassekou10/ship-safe
 
 | Command | Description |
 |---------|-------------|
-| `/ship-safe` | Full security audit — 18 agents, 80+ attack classes, prioritized remediation plan |
+| `/ship-safe` | Full security audit — 22 agents, 80+ attack classes, prioritized remediation plan |
 | `/ship-safe-hooks` | Install real-time hooks — block secrets & dangerous commands on every Write/Bash |
 | `/ship-safe-scan` | Quick scan for leaked secrets (API keys, passwords, tokens) |
 | `/ship-safe-score` | Security health score (0-100, A-F grade) |

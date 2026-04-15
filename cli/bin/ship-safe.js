@@ -607,7 +607,7 @@ How it works:
 if (process.argv.length === 2) {
   console.log(banner);
   console.log(chalk.yellow('\nQuick start:\n'));
-  console.log(chalk.cyan.bold('  v8.0 — Ship Safe × Hermes Agent'));
+  console.log(chalk.cyan.bold('  v9.0 — Agent Studio, Teams & Findings'));
   console.log(chalk.white('  npx ship-safe audit .       ') + chalk.gray('# Full audit: secrets + 22 agents + deps + remediation'));
   console.log(chalk.white('  npx ship-safe audit . --deep') + chalk.gray('# LLM-powered taint analysis (Anthropic/Ollama)'));
   console.log(chalk.white('  npx ship-safe red-team .    ') + chalk.gray('# 22-agent red team scan (80+ attack classes)'));

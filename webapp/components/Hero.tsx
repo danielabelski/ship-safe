@@ -67,7 +67,7 @@ export default function Hero({ stars, downloads }: HeroProps) {
         <div className={styles.heroLeft}>
           <div className={styles.badge}>
             <span className={styles.badgeDot} />
-            v8.0 · MIT open source · No account required
+            v9.0 · MIT open source · No account required
           </div>
 
           <h1 className={styles.h1}>

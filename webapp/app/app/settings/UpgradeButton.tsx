@@ -43,7 +43,7 @@ export default function UpgradeButton() {
         <div key={plan} className={s.planOption}>
           <div className={s.planOptionHeader}>
             <span className={s.planOptionName}>{PLAN_INFO[plan].label}</span>
-            <span className={s.planOptionPrice}>{PLAN_INFO[plan].price} <span className={s.planOptionOnce}>one-time</span></span>
+            <span className={s.planOptionPrice}>{PLAN_INFO[plan].price}<span className={s.planOptionOnce}>/month</span></span>
           </div>
           <p className={s.planOptionDesc}>{PLAN_INFO[plan].desc}</p>
           <button

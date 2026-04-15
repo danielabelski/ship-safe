@@ -97,7 +97,7 @@ export default async function Dashboard() {
         <div className={styles.upgradeCard}>
           <div className={styles.upgradeLeft}>
             <h3>You&apos;ve used your free scan</h3>
-            <p>Upgrade to Pro for unlimited scans, private repos, AI analysis, and API access — one-time payment, no subscription.</p>
+            <p>Upgrade to Pro for unlimited scans, private repos, AI analysis, and API access — $9/month, cancel anytime.</p>
           </div>
           <Link href="/pricing" className="btn btn-primary">Upgrade to Pro →</Link>
         </div>

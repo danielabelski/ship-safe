@@ -18,9 +18,9 @@
 
 22 security agents. 80+ attack classes. One command.
 
-**Ship Safe v8.0.0** is an AI-powered security platform that runs 22 specialized agents in parallel against your codebase — covering secrets, injection vulnerabilities, auth bypass, SSRF, supply chain attacks, memory poisoning, Hermes Agent security, Supabase RLS, Docker/Terraform/Kubernetes misconfigs, CI/CD pipeline poisoning, LLM/agentic AI security, MCP server misuse, RAG poisoning, PII compliance, vibe coding patterns, exception handling, Claude Managed Agent configs, and more. Full OWASP Agentic AI Top 10 mapping (ASI-01–ASI-10) enriches every finding. Live OSV.dev advisory feed surfaces actively exploited CVEs within hours of disclosure. OWASP 2025 scoring with EPSS exploit probability. LLM-powered deep analysis verifies exploitability of critical findings. Secrets verification probes provider APIs to check if leaked keys are still active.
+**Ship Safe v9.0.0** is an AI-powered security platform that runs 22 specialized agents in parallel against your codebase — covering secrets, injection vulnerabilities, auth bypass, SSRF, supply chain attacks, memory poisoning, Hermes Agent security, Supabase RLS, Docker/Terraform/Kubernetes misconfigs, CI/CD pipeline poisoning, LLM/agentic AI security, MCP server misuse, RAG poisoning, PII compliance, vibe coding patterns, exception handling, Claude Managed Agent configs, and more. Full OWASP Agentic AI Top 10 mapping (ASI-01–ASI-10) enriches every finding. Live OSV.dev advisory feed surfaces actively exploited CVEs within hours of disclosure. OWASP 2025 scoring with EPSS exploit probability. LLM-powered deep analysis verifies exploitability of critical findings. Secrets verification probes provider APIs to check if leaked keys are still active.
 
-**v8.0.0 highlights:** **Ship Safe × Hermes Agent** — two new agents purpose-built for [NousResearch Hermes Agent](https://github.com/NousResearch/hermes-function-calling) deployments. `HermesSecurityAgent` detects 17 attack patterns across the full OWASP Agentic AI Top 10 surface: tool registry poisoning, function-call injection, goal/plan hijacking, memory layer attacks, skill permission drift, and multi-agent trust boundary violations. `AgentAttestationAgent` catches supply-chain failures in agent manifests: unpinned versions, missing integrity hashes on remote tool sources, unsigned manifests, and dynamic `require()` of manifests from env vars. Both agents integrate into the `--agentic` loop for automated scan → annotate → re-scan cycles. Ship Safe is now a first-class Hermes citizen via `skills/ship-safe-security.md` and `registerWithHermes()`.
+**v9.0.0 highlights:** **Agent Studio, Teams & Findings** — the web dashboard is now a full AI security operations platform. **Agent Studio** lets you build, configure, and deploy custom Hermes security agents from the UI — give each agent a role, tools, and memory, then deploy to a live container in one click. **Agent Console** provides a live SSE chat interface with ANSI color rendering and per-session run history. **Agent Teams** orchestrate multiple specialist agents (pen tester, secrets scanner, CVE analyst) under a lead agent that plans, delegates tasks in parallel, and synthesises an executive security report. **Agent Triggers** add webhook and cron-based automation per agent. The new **Findings Dashboard** aggregates all security findings across every agent run with severity charts, trend data, and one-click GitHub issue creation. Billing has moved to monthly subscriptions (Pro at $9/month, Team at $19/seat/month) with automatic plan downgrade on cancellation.
 
 [Documentation](https://shipsafecli.com/docs) | [Blog](https://shipsafecli.com/blog) | [Pricing](https://shipsafecli.com/pricing)
 
@@ -99,7 +99,7 @@ npx ship-safe audit .
 
 ```
 ════════════════════════════════════════════════════════════
-  Ship Safe v8.0 — Full Security Audit
+  Ship Safe v9.0 — Full Security Audit
 ════════════════════════════════════════════════════════════
 
   [Phase 1/4] Scanning for secrets...         ✔ 49 found
