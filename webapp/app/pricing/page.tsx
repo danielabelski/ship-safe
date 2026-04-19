@@ -17,7 +17,9 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Simple, transparent pricing — Ship Safe',
     description: 'The CLI is always free and open-source. Pro & Team plans for the cloud dashboard, GitHub integration, and team collaboration.',
+    type: 'website',
     url: 'https://www.shipsafecli.com/pricing',
+    siteName: 'Ship Safe',
     images: [{ url: ogImage, width: 1200, height: 630, alt: 'Ship Safe Pricing' }],
   },
   twitter: {

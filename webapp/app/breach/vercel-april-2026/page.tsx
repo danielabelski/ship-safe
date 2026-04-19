@@ -23,7 +23,9 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Vercel April 2026 Breach — Impact Checker',
     description: 'Check if your project was impacted by the Vercel April 2026 AI integration supply chain attack.',
+    type: 'website',
     url: 'https://www.shipsafecli.com/breach/vercel-april-2026',
+    siteName: 'Ship Safe',
     images: [{ url: ogImage, width: 1200, height: 630, alt: 'Vercel April 2026 Breach Impact Checker' }],
   },
   twitter: {

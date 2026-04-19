@@ -15,7 +15,9 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Hermes Agent Security — Ship Safe',
     description: 'Harden your Hermes agent against tool poisoning, function-call injection, and memory attacks in one command.',
+    type: 'website',
     url: 'https://www.shipsafecli.com/hermes',
+    siteName: 'Ship Safe',
     images: [{ url: ogImage, width: 1200, height: 630, alt: 'Hermes Agent Security' }],
   },
   twitter: {

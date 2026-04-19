@@ -16,7 +16,9 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'OpenClaw Security Scanner — Ship Safe',
     description: 'Detect ClawJacked, malicious skills, missing auth, and prompt injection in your agent configs in 60 seconds.',
+    type: 'website',
     url: 'https://www.shipsafecli.com/openclaw',
+    siteName: 'Ship Safe',
     images: [{ url: ogImage, width: 1200, height: 630, alt: 'OpenClaw Security Scanner' }],
   },
   twitter: {

@@ -16,7 +16,9 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Security Guides for Developers — Ship Safe Blog',
     description: 'Vulnerability research, supply chain deep-dives, and practical security advice from the Ship Safe team.',
+    type: 'website',
     url: 'https://www.shipsafecli.com/blog',
+    siteName: 'Ship Safe',
     images: [{ url: ogImage, width: 1200, height: 630, alt: 'Ship Safe Blog' }],
   },
   twitter: {

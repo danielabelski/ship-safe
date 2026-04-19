@@ -16,12 +16,28 @@ import ThreatMarquee from '@/components/ThreatMarquee';
 import RecentPosts from '@/components/RecentPosts';
 import { getRepoStats } from '@/lib/stats';
 
+const ogImage = 'https://www.shipsafecli.com/api/og?title=Ship+Safe&description=23+AI+security+agents+detect+LLM+vulnerabilities%2C+MCP+misconfigurations%2C+RAG+poisoning%2C+secrets%2C+and+CVEs.+One+command.+Free+and+open+source.&label=AI+Agent+Security+Scanner&badge=MIT+Open+Source';
+
 export const metadata: Metadata = {
   title: 'Ship Safe — AI Agent Security Scanner for Developers',
-  description: '22 AI security agents scan your codebase for LLM vulnerabilities, MCP configuration security issues, RAG poisoning, Claude Managed Agent misconfigs, secrets, and dependency CVEs. OWASP Agentic AI Top 10 mapping, live advisory feeds. Free CLI.',
+  description: '23 AI security agents scan your codebase for LLM vulnerabilities, MCP configuration security issues, RAG poisoning, Claude Managed Agent misconfigs, secrets, and dependency CVEs. OWASP Agentic AI Top 10 mapping, live advisory feeds. Free CLI.',
   keywords: ['AI agent security scanner', 'LLM vulnerability CLI', 'MCP configuration security', 'RAG poisoning prevention', 'prevent RAG poisoning', 'application security scanner', 'AI security agents', 'secret scanner', 'OWASP Agentic AI Top 10', 'memory poisoning detection', 'prompt injection scanner', 'DevSecOps tool', 'free security scanner', 'open source SAST'],
   alternates: {
     canonical: 'https://www.shipsafecli.com',
+  },
+  openGraph: {
+    title: 'Ship Safe — AI Agent Security Scanner for Developers',
+    description: '23 AI security agents detect LLM vulnerabilities, MCP misconfigurations, RAG poisoning, secrets, and CVEs. One command. Free and open source.',
+    type: 'website',
+    url: 'https://www.shipsafecli.com',
+    siteName: 'Ship Safe',
+    images: [{ url: ogImage, width: 1200, height: 630, alt: 'Ship Safe - AI Agent Security Scanner' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Ship Safe — AI Agent Security Scanner for Developers',
+    description: '23 AI security agents detect LLM vulnerabilities, MCP misconfigurations, RAG poisoning, secrets, and CVEs. One command. Free and open source.',
+    images: [ogImage],
   },
 };
 

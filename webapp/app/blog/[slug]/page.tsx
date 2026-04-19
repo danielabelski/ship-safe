@@ -32,6 +32,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: post.title,
       description: post.description,
       type: 'article',
+      url: `https://www.shipsafecli.com/blog/${post.slug}`,
+      siteName: 'Ship Safe',
       publishedTime: post.date,
       authors: [post.author],
       tags: post.tags,
