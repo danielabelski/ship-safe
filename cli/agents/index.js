@@ -31,6 +31,7 @@ export { LegalRiskAgent, LEGALLY_RISKY_PACKAGES } from './legal-risk-agent.js';
 export { ManagedAgentScanner } from './managed-agent-scanner.js';
 export { HermesSecurityAgent } from './hermes-security-agent.js';
 export { AgentAttestationAgent } from './agent-attestation-agent.js';
+export { AgenticSupplyChainAgent } from './agentic-supply-chain-agent.js';
 export { ABOMGenerator } from './abom-generator.js';
 export { VerifierAgent } from './verifier-agent.js';
 export { DeepAnalyzer } from './deep-analyzer.js';
@@ -70,6 +71,7 @@ import { MemoryPoisoningAgent as MemoryPoisoningAgentClass } from './memory-pois
 import { ManagedAgentScanner as ManagedAgentScannerClass } from './managed-agent-scanner.js';
 import { HermesSecurityAgent as HermesSecurityAgentClass } from './hermes-security-agent.js';
 import { AgentAttestationAgent as AgentAttestationAgentClass } from './agent-attestation-agent.js';
+import { AgenticSupplyChainAgent as AgenticSupplyChainAgentClass } from './agentic-supply-chain-agent.js';
 import { loadPlugins } from '../utils/plugin-loader.js';
 
 const BUILT_IN_AGENTS = () => [
@@ -95,6 +97,7 @@ const BUILT_IN_AGENTS = () => [
   new ManagedAgentScannerClass(),
   new HermesSecurityAgentClass(),
   new AgentAttestationAgentClass(),
+  new AgenticSupplyChainAgentClass(),
 ];
 
 /** Synchronous build — no plugin support. Used by legacy callers. */

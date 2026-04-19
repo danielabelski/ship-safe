@@ -150,7 +150,7 @@ export default function Pricing() {
               </div>
               <div>
                 <h3>Always open source.</h3>
-                <p>The CLI and all 22 agents are MIT licensed. Self-host it, fork it, contribute to it. The SaaS layer funds development while the core stays free forever.</p>
+                <p>The CLI and all 23 agents are MIT licensed. Self-host it, fork it, contribute to it. The SaaS layer funds development while the core stays free forever.</p>
               </div>
               <a href="https://github.com/asamassekou10/ship-safe" target="_blank" rel="noopener noreferrer" className="btn btn-ghost">
                 View on GitHub →

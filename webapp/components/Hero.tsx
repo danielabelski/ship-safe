@@ -18,7 +18,7 @@ const FLOAT_CARDS = [
 
 export default function Hero({ stars, downloads }: HeroProps) {
   const stats = [
-    { num: '22',  label: 'Security agents' },
+    { num: '23',  label: 'Security agents' },
     { num: '80+', label: 'Attack classes' },
     { num: stars ? formatNumber(stars) : '1.2k+', label: 'GitHub stars' },
     { num: downloads ? formatNumber(downloads) : '8k+', label: 'Weekly downloads' },
@@ -76,7 +76,7 @@ export default function Hero({ stars, downloads }: HeroProps) {
           </h1>
 
           <p className={styles.heroSub}>
-            22 security agents. One command. Catches secrets, injection, memory poisoning,
+            23 security agents. One command. Catches secrets, injection, memory poisoning,
             Hermes Agent misconfigs, and CVEs — with OWASP&nbsp;Agentic&nbsp;AI&nbsp;Top&nbsp;10 mapping built in.
           </p>
 
@@ -140,7 +140,7 @@ export default function Hero({ stars, downloads }: HeroProps) {
             <div className={styles.dashTerminal}>
               {[
                 { icon: '✔', text: 'Secrets: 4 found',      tag: 'CRITICAL', tagCls: styles.tagRed },
-                { icon: '✔', text: '22 agents: 23 findings', tag: 'HIGH',     tagCls: styles.tagYellow },
+                { icon: '✔', text: '23 agents: 23 findings', tag: 'HIGH',     tagCls: styles.tagYellow },
                 { icon: '✔', text: 'Dependencies: 3 CVEs',  tag: 'HIGH',     tagCls: styles.tagYellow },
                 { icon: '✔', text: 'Remediation plan ready', tag: null, dim: true },
               ].map((l, i) => (

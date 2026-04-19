@@ -16,11 +16,13 @@
 
 ---
 
-22 security agents. 80+ attack classes. One command.
+23 security agents. 80+ attack classes. One command.
 
-**Ship Safe v9.0.0** is an AI-powered security platform that runs 22 specialized agents in parallel against your codebase — covering secrets, injection vulnerabilities, auth bypass, SSRF, supply chain attacks, memory poisoning, Hermes Agent security, Supabase RLS, Docker/Terraform/Kubernetes misconfigs, CI/CD pipeline poisoning, LLM/agentic AI security, MCP server misuse, RAG poisoning, PII compliance, vibe coding patterns, exception handling, Claude Managed Agent configs, and more. Full OWASP Agentic AI Top 10 mapping (ASI-01–ASI-10) enriches every finding. Live OSV.dev advisory feed surfaces actively exploited CVEs within hours of disclosure. OWASP 2025 scoring with EPSS exploit probability. LLM-powered deep analysis verifies exploitability of critical findings. Secrets verification probes provider APIs to check if leaked keys are still active.
+**Ship Safe v9.1.0** is an AI-powered security platform that runs 23 specialized agents in parallel against your codebase — covering secrets, injection vulnerabilities, auth bypass, SSRF, supply chain attacks, AI integration supply chain (Vercel-class attacks), memory poisoning, Hermes Agent security, Supabase RLS, Docker/Terraform/Kubernetes misconfigs, CI/CD pipeline poisoning, LLM/agentic AI security, MCP server misuse, RAG poisoning, PII compliance, vibe coding patterns, exception handling, Claude Managed Agent configs, and more. Full OWASP Agentic AI Top 10 mapping (ASI-01–ASI-10) enriches every finding. Live OSV.dev advisory feed surfaces actively exploited CVEs within hours of disclosure. OWASP 2025 scoring with EPSS exploit probability. LLM-powered deep analysis verifies exploitability of critical findings. Secrets verification probes provider APIs to check if leaked keys are still active.
 
-**v9.0.0 highlights:** **Agent Studio, Teams & Findings** — the web dashboard is now a full AI security operations platform. **Agent Studio** lets you build, configure, and deploy custom Hermes security agents from the UI — give each agent a role, tools, and memory, then deploy to a live container in one click. **Agent Console** provides a live SSE chat interface with ANSI color rendering and per-session run history. **Agent Teams** orchestrate multiple specialist agents (pen tester, secrets scanner, CVE analyst) under a lead agent that plans, delegates tasks in parallel, and synthesises an executive security report. **Agent Triggers** add webhook and cron-based automation per agent. The new **Findings Dashboard** aggregates all security findings across every agent run with severity charts, trend data, and one-click GitHub issue creation. Billing has moved to monthly subscriptions (Pro at $9/month, Team at $19/seat/month) with automatic plan downgrade on cancellation.
+**v9.1.0 highlights:** **AgenticSupplyChainAgent & Vercel Breach Checker** — new 23rd agent detects AI integration supply chain attacks (Vercel-class): unpinned AI CI actions, OAuth scope abuse in platform integrations, unsigned webhook handlers, and MCP/Hermes cross-boundary token forwarding. New public breach impact checker at /breach/vercel-april-2026 lets any Vercel user self-serve all four checks without the CLI. Full incident analysis published.
+
+**v9.0.0:** **Agent Studio, Teams & Findings** — the web dashboard is now a full AI security operations platform. **Agent Studio** lets you build, configure, and deploy custom Hermes security agents from the UI — give each agent a role, tools, and memory, then deploy to a live container in one click. **Agent Console** provides a live SSE chat interface with ANSI color rendering and per-session run history. **Agent Teams** orchestrate multiple specialist agents (pen tester, secrets scanner, CVE analyst) under a lead agent that plans, delegates tasks in parallel, and synthesises an executive security report. **Agent Triggers** add webhook and cron-based automation per agent. The new **Findings Dashboard** aggregates all security findings across every agent run with severity charts, trend data, and one-click GitHub issue creation. Billing has moved to monthly subscriptions (Pro at $9/month, Team at $19/seat/month) with automatic plan downgrade on cancellation.
 
 [Documentation](https://shipsafecli.com/docs) | [Blog](https://shipsafecli.com/blog) | [Pricing](https://shipsafecli.com/pricing)
 
@@ -29,7 +31,7 @@
 ## Quick Start
 
 ```bash
-# Full security audit — secrets + 22 agents + deps + remediation plan
+# Full security audit — secrets + 23 agents + deps + remediation plan
 npx ship-safe audit .
 
 # LLM-powered deep analysis (Anthropic, OpenAI, Google, Ollama, Gemma 4)
@@ -39,7 +41,7 @@ npx ship-safe audit . --deep
 npx ship-safe audit . --agentic
 npx ship-safe audit . --agentic 5 --agentic-target 85
 
-# Red team scan (22 agents, 80+ attack classes)
+# Red team scan (23 agents, 80+ attack classes)
 npx ship-safe red-team .
 
 # Scan only changed files (fast pre-commit & PR scanning)
@@ -51,7 +53,7 @@ npx ship-safe advisories .
 
 # Continuous monitoring
 npx ship-safe watch .                         # Lightweight file watcher
-npx ship-safe watch . --deep                  # Full 22-agent scan on every change
+npx ship-safe watch . --deep                  # Full 23-agent scan on every change
 npx ship-safe watch . --deep --threshold 80   # Fail if score drops below threshold
 npx ship-safe watch . --status                # Show last deep-watch results
 
@@ -103,7 +105,7 @@ npx ship-safe audit .
 ════════════════════════════════════════════════════════════
 
   [Phase 1/4] Scanning for secrets...         ✔ 49 found
-  [Phase 2/4] Running 22 security agents...   ✔ 103 findings
+  [Phase 2/4] Running 23 security agents...   ✔ 103 findings
   [Phase 3/4] Auditing dependencies...        ✔ 44 CVEs
   [Phase 4/4] Computing security score...     ✔ 25/100 F
 
@@ -130,7 +132,7 @@ npx ship-safe audit .
 
 **What it runs:**
 1. **Secret scan** — 50+ patterns with entropy scoring (API keys, passwords, tokens)
-2. **22 security agents** — run in parallel with per-agent timeouts and framework-aware filtering
+2. **23 security agents** — run in parallel with per-agent timeouts and framework-aware filtering
 3. **Dependency audit** — npm/pip/bundler CVE scanning with EPSS exploit probability scores
 4. **Secrets verification** — probes provider APIs (GitHub, Stripe, OpenAI, etc.) to check if leaked keys are still active
 5. **Deep analysis** — LLM-powered taint analysis verifies exploitability of critical/high findings (optional)
@@ -165,7 +167,7 @@ npx ship-safe audit .
 
 ---
 
-## 22 Security Agents
+## 23 Security Agents
 
 | Agent | Category | What It Detects |
 |-------|----------|-----------------|
@@ -189,8 +191,9 @@ npx ship-safe audit .
 | **CICDScanner** | CI/CD | OWASP CI/CD Top 10 — pipeline poisoning, unpinned actions, secret logging, self-hosted runners, script injection, AI agent danger flags |
 | **APIFuzzer** | API | Routes without auth, missing input validation, mass assignment, unrestricted file upload, GraphQL introspection, debug endpoints, missing rate limiting, OpenAPI spec security issues |
 | **ManagedAgentScanner** | AI/LLM | Claude Managed Agents misconfigurations — `always_allow` permission policies, unrestricted networking, bash without human confirmation, MCP servers over HTTP, hardcoded vault tokens, unpinned environment packages (ASI-03, ASI-04, ASI-05, ASI-07) |
-| **HermesSecurityAgent** *(new)* | AI/LLM | Hermes Agent deployments — tool registry poisoning, function-call injection (`<tool_call>` / `<function_calls>`), goal/plan hijacking, memory layer attacks, skill permission drift, sub-agent trust boundary violations, manifest attestation (ASI-01–ASI-10) |
-| **AgentAttestationAgent** *(new)* | Supply Chain | Agent manifest supply chain — unpinned versions (`latest`, `^`, `~`), missing integrity hashes on remote tool sources, unsigned manifests, `skipIntegrityCheck` bypass, dynamic `require()` of manifests from env vars, missing provenance fields (ASI-10, SLSA Level 0) |
+| **HermesSecurityAgent** | AI/LLM | Hermes Agent deployments — tool registry poisoning, function-call injection (`<tool_call>` / `<function_calls>`), goal/plan hijacking, memory layer attacks, skill permission drift, sub-agent trust boundary violations, manifest attestation (ASI-01–ASI-10) |
+| **AgentAttestationAgent** | Supply Chain | Agent manifest supply chain — unpinned versions (`latest`, `^`, `~`), missing integrity hashes on remote tool sources, unsigned manifests, `skipIntegrityCheck` bypass, dynamic `require()` of manifests from env vars, missing provenance fields (ASI-10, SLSA Level 0) |
+| **AgenticSupplyChainAgent** *(new)* | Supply Chain | AI integration supply chain — over-privileged AI CI actions (Vercel/GitHub/Netlify), OAuth scope creep in AI platform integrations, unsigned AI webhook receivers (missing HMAC), MCP/Hermes cross-boundary token forwarding to third-party servers (ASI-02, ASI-06, ASI-09, CICD-SEC-8) |
 
 **Post-processors:** ScoringEngine (8-category weighted scoring with OWASP Agentic AI Top 10 enrichment), VerifierAgent (secrets liveness verification), DeepAnalyzer (LLM-powered taint analysis)
 
@@ -204,7 +207,7 @@ npx ship-safe audit .
 # Full audit with remediation plan + HTML report
 npx ship-safe audit .
 
-# Red team: 22 agents, 80+ attack classes
+# Red team: 23 agents, 80+ attack classes
 npx ship-safe red-team .
 npx ship-safe red-team . --agents injection,auth    # Run specific agents
 npx ship-safe red-team . --html report.html         # HTML report
@@ -461,7 +464,7 @@ npx ship-safe watch . --configs
 # Lightweight file watcher — re-scans changed files on save
 npx ship-safe watch .
 
-# Deep watch — full 22-agent orchestrator on every change
+# Deep watch — full 23-agent orchestrator on every change
 npx ship-safe watch . --deep
 npx ship-safe watch . --deep --threshold 80   # Fail if score drops below threshold
 npx ship-safe watch . --deep --debounce 2000  # Custom debounce in ms (default: 1000)
@@ -522,7 +525,7 @@ claude plugin add github:asamassekou10/ship-safe
 
 | Command | Description |
 |---------|-------------|
-| `/ship-safe` | Full security audit — 22 agents, remediation plan, auto-fix |
+| `/ship-safe` | Full security audit — 23 agents, remediation plan, auto-fix |
 | `/ship-safe-scan` | Quick scan for leaked secrets |
 | `/ship-safe-score` | Security health score (0-100) |
 | `/ship-safe-deep` | LLM-powered deep taint analysis |

@@ -55,11 +55,12 @@ export async function collectAgentRun(opts: {
   deploymentPort: number;
   message:        string;
   runId:          string;
+  timeoutMs?:     number;
 }): Promise<{ ok: true; data: CollectedRun } | { ok: false; error: string }> {
-  const { deploymentPort, message, runId } = opts;
+  const { deploymentPort, message, runId, timeoutMs } = opts;
 
   const controller = new AbortController();
-  const timeoutId  = setTimeout(() => controller.abort(), AGENT_TIMEOUT_MS);
+  const timeoutId  = setTimeout(() => controller.abort(), timeoutMs ?? AGENT_TIMEOUT_MS);
 
   let agentRes: Response;
   try {

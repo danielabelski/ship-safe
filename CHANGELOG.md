@@ -6,6 +6,58 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [9.1.0] — 2026-04-19 — AgenticSupplyChainAgent & Vercel Breach Impact Checker
+
+### Added
+
+- **`AgenticSupplyChainAgent`** — new 23rd security agent covering AI integration supply chain attack vectors, modelled on the Vercel April 2026 incident. Four detection tracks:
+
+  | Rule | Severity | Category |
+  |------|----------|----------|
+  | `AI_CI_UNPINNED_AI_ACTION` | Critical | AI-named GitHub Actions referenced by mutable tags instead of commit SHAs |
+  | `AI_CI_WRITE_ALL` | Critical | `permissions: write-all` in workflows that include AI actions |
+  | `AI_CI_ADMIN_SCOPE` | Critical | `administration: write` paired with an AI action |
+  | `AI_CI_SECRETS_WRITE` | Critical | `secrets: write` in workflows with AI actions |
+  | `AI_CI_PACKAGES_WRITE` | High | `packages: write` paired with an AI action |
+  | `VERCEL_AI_INTEGRATION_BROAD_SCOPE` | High | Vercel AI integrations holding write/admin/secret scopes (`vercel.json`) |
+  | `GITHUB_APP_DANGEROUS_SCOPE` | High | GitHub App manifests with `administration`, `secrets`, or `members` write access |
+  | `GITHUB_APP_INSECURE_WEBHOOK` | High | GitHub App webhook URLs using plain HTTP |
+  | `NETLIFY_AI_PLUGIN_SECRET_EXPOSURE` | High | Netlify AI plugins receiving secrets via build config (`netlify.toml`) |
+  | `WEBHOOK_NO_HMAC_VERIFICATION` | High | AI/payment platform webhook handlers with no HMAC signature check |
+  | `WEBHOOK_RAW_BODY_NOT_USED` | Medium | JSON-parsed body used as HMAC input (invalidates the signature) |
+  | `MCP_TOKEN_FORWARD_ENV` | High | High-value credentials in MCP/agent configs pointing at non-localhost URLs |
+  | `MCP_THIRD_PARTY_SERVER_WITH_AUTH` | Critical | MCP server configs sending auth headers to third-party endpoints |
+  | `HERMES_TOOL_EXFIL` | Critical | Hermes tool configs forwarding credentials cross-boundary |
+  | `AGENT_OAUTH_SCOPE_CREEP` | High | Agent configs requesting 4+ OAuth scopes |
+
+  Maps to: ASI-02, ASI-06, ASI-09, CICD-SEC-8, CWE-200, CWE-250, CWE-272, CWE-345, CWE-829.
+
+- **Vercel April 2026 Breach Impact Checker** (`/breach/vercel-april-2026`) — public web tool letting anyone check whether their project is exposed to the same attack patterns. Four self-service checks:
+  - **GitHub workflow scan** — fetches `.github/workflows/*.yml` via the GitHub API and flags unpinned AI actions (no auth required)
+  - **Vercel integration scope audit** — lists installed integrations and flags dangerous scope combinations using a user-supplied read-only Vercel token
+  - **Vercel audit log analysis** — pulls the audit log and looks for env reads, unexpected deployments, and new token creations during the incident window (Mar 28 – Apr 12, 2026)
+  - **Config paste scanner** — runs `AgenticSupplyChainAgent` Track 4 patterns against a pasted `.mcp.json` or Hermes config inline; handles both JSON and YAML format. Tokens used for one request, never stored.
+
+- **Blog post** — full incident analysis: *The Vercel April 2026 Incident: How a Compromised AI Integration Became a Supply Chain Attack* (`/blog/vercel-april-2026-ai-integration-supply-chain-attack`). Covers the four attack vectors, exact detection rules, remediation steps, and IOCs from the Vercel bulletin.
+
+- **Agent team orchestration hardening** (from previous session, landing in this release):
+  - `stripAnsi()` — strips ANSI escape codes from Hermes terminal output before it enters synthesis prompts
+  - `parseFindings()` — parses `FINDING:` JSON lines from raw agent text as a fallback to SSE events
+  - `deduplicateAndCorrelate()` — deduplicates findings across agents by `(title + location)`, escalates severity when 2+ agents flag the same asset, emits attack chains
+  - `extractRecon()` — captures Lead agent's Phase 1 attack surface prose and injects it into sub-agent prompts as structured handoff context
+  - `ROLE_STRATEGY` — per-role focused search instructions (pen tester, red team, secrets, CVE analyst) to prevent wasted tool iterations
+  - `ROLE_TIMEOUT_MS` — per-role timeout budget: pen tester 10 min, red team / secrets 8 min, CVE analyst 6 min, custom 5 min
+  - `collectAgentRun` — optional `timeoutMs` parameter so team orchestrator can apply per-role budgets
+  - Synthesis fallback — if the Lead returns an empty report, the orchestrator constructs one directly from deduplicated sub-agent findings
+
+### Changed
+
+- Agent count updated from 22 to 23 across README, webapp hero stat, AgentDirectory component, docs metadata, deploy page, hermes page, pricing page, features component, blog post footer CTA, and plans data.
+- `AgenticSupplyChainAgent` registered in `BUILT_IN_AGENTS` alongside all existing agents.
+- Sitemap updated with `/breach/vercel-april-2026` at priority 0.9.
+
+---
+
 ## [9.0.0] — 2026-04-15 — Agent Studio, Teams, Findings & Monthly Billing
 
 ### Added

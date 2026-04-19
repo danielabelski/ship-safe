@@ -6,7 +6,7 @@ const ogImage = 'https://www.shipsafecli.com/api/og?title=Ship+Safe+Docs&descrip
 
 export const metadata: Metadata = {
   title: 'Documentation',
-  description: 'Complete Ship Safe documentation: LLM vulnerability CLI commands, MCP configuration security scanning, RAG poisoning detection, CI/CD integration, 22 agent reference, and API docs.',
+  description: 'Complete Ship Safe documentation: LLM vulnerability CLI commands, MCP configuration security scanning, RAG poisoning detection, CI/CD integration, 23 agent reference, and API docs.',
   keywords: ['Ship Safe docs', 'LLM vulnerability CLI', 'MCP configuration security', 'RAG poisoning detection', 'AI agent security scanner', 'ship-safe commands', 'ship-safe agents', 'DevSecOps documentation', 'OWASP Agentic AI Top 10'],
   alternates: {
     canonical: 'https://www.shipsafecli.com/docs',
@@ -98,7 +98,7 @@ export GOOGLE_AI_API_KEY=AIza...`}</code></pre>
               <pre><code>{`# Full security audit with remediation plan + HTML report
 npx ship-safe audit .
 
-# Red team: 22 agents, 80+ attack classes
+# Red team: 23 agents, 80+ attack classes
 npx ship-safe red-team .
 
 # Quick secret scan
@@ -126,8 +126,8 @@ npx ship-safe ci . --threshold 80`}</code></pre>
                 <table>
                   <thead><tr><th>Command</th><th>Description</th></tr></thead>
                   <tbody>
-                    <tr><td><code>audit .</code></td><td>Full audit: secrets + 22 agents + deps + remediation plan + HTML report</td></tr>
-                    <tr><td><code>red-team .</code></td><td>Run 22 agents with 80+ attack classes</td></tr>
+                    <tr><td><code>audit .</code></td><td>Full audit: secrets + 23 agents + deps + remediation plan + HTML report</td></tr>
+                    <tr><td><code>red-team .</code></td><td>Run 23 agents with 80+ attack classes</td></tr>
                     <tr><td><code>scan .</code></td><td>Secret scanner (pattern matching + entropy scoring)</td></tr>
                     <tr><td><code>score .</code></td><td>Security health score (0-100, A-F grade)</td></tr>
                     <tr><td><code>deps .</code></td><td>Dependency CVE audit with EPSS scores</td></tr>

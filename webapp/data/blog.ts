@@ -11,6 +11,230 @@ export interface BlogPost {
 
 export const posts: BlogPost[] = [
   {
+    slug: 'vercel-april-2026-ai-integration-supply-chain-attack',
+    title: 'The Vercel April 2026 Incident: How a Compromised AI Integration Became a Supply Chain Attack',
+    description: 'In April 2026, attackers compromised a third-party AI integration connected to Vercel and used it to exfiltrate deployment tokens across hundreds of projects. Here is what happened, the exact attack vectors, and the new AgenticSupplyChainAgent rules we shipped to detect them.',
+    date: '2026-04-19',
+    author: 'Ship Safe Team',
+    tags: ['security research', 'supply chain', 'AI agents', 'CI/CD'],
+    keywords: ['Vercel April 2026 security incident', 'AI integration supply chain attack', 'Vercel deployment token exfiltration', 'MCP server security', 'OAuth scope creep AI', 'agentic supply chain', 'GitHub Actions AI action security', 'webhook HMAC verification', 'cross-boundary token forwarding', 'ASI-09 agentic security'],
+    content: `
+In April 2026, Vercel published a security bulletin disclosing a compromise that began not with Vercel's own infrastructure but with a third-party AI integration that had been granted deployment-level OAuth scopes. By the time the attack was contained, deployment tokens from hundreds of projects had been exfiltrated through a channel most teams had never thought to monitor: their AI tooling.
+
+This post covers what happened, how it worked, and the new \`AgenticSupplyChainAgent\` we shipped to detect these patterns in your own codebase.
+
+## What Happened
+
+The incident started with a trojanized update to a popular AI productivity integration — a tool used by thousands of Vercel teams for automated code review and deployment previews. The integration had been granted OAuth scopes including \`deployments:write\` and \`env:read\` by its users, which is standard for tools that manage preview deployments.
+
+The attackers, likely the same threat group responsible for the March 2026 CanisterWorm campaign, published a malicious update to the integration's backend service. The update included a credential-harvesting payload that forwarded Vercel deployment tokens to an attacker-controlled endpoint on every API call.
+
+Because the tokens arrived over TLS from a legitimate integration client, Vercel's API logs looked completely normal. The only signal was a slight increase in deployment API call volume — and because AI integrations generate noisy, automated traffic, it was initially attributed to product usage growth.
+
+### Indicators of Compromise
+
+Vercel's April 2026 bulletin listed several IOCs that point directly to the attack class — not just this specific incident:
+
+- Third-party integrations with \`env:read\` and \`deployments:write\` scopes that were not actively configured by the team
+- OAuth tokens being used from geographic regions inconsistent with the team's normal activity
+- Unexplained preview deployments on branches with no recent pushes
+- Environment variable reads on projects that had no recent builds
+- Webhook events arriving with no corresponding user action in the audit log
+
+The key insight from the bulletin: **none of these signals required exploiting a vulnerability in Vercel itself**. The attack surface was entirely in the integration layer — the boundary between Vercel and the third-party AI tools connected to it.
+
+## The Four Attack Vectors
+
+The Vercel incident is not a one-off. It represents a class of attack against AI integration supply chains, and it has four distinct vectors:
+
+### 1. Over-Privileged AI Integrations
+
+The root cause was scope creep. AI integrations routinely request write and admin scopes because it makes the demo flow smoother — one OAuth grant and the tool can do everything. Teams approve without reading the scope list.
+
+\`\`\`json
+// What most teams see and approve
+{
+  "integration": "ai-code-review",
+  "scopes": ["read:code", "deployments:write", "env:read", "teams:read"]
+}
+\`\`\`
+
+The \`env:read\` scope is the critical one here. It means any code running as this integration — including a trojanized update — can read every environment variable across all projects the integration is installed on. That includes \`VERCEL_TOKEN\`, database URLs, API keys for downstream services, and any secret the team has ever set.
+
+**What to check:** Review every integration connected to your Vercel account. For each one, ask whether it actually needs write or admin scopes, or whether read-only would be sufficient.
+
+### 2. Unpinned AI Actions in CI
+
+Many teams use GitHub Actions that call Vercel APIs or deploy via Vercel CLI. These actions are often AI-adjacent — they run code review agents, generate changelogs, or trigger AI-powered build checks. The same tag-repointing attack that hit the Trivy/CanisterWorm campaign applies here.
+
+\`\`\`yaml
+# Vulnerable — tag is mutable
+- uses: some-ai-vendor/vercel-deploy-action@v2
+
+# Safe — SHA is immutable
+- uses: some-ai-vendor/vercel-deploy-action@a3f8c1d2e4b5f6... # v2
+\`\`\`
+
+When an AI action is not pinned to a SHA and is also granted \`VERCEL_TOKEN\` as an environment variable, a tag repoint is all an attacker needs. The action runs with your token, the deployment succeeds, and no alarm fires.
+
+### 3. Unsigned Webhook Receivers
+
+Several teams affected by the April 2026 incident had automated webhook receivers that processed Vercel deployment events to trigger downstream AI workflows — things like "on deployment success, run AI security scan" or "on build failure, page the AI agent to investigate."
+
+These receivers accepted incoming events without verifying the \`x-vercel-signature\` header. An attacker who knows the webhook URL (often predictable from project naming conventions) can POST forged events to trigger arbitrary AI agent actions.
+
+\`\`\`typescript
+// Vulnerable — no signature check
+export async function POST(req: NextRequest) {
+  const event = await req.json();
+  if (event.type === 'deployment.succeeded') {
+    await triggerAiSecurityScan(event.payload.deploymentUrl);
+  }
+}
+
+// Safe — verify before processing
+export async function POST(req: NextRequest) {
+  const rawBody = await req.text();
+  const signature = req.headers.get('x-vercel-signature');
+  if (!verifySignature(rawBody, signature, process.env.WEBHOOK_SECRET)) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+  const event = JSON.parse(rawBody);
+  // ...
+}
+\`\`\`
+
+### 4. Cross-Boundary Token Forwarding in Agent Tools
+
+The most subtle vector — and the one that made the Vercel incident self-amplifying — was AI agent tool configurations that passed high-privilege tokens to third-party tool servers.
+
+A common pattern in Hermes and MCP-based setups is to inject environment credentials into agent tool configs so the tools can act on your behalf:
+
+\`\`\`json
+// .mcp.json — vulnerable pattern
+{
+  "servers": {
+    "vercel-deployer": {
+      "url": "https://mcp.some-ai-vendor.com/vercel",
+      "env": {
+        "VERCEL_TOKEN": "\${VERCEL_TOKEN}",
+        "VERCEL_ORG_ID": "\${VERCEL_ORG_ID}"
+      }
+    }
+  }
+}
+\`\`\`
+
+This config forwards your \`VERCEL_TOKEN\` to \`mcp.some-ai-vendor.com\` on every tool call. If that server is compromised — or if you misread the URL and it points somewhere else — your token is exfiltrated on every agent interaction. There is no audit log entry, no anomalous API call from Vercel's perspective, and the leak continues as long as the agent runs.
+
+## What Ship Safe Now Detects
+
+We shipped \`AgenticSupplyChainAgent\` to close these detection gaps. It runs as part of the standard 23-agent scan:
+
+\`\`\`bash
+npx ship-safe audit .
+npx ship-safe red-team .
+\`\`\`
+
+### Detection Coverage
+
+**Track 1: Over-privileged AI CI actions**
+
+Scans \`.github/workflows/*.yml\` for workflows that use AI-named actions (matching patterns like \`copilot\`, \`claude\`, \`devin\`, \`cursor\`, \`openai\`, \`anthropic\`, etc.) and flags:
+- \`permissions: write-all\` in the same workflow
+- \`administration: write\`, \`secrets: write\`, or \`packages: write\` paired with an AI action
+- Any AI action referenced by mutable tag instead of a commit SHA
+
+**Track 2: OAuth scope abuse in AI integrations**
+
+Parses \`vercel.json\`, GitHub App manifests (\`app.yml\`, \`.github/app.yml\`), and \`netlify.toml\` to find:
+- AI integrations requesting \`write\`, \`admin\`, \`delete\`, \`deploy\`, or \`secret\` scopes
+- GitHub App manifests with \`administration: write\`, \`secrets: write\`, \`organization_secrets: write\`, or \`members: write\`
+- Webhook URLs using plain HTTP instead of HTTPS
+- Netlify AI plugins receiving secrets via build config
+
+**Track 3: Unsigned AI platform webhooks**
+
+Finds webhook route handlers (any file with \`webhook\` in the path) that process Vercel, OpenAI, Anthropic, Stripe, Linear, GitHub, or Slack events without any HMAC verification marker (\`createHmac\`, \`timingSafeEqual\`, \`stripe.webhooks.constructEvent\`, \`verifySignature\`, \`svix-signature\`).
+
+**Track 4: Cross-boundary token forwarding**
+
+Scans MCP server configs (\`.mcp.json\`, \`mcp.json\`), Hermes configs (\`.hermesrc\`, \`hermes.json\`), and \`.claude/\` directories for:
+- High-value credentials (\`VERCEL_TOKEN\`, \`GITHUB_TOKEN\`, \`ANTHROPIC_API_KEY\`, etc.) set in configs pointing at non-localhost URLs
+- MCP server configs that send auth headers to third-party endpoints
+- Hermes tool configs forwarding credentials cross-boundary
+- Agent OAuth configurations requesting 4+ scopes
+
+### Example Findings
+
+\`\`\`
+CRITICAL  [AI_CI_UNPINNED_AI_ACTION]
+  AI CI Action Not Pinned to SHA: ai-vendor/deploy-action@v2
+  .github/workflows/preview.yml:14
+  Fix: Pin to full 40-character commit SHA
+
+HIGH  [AI_CI_WRITE_ALL]
+  AI CI Action: Workflow Has write-all Permissions
+  .github/workflows/ai-review.yml:3
+  Fix: Scope to minimum: permissions: { contents: read }
+
+CRITICAL  [MCP_THIRD_PARTY_SERVER_WITH_AUTH]
+  MCP: Third-Party Server URL With Auth Headers
+  .mcp.json:8 — mcp.some-ai-vendor.com receives VERCEL_TOKEN
+  Fix: Audit this server. Use a dedicated secrets-free profile.
+
+HIGH  [WEBHOOK_NO_HMAC_VERIFICATION]
+  AI Platform Webhook: No HMAC Signature Verification
+  app/api/webhooks/vercel/route.ts
+  Fix: Verify x-vercel-signature before processing events
+\`\`\`
+
+## Remediation Steps
+
+If you are a Vercel user who was active during April 2026:
+
+**Immediate:**
+1. Rotate all Vercel team tokens and regenerate any environment variables that contain downstream API keys
+2. Audit your installed integrations at vercel.com/account/integrations — revoke any that are not actively used or that request scopes beyond what they need
+3. Check your audit log for unexpected deployment API calls, env reads, or OAuth token usage from unfamiliar IPs
+
+**Structural fixes:**
+1. Pin all GitHub Actions to commit SHAs — especially AI-adjacent actions
+2. Add HMAC verification to all webhook receivers before any application logic runs
+3. Audit your MCP and Hermes tool configs — never forward production tokens to third-party tool servers
+4. Enforce scope minimization for all OAuth apps: if the tool works with \`read\` scopes, do not grant \`write\`
+
+**Run Ship Safe:**
+
+\`\`\`bash
+# Scan for all four attack vectors
+npx ship-safe audit .
+
+# Focus on supply chain and CI/CD findings
+npx ship-safe red-team . --agents supply-chain,cicd
+\`\`\`
+
+## Why This Category of Attack Will Get Worse
+
+The Vercel incident is a preview of where AI supply chain attacks are heading. As AI integrations proliferate — every product is adding an OAuth integration, an MCP server, a GitHub Action — the attack surface grows in proportion to the number of tokens flowing through these channels.
+
+The pattern is consistent with what we saw in the Trivy/CanisterWorm campaign (March 2026): attackers are not breaking into your infrastructure directly. They are compromising the tools you trust, then riding the trust relationship those tools already have with your infrastructure.
+
+Traditional supply chain scanning focuses on npm packages and Docker images. AI integrations are the new frontier: they run with OAuth tokens, they have write access to your deployments, and they generate noisy enough traffic that credential exfiltration blends in with normal API activity.
+
+Ship Safe v9.0 closes this gap. \`AgenticSupplyChainAgent\` is part of every standard scan.
+
+## Sources
+
+- [Vercel Security Bulletin: April 2026 Security Incident](https://vercel.com/kb/bulletin/vercel-april-2026-security-incident)
+- [Vercel April 2026 — Indicators of Compromise](https://vercel.com/kb/bulletin/vercel-april-2026-security-incident#indicators-of-compromise-iocs)
+- [OWASP Agentic AI Top 10: ASI-09 Agentic Supply Chain Risk](https://owasp.org/www-project-agentic-ai-threats/)
+- [Our previous coverage: CanisterWorm and the March 2026 npm campaign](/blog/supply-chain-attacks-2026-how-we-hardened-ship-safe)
+
+Ship fast. Ship safe.
+    `.trim(),
+  },
+  {
     slug: 'hermes-agent-security-tool-registry-poisoning-function-call-injection',
     title: 'Hermes Agent Security: Tool Registry Poisoning, Function-Call Injection, and the Attacks Your Scanner Misses',
     description: 'Hermes Agent introduces four attack surfaces that traditional scanners do not cover: tool registry, memory layer, skill playbooks, and multi-agent mesh. Here is what can go wrong in each — and how Ship Safe v8 catches it.',

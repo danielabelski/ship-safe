@@ -89,6 +89,11 @@ const AGENTS = [
         checks: ['Dependency CVEs', 'Typosquatting packages', 'Malicious npm scripts', 'Lockfile tampering'],
       },
       {
+        name: 'Agentic Supply Chain Agent',
+        owasp: 'ASI09',
+        checks: ['Over-privileged AI CI actions', 'OAuth scope abuse in AI integrations', 'Unsigned AI webhook receivers', 'MCP/Hermes cross-boundary token forwarding'],
+      },
+      {
         name: 'Legal Risk Agent',
         owasp: 'A06',
         checks: ['GPL copyleft contamination', 'DMCA-flagged packages', 'License incompatibilities', 'AI-generated code risk'],
@@ -138,7 +143,7 @@ export default function AgentDirectory() {
     <section className={styles.section} id="agents">
       <div className="container">
         <span className="section-label">Under the hood</span>
-        <h2>22 agents. Every attack surface covered.</h2>
+        <h2>23 agents. Every attack surface covered.</h2>
         <p className="section-sub">
           Not wrappers — each agent has its own detection logic, rule set, and OWASP mapping.
           Here&rsquo;s exactly what runs when you type <code>ship-safe audit .</code>
