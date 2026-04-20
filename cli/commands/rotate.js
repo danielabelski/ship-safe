@@ -10,8 +10,9 @@
  * (no auth required — designed for reporting exposed credentials).
  *
  * USAGE:
- *   ship-safe rotate .              Scan and rotate all found secrets
- *   ship-safe rotate . --provider github   Only rotate GitHub tokens
+ *   ship-safe rotate .                         Scan local files and rotate found secrets
+ *   ship-safe rotate . --provider github        Only rotate GitHub tokens
+ *   ship-safe rotate --plan rotation-plan.json  Execute a plan from shipsafecli.com/rotate
  *
  * RECOMMENDED ORDER:
  *   1. ship-safe rotate      ← revoke the key so it can't be used
@@ -21,6 +22,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import readline from 'readline';
 import { execSync } from 'child_process';
 import chalk from 'chalk';
 import ora from 'ora';
@@ -461,10 +463,205 @@ function maskToken(token) {
 }
 
 // =============================================================================
-// MAIN COMMAND
+// PLAN-BASED ROTATION (--plan rotation-plan.json)
 // =============================================================================
 
+function promptHidden(question) {
+  return new Promise(resolve => {
+    process.stdout.write(question);
+    const stdin = process.stdin;
+    const wasRaw = stdin.isRaw;
+    try { stdin.setRawMode(true); } catch { /* not a TTY */ }
+    stdin.resume();
+    stdin.setEncoding('utf8');
+    let value = '';
+    function onData(ch) {
+      if (ch === '\n' || ch === '\r' || ch === '\u0003') {
+        stdin.removeListener('data', onData);
+        try { stdin.setRawMode(!!wasRaw); } catch { /* ignore */ }
+        stdin.pause();
+        process.stdout.write('\n');
+        if (ch === '\u0003') process.exit(0);
+        resolve(value);
+      } else if (ch === '\u007f' || ch === '\b') {
+        value = value.slice(0, -1);
+      } else {
+        value += ch;
+        process.stdout.write('*');
+      }
+    }
+    stdin.on('data', onData);
+  });
+}
+
+async function updateVercelEnvVar(token, projectId, envId, envType, newValue, teamId) {
+  const params = new URLSearchParams();
+  if (teamId) params.set('teamId', teamId);
+  const url = `https://api.vercel.com/v9/projects/${projectId}/env/${envId}?${params}`;
+  const r = await fetch(url, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value: newValue, type: envType || 'encrypted' }),
+  });
+  if (!r.ok) {
+    const body = await r.text();
+    throw new Error(`${r.status}: ${body}`);
+  }
+}
+
+export async function rotatePlanCommand(planFile) {
+  // ── 1. Read and validate plan ──────────────────────────────────────────────
+  const planPath = path.resolve(planFile);
+  if (!fs.existsSync(planPath)) {
+    output.error(`Plan file not found: ${planPath}`);
+    process.exit(1);
+  }
+
+  let plan;
+  try {
+    plan = JSON.parse(fs.readFileSync(planPath, 'utf-8'));
+  } catch {
+    output.error('Failed to parse rotation plan JSON. Make sure it was downloaded from shipsafecli.com/rotate');
+    process.exit(1);
+  }
+
+  const issuers = plan.issuers;
+  if (!issuers || typeof issuers !== 'object' || Object.keys(issuers).length === 0) {
+    output.success('No credentials in rotation plan — nothing to rotate.');
+    return;
+  }
+
+  const totalEnvVars = Object.values(issuers).reduce((sum, g) => sum + (g.affected?.length ?? 0), 0);
+  const issuerList = Object.entries(issuers);
+
+  output.header('Credential Rotation Plan');
+  console.log(chalk.gray(`\n  Plan generated: ${plan.generated ?? 'unknown'}`));
+  console.log(chalk.gray(`  Projects scanned: ${plan.projectsScanned ?? 'unknown'}`));
+  console.log(chalk.gray(`  Env vars to update: ${totalEnvVars}`));
+  console.log(chalk.gray(`  Credential types: ${issuerList.length}\n`));
+
+  // ── 2. Prompt for Vercel token ────────────────────────────────────────────
+  console.log(chalk.cyan.bold('  This command will update your Vercel env vars via the API.'));
+  console.log(chalk.gray('  Your token is used only for API calls and is never stored.\n'));
+
+  const vercelToken = await promptHidden(chalk.white('  Enter your Vercel API token: '));
+  if (!vercelToken) {
+    output.error('No Vercel token provided. Aborting.');
+    process.exit(1);
+  }
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const teamId = plan.teamId || '';
+
+  // ── 3. Process each issuer ────────────────────────────────────────────────
+  const auditLog = [];
+  let totalUpdated = 0;
+  let totalFailed = 0;
+
+  for (let i = 0; i < issuerList.length; i++) {
+    const [issuerKey, issuerData] = issuerList[i];
+    const affected = issuerData.affected ?? [];
+    if (affected.length === 0) continue;
+
+    const projectCount = new Set(affected.map(a => a.projectId)).size;
+    console.log(chalk.white.bold(`\n  [${i + 1}/${issuerList.length}] ${issuerData.name ?? issuerKey}`));
+    console.log(chalk.gray(`       ${affected.length} env var${affected.length !== 1 ? 's' : ''} across ${projectCount} project${projectCount !== 1 ? 's' : ''}`));
+
+    if (issuerData.rotateUrl) {
+      console.log(chalk.gray(`       Rotate URL: ${chalk.cyan(issuerData.rotateUrl)}`));
+      const opened = openBrowser(issuerData.rotateUrl);
+      if (opened) {
+        console.log(chalk.gray('       ✓ Opened in browser'));
+      } else {
+        console.log(chalk.yellow(`       → Open manually: ${issuerData.rotateUrl}`));
+      }
+    } else {
+      console.log(chalk.yellow('       No rotation URL — rotate manually in the provider dashboard.'));
+    }
+
+    // Get one new value per unique env var name for this issuer
+    const uniqueKeys = [...new Set(affected.map(a => a.envVar))];
+    const newValues = {};
+
+    for (const envKey of uniqueKeys) {
+      const newVal = await promptHidden(chalk.white(`\n  Paste new value for ${chalk.cyan(envKey)}: `));
+      if (!newVal) {
+        console.log(chalk.yellow(`  Skipping ${envKey} (no value entered)`));
+        continue;
+      }
+      newValues[envKey] = newVal;
+    }
+
+    if (Object.keys(newValues).length === 0) {
+      console.log(chalk.gray('  Skipped all env vars for this issuer.\n'));
+      continue;
+    }
+
+    // Update each affected env var via Vercel API
+    const spinner = ora({ text: `  Updating ${affected.length} env var${affected.length !== 1 ? 's' : ''}...`, color: 'cyan' }).start();
+    let issuerUpdated = 0;
+    let issuerFailed = 0;
+
+    for (const item of affected) {
+      const newVal = newValues[item.envVar];
+      if (!newVal) continue;
+      try {
+        await updateVercelEnvVar(vercelToken, item.projectId, item.envId, item.envType, newVal, teamId);
+        issuerUpdated++;
+        auditLog.push({
+          ts: new Date().toISOString(),
+          issuer: issuerKey,
+          project: item.projectName,
+          projectId: item.projectId,
+          envVar: item.envVar,
+          status: 'updated',
+        });
+      } catch (e) {
+        issuerFailed++;
+        auditLog.push({
+          ts: new Date().toISOString(),
+          issuer: issuerKey,
+          project: item.projectName,
+          projectId: item.projectId,
+          envVar: item.envVar,
+          status: 'failed',
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+
+    totalUpdated += issuerUpdated;
+    totalFailed += issuerFailed;
+
+    if (issuerFailed === 0) {
+      spinner.succeed(chalk.green(`  Updated ${issuerUpdated} env var${issuerUpdated !== 1 ? 's' : ''}`));
+    } else {
+      spinner.warn(chalk.yellow(`  Updated ${issuerUpdated}, failed ${issuerFailed}`));
+    }
+  }
+
+  rl.close();
+
+  // ── 4. Write audit log ────────────────────────────────────────────────────
+  const auditPath = path.resolve('rotation-audit.json');
+  fs.writeFileSync(auditPath, JSON.stringify({ rotatedAt: new Date().toISOString(), auditLog }, null, 2));
+
+  // ── 5. Summary ────────────────────────────────────────────────────────────
+  console.log();
+  console.log(chalk.cyan.bold('  Rotation complete'));
+  console.log(chalk.white(`  ✓ ${totalUpdated} env var${totalUpdated !== 1 ? 's' : ''} updated`));
+  if (totalFailed > 0) {
+    console.log(chalk.red(`  ✗ ${totalFailed} failed — see rotation-audit.json for details`));
+  }
+  console.log(chalk.gray(`\n  Audit log written to: ${auditPath}`));
+  console.log(chalk.gray('  Run ship-safe scan . to confirm no hardcoded credentials remain.\n'));
+}
+
 export async function rotateCommand(targetPath = '.', options = {}) {
+  // If --plan flag provided, delegate to plan-based rotation
+  if (options.plan) {
+    return rotatePlanCommand(options.plan);
+  }
   const absolutePath = path.resolve(targetPath);
 
   if (!fs.existsSync(absolutePath)) {

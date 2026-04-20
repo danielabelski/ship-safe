@@ -1961,6 +1961,100 @@ npx ship-safe hooks status
 Ship fast. Ship safe.
     `.trim(),
   },
+  {
+    slug: 'lovable-2025-public-project-chat-exposure',
+    title: 'The Lovable Incident: When "Public" Means Your Chat History',
+    description: 'Lovable accidentally re-exposed chat histories on public projects - histories that contained API keys, database URLs, and business logic pasted directly into prompts. Here is what happened, why the HackerOne reports were closed without escalation, and what vibe-coders should do right now.',
+    date: '2026-04-20',
+    author: 'Ship Safe Team',
+    tags: ['security research', 'vibe coding', 'AI tools', 'credentials'],
+    keywords: ['Lovable security incident', 'Lovable public project chat exposure', 'vibe coding security risks', 'AI coding tool credential leak', 'Lovable chat history visible', 'HackerOne escalation failure', 'rotate credentials after Lovable', 'vibe-coded app security audit'],
+    content: `
+Lovable published a statement this week acknowledging that chat messages on public projects were briefly re-accessible - after the company had previously closed the exposure. A backend change made while unifying permissions accidentally re-enabled access to those chats. Two separate HackerOne reports flagging the behavior were closed without escalation because the triage team believed seeing public project chats was intended.
+
+This post covers what actually happened, why it matters more than a simple visibility bug, and what you should do if you used Lovable with public projects.
+
+## What Happened
+
+Lovable was built around a "public/private" project toggle. In the early days, public meant everything - the chat, the generated code, the build history. The reasoning made sense at the time: like a public GitHub repo, developers could browse others' work to learn what was possible.
+
+The problem is that a GitHub repo and a Lovable chat session are not the same thing. A GitHub repo contains committed code. A Lovable chat session contains the prompts that generated that code - including everything a developer typed to get there.
+
+Over time Lovable acknowledged the confusion and added controls. Free tier users got the ability to make projects private in May 2025. Enterprise customers had public visibility disabled entirely. In December 2025, the platform switched to private-by-default across all tiers.
+
+Then in February 2026, a backend permissions unification accidentally re-enabled access to chats on public projects. Two researchers reported it through HackerOne. Both reports were closed - the triage team read the behavior as "public projects have public chats" and marked it as intended. Lovable only learned what had happened when they investigated following the public reports.
+
+## Why the Chat Exposure Is the Real Issue
+
+When people talk about this incident, most of the attention goes to the visibility bug itself. But the more important question is: **what was in those chats?**
+
+When you vibe-code, you do not just describe UI. You paste context. You share what you are actually building. A typical session might include:
+
+- Database connection strings pasted to give the AI context
+- API keys dropped in to configure integrations mid-session
+- Environment variable names and values shared to explain errors
+- Internal system names, endpoint URLs, business logic details
+
+None of this is hypothetical. It is how people actually use these tools. The combination of "free tier defaults to public" and "prompts contain credentials" created a window where sensitive material was accessible to anyone who knew how to query the API.
+
+The window ran from February 2026 until Lovable reverted the change. Anyone who scraped public Lovable projects during that window has those chat logs.
+
+## The Broader Pattern
+
+Lovable is not uniquely careless here. The confusion between "public app" and "public development environment" exists across every AI-native coding platform:
+
+| Platform | What "public" has historically meant |
+|---|---|
+| Lovable | Chat + code + build history |
+| Bolt | Published app + project files |
+| Replit | Full REPL including environment state |
+| v0 | Generated component + prompt history |
+
+These tools were designed to lower the barrier to shipping. That means defaults that favor visibility and sharing. The security assumption baked in was that developers would understand the scope of what they were sharing. Many did not.
+
+## The HackerOne Escalation Failure
+
+This part of the incident is worth examining separately. Two researchers submitted vulnerability reports. Both were closed.
+
+The triage team was not wrong to look at the documentation - Lovable had at various points described public projects as having fully public chats. The issue is that "our documentation used to describe this behavior" is not the same as "this behavior is currently intended." A permissions unification event is exactly the kind of change that can silently re-enable something that was supposed to be fixed.
+
+Bug bounty triage is a hard problem. Triagers work through high volume with limited context. But this case illustrates why security-relevant behavior changes - especially permissions changes - need a regression check, not just a documentation check.
+
+## What to Do Now
+
+If you used Lovable before December 2025 and your projects were public, assume the chats were visible during the February window. The practical steps:
+
+**1. Rotate any credentials mentioned in chats**
+
+This includes API keys, tokens, database URLs, service passwords, or any secret you pasted to give the AI context. If you used Vercel, our [credential rotation wizard](/rotate) scans all your projects for high-value env vars grouped by issuer and links you directly to each project's settings page.
+
+**2. Audit your generated code**
+
+Lovable-generated code can contain hardcoded credentials, missing auth checks, insecure API patterns, and other issues that accumulate from iterative prompting without security review. Run:
+
+\`\`\`bash
+npx ship-safe audit .
+\`\`\`
+
+This runs 23 security agents across your codebase - secrets, injection, auth bypass, SSRF, supply chain, and LLM-specific risks. It takes under a minute and flags issues with fix instructions.
+
+**3. Check your risk exposure**
+
+Use our [Lovable self-audit checklist](/breach/lovable-2025) to assess your specific situation - when you used Lovable, what your projects' visibility settings were, and whether your chats contained credentials.
+
+## The Vibe Coding Security Gap
+
+There is a structural issue here that goes beyond Lovable specifically. AI coding tools lower the floor for building - which is genuinely valuable. But the security model that developers carry into those tools was built for a different workflow.
+
+In traditional development, credentials live in `.env` files that git-ignore by default. They are never typed into a chat interface. There is no concept of a "public project" that includes the conversation that generated it.
+
+Vibe coding collapses that distinction. The tool, the prompts, the credentials, and the generated code exist in the same session. When the session is public, all of it is public.
+
+Ship Safe exists for exactly this gap. Whether you built on Lovable, Bolt, Cursor, or any other AI-native tool, \`npx ship-safe audit .\` runs the same 23-agent security review against the output - looking for what the AI missed and what the prompts may have introduced.
+
+Ship fast. Ship safe.
+    `.trim(),
+  },
 ];
 
 export function getPostBySlug(slug: string): BlogPost | undefined {

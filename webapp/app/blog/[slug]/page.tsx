@@ -275,6 +275,21 @@ export default async function BlogPost({ params }: Props) {
               </div>
             )}
 
+            {slug === 'lovable-2025-public-project-chat-exposure' && (
+              <div className={styles.breachCta}>
+                <div className={styles.breachCtaBadge}>
+                  <span className={styles.breachDot} />
+                  Lovable Self-Audit
+                </div>
+                <h3>Did your projects expose credentials?</h3>
+                <p>Answer 4 questions to assess your exposure and get specific action items - credential rotation, code audit, and visibility settings check.</p>
+                <Link href="/breach/lovable-2025" className="btn btn-primary">
+                  Assess my exposure
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </Link>
+              </div>
+            )}
+
             <div className={styles.cta}>
               <h3>Scan your project now</h3>
               <pre className={styles.ctaCode}><code>npx ship-safe audit .</code></pre>
