@@ -18,6 +18,8 @@ import path from 'path';
 import chalk from 'chalk';
 import ora from 'ora';
 import { buildOrchestratorAsync } from '../agents/index.js';
+import { SwarmOrchestrator } from '../agents/swarm-orchestrator.js';
+import { ReconAgent } from '../agents/recon-agent.js';
 import { ScoringEngine } from '../agents/scoring-engine.js';
 import { PolicyEngine } from '../agents/policy-engine.js';
 import { HTMLReporter } from '../agents/html-reporter.js';
@@ -35,30 +37,71 @@ export async function redTeamCommand(targetPath = '.', options = {}) {
   }
 
   console.log();
-  output.header('Ship Safe v4.0 — Multi-Agent Security Audit');
-  console.log();
 
-  // ── 1. Run orchestrator ─────────────────────────────────────────────────────
-  const orchestrator = await buildOrchestratorAsync(absolutePath, { quiet: true });
+  let findings = [];
+  let recon = {};
+  let agentResults = [];
 
-  const agentFilter = options.agents
-    ? options.agents.split(',').map(a => a.trim())
-    : null;
+  // ── 1a. Swarm mode (Kimi K2.6 native parallel execution) ─────────────────
+  if (options.swarm) {
+    output.header('Ship Safe — Kimi K2.6 Swarm Mode');
+    console.log();
 
-  const orchestratorOpts = {
-    verbose: options.verbose,
-    agents: agentFilter,
-  };
-  if (options.deep) orchestratorOpts.deep = true;
-  if (options.local) orchestratorOpts.local = true;
-  if (options.model) orchestratorOpts.model = options.model;
-  if (options.provider) orchestratorOpts.provider = options.provider;
-  if (options.baseUrl) orchestratorOpts.baseUrl = options.baseUrl;
-  if (options.budget) orchestratorOpts.budget = options.budget;
+    const swarm = SwarmOrchestrator.create(absolutePath, {
+      provider: options.provider || 'kimi',
+      model: options.model,
+      verbose: options.verbose,
+      budgetCents: options.budget || 200,
+    });
 
-  const results = await orchestrator.runAll(absolutePath, orchestratorOpts); // ship-safe-ignore — orchestrator result, not LLM output triggering actions
+    if (!swarm) {
+      output.error('Swarm mode requires MOONSHOT_API_KEY (Kimi K2.6). Set it and retry.');
+      process.exit(1);
+    }
 
-  const { recon, findings, agentResults } = results;
+    const reconSpinner = ora({ text: 'Mapping attack surface...', color: 'cyan' }).start();
+    const reconAgent = new ReconAgent();
+    const reconResult = await reconAgent.analyze({ rootPath: absolutePath });
+    recon = Array.isArray(reconResult) ? {} : reconResult;
+    const files = await reconAgent.discoverFiles(absolutePath);
+    reconSpinner.succeed(chalk.green('Attack surface mapped'));
+
+    const swarmSpinner = ora({ text: `Deploying ${chalk.cyan('23 swarm agents')} via Kimi K2.6...`, color: 'cyan' }).start();
+    try {
+      findings = await swarm.run(absolutePath, recon, files);
+      swarmSpinner.succeed(chalk.green(`Swarm complete — ${findings.length} finding(s)`));
+    } catch (err) {
+      swarmSpinner.fail(chalk.red(`Swarm failed: ${err.message}`));
+      process.exit(1);
+    }
+
+    agentResults = [{ agent: 'KimiSwarm', category: 'swarm', findingCount: findings.length, success: true }];
+
+  } else {
+    // ── 1b. Standard local orchestration ───────────────────────────────────
+    output.header('Ship Safe v4.0 — Multi-Agent Security Audit');
+    console.log();
+
+    const orchestrator = await buildOrchestratorAsync(absolutePath, { quiet: true });
+
+    const agentFilter = options.agents
+      ? options.agents.split(',').map(a => a.trim())
+      : null;
+
+    const orchestratorOpts = {
+      verbose: options.verbose,
+      agents: agentFilter,
+    };
+    if (options.deep) orchestratorOpts.deep = true;
+    if (options.local) orchestratorOpts.local = true;
+    if (options.model) orchestratorOpts.model = options.model;
+    if (options.provider) orchestratorOpts.provider = options.provider;
+    if (options.baseUrl) orchestratorOpts.baseUrl = options.baseUrl;
+    if (options.budget) orchestratorOpts.budget = options.budget;
+
+    const results = await orchestrator.runAll(absolutePath, orchestratorOpts); // ship-safe-ignore — orchestrator result, not LLM output triggering actions
+    ({ recon, findings, agentResults } = results);
+  }
 
   // ── 2. Dependency audit ─────────────────────────────────────────────────────
   let depVulns = [];

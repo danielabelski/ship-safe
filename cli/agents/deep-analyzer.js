@@ -233,8 +233,9 @@ export class DeepAnalyzer {
     this.maxFileChars = this.largeContext ? MAX_FILE_CHARS_LARGE_CTX : MAX_FILE_CHARS_DEFAULT;
     this.batchSize = this.largeContext ? 15 : 5;
 
-    // Whether we can use multi-tier Anthropic routing
+    // Whether we can use multi-tier structured output routing
     this._isAnthropic = this.provider?.name === 'Anthropic';
+    this._supportsTools = this._isAnthropic || this.provider?.supportsStructuredOutput === true;
   }
 
   /**
@@ -294,7 +295,7 @@ export class DeepAnalyzer {
       toAnalyze.length = Math.max(1, affordable);
     }
 
-    const results = this._isAnthropic
+    const results = this._supportsTools
       ? await this._analyzeTiered(toAnalyze, context)
       : await this._analyzeSingleTier(toAnalyze, context);
 
@@ -333,8 +334,14 @@ export class DeepAnalyzer {
   async _analyzeTiered(findings, context) {
     const results = new Map();
 
+    // Model selection: use Anthropic tiers or provider's own model for non-Anthropic
+    const tier1Model = this._isAnthropic ? TIER1_MODEL : undefined;
+    const tier2Model = this._isAnthropic ? TIER2_MODEL : undefined;
+    const tier3Model = this._isAnthropic ? TIER3_MODEL : undefined;
+    const providerLabel = this._isAnthropic ? 'Haiku' : this.provider.name;
+
     // ── Tier 1: Haiku triage ────────────────────────────────────────────────
-    if (this.verbose) console.log(`  [Tier 1] Triaging ${findings.length} findings with Haiku...`);
+    if (this.verbose) console.log(`  [Tier 1] Triaging ${findings.length} findings with ${providerLabel}...`);
 
     const triageMap = await this._runTriage(findings, context);
 
@@ -350,16 +357,18 @@ export class DeepAnalyzer {
 
     // ── Tier 2: Sonnet deep analysis ────────────────────────────────────────
     if (toReview.length > 0 && this.spentCents < this.budgetCents) {
-      if (this.verbose) console.log(`  [Tier 2] Deep-analyzing ${toReview.length} findings with Sonnet...`);
-      const tier2Results = await this._runDeepAnalysis(toReview, context, TIER2_MODEL);
+      const tier2Label = this._isAnthropic ? 'Sonnet' : this.provider.name;
+      if (this.verbose) console.log(`  [Tier 2] Deep-analyzing ${toReview.length} findings with ${tier2Label}...`);
+      const tier2Results = await this._runDeepAnalysis(toReview, context, tier2Model);
       for (const [id, analysis] of tier2Results) results.set(id, analysis);
       this._tier2Count += toReview.length;
     }
 
     // ── Tier 3: Opus exploit chain ──────────────────────────────────────────
     if (toEscalate.length > 0 && this.spentCents < this.budgetCents) {
-      if (this.verbose) console.log(`  [Tier 3] Running exploit-chain analysis on ${toEscalate.length} findings with Opus...`);
-      const tier3Results = await this._runExploitChain(toEscalate, context);
+      const tier3Label = this._isAnthropic ? 'Opus' : this.provider.name;
+      if (this.verbose) console.log(`  [Tier 3] Running exploit-chain analysis on ${toEscalate.length} findings with ${tier3Label}...`);
+      const tier3Results = await this._runExploitChain(toEscalate, context, tier3Model);
       for (const [id, analysis] of tier3Results) results.set(id, analysis);
       this._tier3Count += toEscalate.length;
     }
@@ -399,7 +408,7 @@ export class DeepAnalyzer {
           prompt,
           'triage_findings',
           TRIAGE_SCHEMA,
-          { maxTokens: 1024, model: TIER1_MODEL }
+          { maxTokens: 1024, ...(tier1Model ? { model: tier1Model } : {}) }
         );
 
         this._trackCost(prompt.length, JSON.stringify(result || '').length);
@@ -467,7 +476,7 @@ export class DeepAnalyzer {
   }
 
   /** Tier 3: exploit-chain analysis — returns Map<findingId, analysis> */
-  async _runExploitChain(findings, context) {
+  async _runExploitChain(findings, context, model = TIER3_MODEL) {
     const results = new Map();
 
     // Single findings per call for maximum depth
@@ -494,7 +503,7 @@ export class DeepAnalyzer {
           prompt,
           'report_exploit_chain',
           EXPLOIT_SCHEMA,
-          { maxTokens: 2048, model: TIER3_MODEL }
+          { maxTokens: 2048, ...(model ? { model } : {}) }
         );
 
         this._trackCost(prompt.length, JSON.stringify(result || '').length);
@@ -689,7 +698,8 @@ export class DeepAnalyzer {
       spentCents:    Math.round(this.spentCents * 100) / 100,
       budgetCents:   this.budgetCents,
       provider:      this.provider?.name || 'none',
-      multiTier:     this._isAnthropic,
+      multiTier:     this._supportsTools,
+      isAnthropic:   this._isAnthropic,
     };
   }
 }

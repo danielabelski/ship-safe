@@ -50,6 +50,11 @@ export async function watchCommand(targetPath = '.', options = {}) {
     return watchConfigs(absolutePath);
   }
 
+  // Stateful mode: persistent K2.6 session (subset of deep)
+  if (options.stateful) {
+    return watchStateful(absolutePath, options);
+  }
+
   // Deep mode: run full orchestrator on changes
   if (options.deep) {
     return watchDeep(absolutePath, options);
@@ -288,6 +293,135 @@ function showWatchStatus(rootPath) {
 // =============================================================================
 // DEEP WATCH MODE (full orchestrator)
 // =============================================================================
+
+async function watchStateful(absolutePath, options = {}) {
+  const { StatefulWatcher } = await import('../agents/stateful-watcher.js');
+  const { ReconAgent } = await import('../agents/recon-agent.js');
+
+  const debounceMs = options.debounce || 2000;
+  const scoringEngine = new ScoringEngine();
+
+  console.log();
+  output.header('Ship Safe — Stateful Watch Mode (Kimi K2.6)');
+  console.log();
+  console.log(chalk.cyan('  Persistent security session — context builds over time'));
+  console.log(chalk.gray(`  Debounce: ${debounceMs}ms`));
+  console.log(chalk.gray('  Press Ctrl+C to stop'));
+  console.log();
+
+  const watcher = StatefulWatcher.create(absolutePath, {
+    provider: options.provider || 'kimi',
+    model: options.model || 'kimi-k2.6',
+    verbose: options.verbose,
+  });
+
+  if (!watcher) {
+    output.error('Stateful watch requires MOONSHOT_API_KEY. Set it and retry.');
+    process.exit(1);
+  }
+
+  // Prime session with baseline
+  const reconAgent = new ReconAgent();
+  console.log(chalk.gray('  Building baseline...'));
+  let recon;
+  try {
+    const reconResult = await reconAgent.analyze({ rootPath: absolutePath });
+    recon = Array.isArray(reconResult) ? {} : reconResult;
+  } catch { recon = {}; }
+  const files = await reconAgent.discoverFiles(absolutePath);
+  await watcher.setBaseline(recon, files);
+  console.log(chalk.green(`  Baseline set (${watcher.provider.name} / ${watcher.provider.model}). Watching...\n`));
+
+  let pendingFiles = new Set();
+  let debounceTimer = null;
+  let allFindings = [];
+
+  const dbDir = path.join(absolutePath, WATCH_DB_DIR);
+  const dbFile = path.join(dbDir, WATCH_DB_FILE);
+
+  const processChanges = async () => {
+    const changedFiles = [...pendingFiles];
+    pendingFiles.clear();
+    if (changedFiles.length === 0) return;
+
+    const timestamp = new Date().toLocaleTimeString();
+    console.log(chalk.gray(`  [${timestamp}] ${changedFiles.length} file(s) changed — stateful scan...`));
+
+    try {
+      const newFindings = await watcher.analyzeChanges(changedFiles);
+
+      if (newFindings.length === 0) {
+        console.log(chalk.green(`  [${timestamp}] ✔ Clean\n`));
+      } else {
+        allFindings = allFindings.concat(newFindings);
+        const scoreResult = scoringEngine.compute(allFindings);
+        const scoreColor = scoreResult.score >= 75 ? chalk.cyan : scoreResult.score >= 50 ? chalk.yellow : chalk.red;
+        console.log(`  [${timestamp}] ${chalk.white(`${newFindings.length} new finding(s)`)}: Score ${scoreColor(`${scoreResult.score}/100`)}`);
+        for (const f of newFindings.filter(f => f.severity === 'critical' || f.severity === 'high')) {
+          const relFile = path.relative(absolutePath, f.file || '');
+          const sev = f.severity === 'critical' ? chalk.red.bold('!!') : chalk.yellow(' !');
+          console.log(`    ${sev} ${f.title} — ${relFile}:${f.line}`);
+        }
+        console.log('');
+
+        // Persist
+        try {
+          if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+          const stats = watcher.getStats();
+          fs.writeFileSync(dbFile, JSON.stringify({
+            mode: 'stateful',
+            lastScan: new Date().toISOString(),
+            scanCount: stats.scanCount,
+            provider: stats.provider,
+            model: stats.model,
+            findings: allFindings.map(f => ({
+              file: path.relative(absolutePath, f.file || ''),
+              line: f.line,
+              severity: f.severity,
+              rule: f.rule,
+              title: f.title,
+            })),
+          }, null, 2));
+        } catch { /* non-fatal */ }
+      }
+    } catch (err) {
+      console.log(chalk.red(`  [${timestamp}] Scan error: ${err.message}\n`));
+    }
+  };
+
+  try {
+    const fsWatcher = fs.watch(absolutePath, { recursive: true }, (eventType, filename) => {
+      if (!filename) return;
+      const relPath = filename.replace(/\\/g, '/');
+      for (const skipDir of SKIP_DIRS) {
+        if (relPath.includes(`${skipDir}/`)) return;
+      }
+      const ext = path.extname(filename).toLowerCase();
+      if (SKIP_EXTENSIONS.has(ext)) return;
+      if (SKIP_FILENAMES.has(path.basename(filename))) return;
+      if (filename.endsWith('.min.js') || filename.endsWith('.min.css')) return;
+
+      const fullPath = path.join(absolutePath, filename);
+      if (!fs.existsSync(fullPath)) return;
+
+      pendingFiles.add(fullPath);
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(processChanges, debounceMs);
+    });
+
+    process.on('SIGINT', () => {
+      fsWatcher.close();
+      const stats = watcher.getStats();
+      console.log(`\n  Stateful watch stopped. ${stats.scanCount} scan(s), ${allFindings.length} total finding(s).\n`);
+      process.exit(0);
+    });
+
+    setInterval(() => {}, 1000 * 60 * 60);
+  } catch (err) {
+    output.error(`Stateful watch failed: ${err.message}`);
+    process.exit(1);
+  }
+}
 
 async function watchDeep(absolutePath, options = {}) {
   const { buildOrchestratorAsync } = await import('../agents/index.js');

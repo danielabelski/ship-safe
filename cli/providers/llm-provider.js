@@ -377,6 +377,57 @@ class OpenAICompatibleProvider extends OpenAIProvider {
     super(apiKey, options);
     this.name = name;
   }
+
+  /** Models known to support OpenAI function calling reliably */
+  get supportsStructuredOutput() {
+    return /kimi|moonshot|gpt-4|grok|deepseek|mistral-large/i.test(this.model || '');
+  }
+
+  /**
+   * Complete with structured output via OpenAI tool-use format.
+   * Used by DeepAnalyzer multi-tier pipeline on non-Anthropic providers.
+   */
+  async completeWithTools(systemPrompt, userPrompt, toolName, inputSchema, options = {}) {
+    const response = await fetch(this.baseUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: options.model || this.model,
+        max_tokens: options.maxTokens || 2048,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        tools: [{
+          type: 'function',
+          function: {
+            name: toolName,
+            description: `Report ${toolName} results`,
+            parameters: inputSchema,
+          },
+        }],
+        tool_choice: { type: 'function', function: { name: toolName } },
+      }),
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      throw new Error(`${this.name} API error: HTTP ${response.status} ${body.slice(0, 200)}`);
+    }
+
+    const data = await response.json();
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall) return null;
+
+    try {
+      return JSON.parse(toolCall.function.arguments);
+    } catch {
+      return null;
+    }
+  }
 }
 
 // =============================================================================

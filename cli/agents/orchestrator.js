@@ -235,12 +235,14 @@ export class Orchestrator {
           const stats = analyzer.getStats();
           if (deepSpinner) {
             if (stats.multiTier) {
+              const providerName = analyzer.provider?.name || 'unknown';
+              const cascade = stats.isAnthropic !== false ? 'Haiku→Sonnet→Opus' : `${providerName} (3-tier)`;
               const tierNote = stats.tier3Count > 0
-                ? `, ${stats.tier3Count} escalated to Opus`
-                : stats.tier2Count > 0 ? `, ${stats.tier2Count} via Sonnet` : '';
+                ? `, ${stats.tier3Count} escalated to tier-3`
+                : stats.tier2Count > 0 ? `, ${stats.tier2Count} via tier-2` : '';
               const skipNote = stats.skippedCount > 0 ? `, ${stats.skippedCount} triaged away` : '';
               deepSpinner.succeed(chalk.green(
-                `Deep analysis (Haiku→Sonnet→Opus): ${stats.analyzedCount} analyzed${tierNote}${skipNote} (${stats.spentCents}¢)`
+                `Deep analysis (${cascade}): ${stats.analyzedCount} analyzed${tierNote}${skipNote} (${stats.spentCents}¢)`
               ));
             } else {
               deepSpinner.succeed(chalk.green(
@@ -252,7 +254,7 @@ export class Orchestrator {
           if (deepSpinner) deepSpinner.fail(chalk.yellow(`Deep analysis failed: ${err.message}`));
         }
       } else if (!quiet) {
-        console.log(chalk.gray('  Deep analysis: no LLM provider found (set ANTHROPIC_API_KEY or use --local)'));
+        console.log(chalk.gray('  Deep analysis: no LLM provider found (set ANTHROPIC_API_KEY, MOONSHOT_API_KEY, or use --local)'));
       }
     }
 
