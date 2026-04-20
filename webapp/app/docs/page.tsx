@@ -2,7 +2,7 @@ import Nav from '@/components/Nav';
 import styles from './docs.module.css';
 import type { Metadata } from 'next';
 
-const ogImage = 'https://www.shipsafecli.com/api/og?title=Ship+Safe+Docs&description=Every+command%2C+agent%2C+and+flag.+LLM+vulnerability+CLI%2C+MCP+security+config%2C+RAG+poisoning+detection%2C+CI%2FCD+integration%2C+and+API+reference.&label=Documentation&badge=v9.0.0';
+const ogImage = 'https://www.shipsafecli.com/og-shipsafe.jpg';
 
 export const metadata: Metadata = {
   title: 'Documentation',
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://www.shipsafecli.com/docs',
     siteName: 'Ship Safe',
-    images: [{ url: ogImage, width: 1200, height: 630, alt: 'Ship Safe Documentation' }],
+    images: [{ url: ogImage, width: 1952, height: 1007, alt: 'Ship Safe Documentation' }],
   },
   twitter: {
     card: 'summary_large_image',

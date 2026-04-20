@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import BreachChecker from './BreachChecker';
 import styles from './breach.module.css';
 
-const ogImage = 'https://www.shipsafecli.com/api/og?title=Vercel+April+2026+Breach+Checker&description=Check+if+your+project+was+impacted+by+the+Vercel+April+2026+AI+integration+supply+chain+attack.&label=Breach+Impact+Check&badge=CVE-2026-VERCEL';
+const ogImage = 'https://www.shipsafecli.com/og-shipsafe.jpg';
 
 export const metadata: Metadata = {
   title: 'Vercel April 2026 Breach — Impact Checker | Ship Safe',
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://www.shipsafecli.com/breach/vercel-april-2026',
     siteName: 'Ship Safe',
-    images: [{ url: ogImage, width: 1200, height: 630, alt: 'Vercel April 2026 Breach Impact Checker' }],
+    images: [{ url: ogImage, width: 1952, height: 1007, alt: 'Vercel April 2026 Breach Impact Checker' }],
   },
   twitter: {
     card: 'summary_large_image',

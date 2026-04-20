@@ -16,7 +16,7 @@ import ThreatMarquee from '@/components/ThreatMarquee';
 import RecentPosts from '@/components/RecentPosts';
 import { getRepoStats } from '@/lib/stats';
 
-const ogImage = 'https://www.shipsafecli.com/api/og?title=Ship+Safe&description=23+AI+security+agents+detect+LLM+vulnerabilities%2C+MCP+misconfigurations%2C+RAG+poisoning%2C+secrets%2C+and+CVEs.+One+command.+Free+and+open+source.&label=AI+Agent+Security+Scanner&badge=MIT+Open+Source';
+const ogImage = 'https://www.shipsafecli.com/og-shipsafe.jpg';
 
 export const metadata: Metadata = {
   title: 'Ship Safe — AI Agent Security Scanner for Developers',
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://www.shipsafecli.com',
     siteName: 'Ship Safe',
-    images: [{ url: ogImage, width: 1200, height: 630, alt: 'Ship Safe - AI Agent Security Scanner' }],
+    images: [{ url: ogImage, width: 1952, height: 1007, alt: 'Ship Safe - AI Agent Security Scanner' }],
   },
   twitter: {
     card: 'summary_large_image',

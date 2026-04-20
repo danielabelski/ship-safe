@@ -13,35 +13,42 @@ export const posts: BlogPost[] = [
   {
     slug: 'vercel-april-2026-ai-integration-supply-chain-attack',
     title: 'The Vercel April 2026 Incident: How a Compromised AI Integration Became a Supply Chain Attack',
-    description: 'In April 2026, attackers compromised a third-party AI integration connected to Vercel and used it to exfiltrate deployment tokens across hundreds of projects. Here is what happened, the exact attack vectors, and the new AgenticSupplyChainAgent rules we shipped to detect them.',
+    description: 'In April 2026, attackers breached Context.ai, compromised a Vercel employee account, and escalated through Google Workspace into Vercel environments — exploiting non-sensitive environment variable designations. Updated with the CEO statement. Here is the confirmed attack chain and the AgenticSupplyChainAgent rules that detect it.',
     date: '2026-04-19',
     author: 'Ship Safe Team',
     tags: ['security research', 'supply chain', 'AI agents', 'CI/CD'],
-    keywords: ['Vercel April 2026 security incident', 'AI integration supply chain attack', 'Vercel deployment token exfiltration', 'MCP server security', 'OAuth scope creep AI', 'agentic supply chain', 'GitHub Actions AI action security', 'webhook HMAC verification', 'cross-boundary token forwarding', 'ASI-09 agentic security'],
+    keywords: ['Vercel April 2026 security incident', 'Context.ai breach Vercel', 'Vercel employee account compromise', 'AI integration supply chain attack', 'Vercel non-sensitive environment variables', 'Google Workspace compromise', 'MCP server security', 'OAuth scope creep AI', 'agentic supply chain', 'GitHub Actions AI action security', 'ASI-09 agentic security'],
     content: `
-In April 2026, Vercel published a security bulletin disclosing a compromise that began not with Vercel's own infrastructure but with a third-party AI integration that had been granted deployment-level OAuth scopes. By the time the attack was contained, deployment tokens from hundreds of projects had been exfiltrated through a channel most teams had never thought to monitor: their AI tooling.
+**Update — April 19, 2026:** Vercel CEO Guillermo Rauch has published a statement with significant new details about the root cause. The article below has been updated to reflect the confirmed incident chain.
 
-This post covers what happened, how it worked, and the new \`AgenticSupplyChainAgent\` we shipped to detect these patterns in your own codebase.
+---
+
+In April 2026, Vercel published a security bulletin disclosing a compromise that began at an AI platform called **Context.ai**. A Vercel employee who used Context.ai had their account compromised in that breach — and attackers used that foothold to escalate through the employee's Vercel Google Workspace account into Vercel-internal environments. The attack class — credential exfiltration through the AI integration layer — is exactly what Ship Safe's \`AgenticSupplyChainAgent\` is built to detect.
+
+This post covers what happened, how the attack chain worked, and how to harden your own environment against the same class of attack.
 
 ## What Happened
 
-The incident started with a trojanized update to a popular AI productivity integration — a tool used by thousands of Vercel teams for automated code review and deployment previews. The integration had been granted OAuth scopes including \`deployments:write\` and \`env:read\` by its users, which is standard for tools that manage preview deployments.
+The incident began at **Context.ai**, an AI platform used by engineering teams — including at least one Vercel employee. Attackers who had compromised Context.ai used that access to compromise the employee's account. Through a series of escalating maneuvers, they pivoted from there into the employee's **Vercel Google Workspace account**.
 
-The attackers, likely the same threat group responsible for the March 2026 CanisterWorm campaign, published a malicious update to the integration's backend service. The update included a credential-harvesting payload that forwarded Vercel deployment tokens to an attacker-controlled endpoint on every API call.
+That Google Workspace compromise became the main pivot point. From a legitimate-looking employee identity, the attackers reached Vercel-internal environments. Vercel stores all customer environment variables **fully encrypted at rest** with multiple defense-in-depth mechanisms — but Vercel also offers a feature that lets teams designate certain variables as "non-sensitive," which affects how they are surfaced and handled in the dashboard. The attackers exploited this distinction, enumerating and accessing environment variables through their non-sensitive designation.
 
-Because the tokens arrived over TLS from a legitimate integration client, Vercel's API logs looked completely normal. The only signal was a slight increase in deployment API call volume — and because AI integrations generate noisy, automated traffic, it was initially attributed to product usage growth.
+Vercel CEO Guillermo Rauch described the attacking group as **highly sophisticated and likely significantly accelerated by AI** — noting they moved with "surprising velocity and in-depth understanding of Vercel." The confirmed number of customers with security impact is described as **"quite limited."** Vercel has reached out to affected customers with priority, and is actively working with **Google Mandiant**, cybersecurity firms, and law enforcement.
+
+This is a materially different incident chain than a trojanized third-party integration. The four attack vectors below remain real and relevant as a class — they represent the broader threat surface that AI integrations introduce — but the specific April 2026 root cause was an employee account compromise at Context.ai, escalated through Google Workspace, and ultimately exploiting Vercel's non-sensitive env var designation.
 
 ### Indicators of Compromise
 
-Vercel's April 2026 bulletin listed several IOCs that point directly to the attack class — not just this specific incident:
+Vercel's April 2026 bulletin listed several IOCs that point directly to this attack class:
 
-- Third-party integrations with \`env:read\` and \`deployments:write\` scopes that were not actively configured by the team
-- OAuth tokens being used from geographic regions inconsistent with the team's normal activity
+- Environment variables marked as "non-sensitive" that contain high-value credentials (\`DATABASE_URL\`, API keys, tokens)
+- OAuth tokens or sessions being used from geographic regions inconsistent with normal team activity
 - Unexplained preview deployments on branches with no recent pushes
 - Environment variable reads on projects that had no recent builds
-- Webhook events arriving with no corresponding user action in the audit log
+- Webhook events or API calls arriving with no corresponding user action in the audit log
+- Third-party integrations with \`env:read\` or \`deployments:write\` scopes not actively configured by the team
 
-The key insight from the bulletin: **none of these signals required exploiting a vulnerability in Vercel itself**. The attack surface was entirely in the integration layer — the boundary between Vercel and the third-party AI tools connected to it.
+The key insight: **no vulnerability in Vercel's core infrastructure was required**. The attack exploited trust boundaries — between a third-party AI platform, an employee identity, and Vercel's environment management features.
 
 ## The Four Attack Vectors
 
@@ -49,7 +56,7 @@ The Vercel incident is not a one-off. It represents a class of attack against AI
 
 ### 1. Over-Privileged AI Integrations
 
-The root cause was scope creep. AI integrations routinely request write and admin scopes because it makes the demo flow smoother — one OAuth grant and the tool can do everything. Teams approve without reading the scope list.
+The April 2026 incident exploited a different root cause — a compromised employee identity — but scope creep in AI integrations remains an adjacent and compounding risk. AI integrations routinely request write and admin scopes because it makes the demo flow smoother — one OAuth grant and the tool can do everything. Teams approve without reading the scope list.
 
 \`\`\`json
 // What most teams see and approve
@@ -191,20 +198,28 @@ HIGH  [WEBHOOK_NO_HMAC_VERIFICATION]
 
 ## Remediation Steps
 
-If you are a Vercel user who was active during April 2026:
+These are the steps Vercel CEO Guillermo Rauch specifically recommended, combined with the structural fixes the April 2026 incident makes clear.
 
-**Immediate:**
-1. Rotate all Vercel team tokens and regenerate any environment variables that contain downstream API keys
-2. Audit your installed integrations at vercel.com/account/integrations — revoke any that are not actively used or that request scopes beyond what they need
-3. Check your audit log for unexpected deployment API calls, env reads, or OAuth token usage from unfamiliar IPs
+**Immediate (from the CEO statement):**
+1. **Rotate all secrets.** Rotate Vercel team tokens and regenerate any environment variables that contain downstream API keys, database URLs, or service credentials
+2. **Audit your integrations.** Review vercel.com/account/integrations — revoke anything not actively used, especially integrations with \`env:read\`, \`deployments:write\`, or \`secrets:read\` scopes
+3. **Check your audit log** for unexpected deployment API calls, env reads, or new token creations between March 28 and April 12 — the confirmed incident window
+4. **Review your non-sensitive env vars.** Open the Vercel dashboard → Project Settings → Environment Variables. Any variable marked "non-sensitive" that contains a credential should be flipped to sensitive immediately. Vercel has shipped a new env var overview page and improved sensitive var UI to make this easier
 
 **Structural fixes:**
 1. Pin all GitHub Actions to commit SHAs — especially AI-adjacent actions
 2. Add HMAC verification to all webhook receivers before any application logic runs
 3. Audit your MCP and Hermes tool configs — never forward production tokens to third-party tool servers
 4. Enforce scope minimization for all OAuth apps: if the tool works with \`read\` scopes, do not grant \`write\`
+5. Apply SSO and MFA on all Google Workspace accounts with access to production systems — the April 2026 attack pivoted through an employee's Google Workspace account
 
-**Run Ship Safe:**
+**Check your project now:**
+
+If you're a Vercel user, you can run the four checks directly from your browser — no CLI install needed:
+
+[**→ Vercel April 2026 Impact Checker**](/breach/vercel-april-2026)
+
+Or run the full scan locally:
 
 \`\`\`bash
 # Scan for all four attack vectors
@@ -216,18 +231,19 @@ npx ship-safe red-team . --agents supply-chain,cicd
 
 ## Why This Category of Attack Will Get Worse
 
-The Vercel incident is a preview of where AI supply chain attacks are heading. As AI integrations proliferate — every product is adding an OAuth integration, an MCP server, a GitHub Action — the attack surface grows in proportion to the number of tokens flowing through these channels.
+The Vercel incident is a preview of where AI supply chain attacks are heading. Guillermo Rauch noted the attacking group was "significantly accelerated by AI" — they moved faster and with deeper knowledge of Vercel's internals than a purely human threat actor would. As AI tooling lowers the cost of sophisticated attacks, the attack surface expands in parallel: every product is adding an OAuth integration, an MCP server, a GitHub Action, a third-party AI platform account.
 
-The pattern is consistent with what we saw in the Trivy/CanisterWorm campaign (March 2026): attackers are not breaking into your infrastructure directly. They are compromising the tools you trust, then riding the trust relationship those tools already have with your infrastructure.
+The April 2026 chain — **third-party AI platform breach → employee identity → Google Workspace → internal environments → non-sensitive env vars** — is a template, not a one-off. Every link in that chain is reproducible against organizations that use AI platforms and don't enforce identity hygiene, env var sensitivity, and scope minimization.
 
-Traditional supply chain scanning focuses on npm packages and Docker images. AI integrations are the new frontier: they run with OAuth tokens, they have write access to your deployments, and they generate noisy enough traffic that credential exfiltration blends in with normal API activity.
+Traditional supply chain scanning focuses on npm packages and Docker images. AI integrations are the new frontier: they run with OAuth tokens, they have write access to your deployments, they touch employee identities, and they generate noisy enough traffic that credential exfiltration blends in with normal API activity.
 
-Ship Safe v9.0 closes this gap. \`AgenticSupplyChainAgent\` is part of every standard scan.
+Ship Safe v9.1.0 closes this gap. \`AgenticSupplyChainAgent\` is part of every standard scan.
 
 ## Sources
 
 - [Vercel Security Bulletin: April 2026 Security Incident](https://vercel.com/kb/bulletin/vercel-april-2026-security-incident)
 - [Vercel April 2026 — Indicators of Compromise](https://vercel.com/kb/bulletin/vercel-april-2026-security-incident#indicators-of-compromise-iocs)
+- [CEO Statement: Guillermo Rauch (@rauchg) on X, April 19, 2026](https://x.com/rauchg)
 - [OWASP Agentic AI Top 10: ASI-09 Agentic Supply Chain Risk](https://owasp.org/www-project-agentic-ai-threats/)
 - [Our previous coverage: CanisterWorm and the March 2026 npm campaign](/blog/supply-chain-attacks-2026-how-we-hardened-ship-safe)
 

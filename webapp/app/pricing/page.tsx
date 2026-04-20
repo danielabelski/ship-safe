@@ -5,7 +5,7 @@ import styles from './pricing.module.css';
 import ScrollAnimator from '@/components/ScrollAnimator';
 import type { Metadata } from 'next';
 
-const ogImage = 'https://www.shipsafecli.com/api/og?title=Simple%2C+transparent+pricing.&description=The+CLI+is+always+free+and+open-source.+Pro+%26+Team+plans+for+the+cloud+dashboard%2C+GitHub+integration%2C+and+team+collaboration.&label=Pricing&badge=Free+CLI+forever';
+const ogImage = 'https://www.shipsafecli.com/og-shipsafe.jpg';
 
 export const metadata: Metadata = {
   title: 'Pricing',
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://www.shipsafecli.com/pricing',
     siteName: 'Ship Safe',
-    images: [{ url: ogImage, width: 1200, height: 630, alt: 'Ship Safe Pricing' }],
+    images: [{ url: ogImage, width: 1952, height: 1007, alt: 'Ship Safe Pricing' }],
   },
   twitter: {
     card: 'summary_large_image',

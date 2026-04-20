@@ -3,7 +3,7 @@ import Link from 'next/link';
 import styles from './hermes.module.css';
 import type { Metadata } from 'next';
 
-const ogImage = 'https://www.shipsafecli.com/api/og?title=Hermes+Agent+Security&description=Harden+your+Hermes+agent+against+tool+poisoning%2C+function-call+injection%2C+and+memory+attacks+in+one+command.&label=Hermes+Security&badge=22+security+agents';
+const ogImage = 'https://www.shipsafecli.com/og-shipsafe.jpg';
 
 export const metadata: Metadata = {
   title: 'Hermes Agent Security — Ship Safe',
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://www.shipsafecli.com/hermes',
     siteName: 'Ship Safe',
-    images: [{ url: ogImage, width: 1200, height: 630, alt: 'Hermes Agent Security' }],
+    images: [{ url: ogImage, width: 1952, height: 1007, alt: 'Hermes Agent Security' }],
   },
   twitter: {
     card: 'summary_large_image',
