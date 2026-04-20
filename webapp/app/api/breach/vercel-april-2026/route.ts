@@ -101,10 +101,12 @@ function vercelHeaders(token: string) {
 }
 
 async function getVercelIntegrations(token: string, teamId?: string) {
-  const qs = teamId ? `?teamId=${encodeURIComponent(teamId)}` : '';
-  const r = await fetch(`https://api.vercel.com/v1/integrations/configurations${qs}`, {
+  const params = new URLSearchParams({ limit: '50' });
+  if (teamId) params.set('teamId', teamId);
+  const r = await fetch(`https://api.vercel.com/v1/integrations/configurations?${params}`, {
     headers: vercelHeaders(token),
   });
+  if (r.status === 400) throw new Error('400');
   if (!r.ok) throw new Error(`Vercel API ${r.status}`);
   const data = await r.json();
   return (data.configurations ?? data.integrations ?? data) as Record<string, unknown>[];
@@ -112,16 +114,13 @@ async function getVercelIntegrations(token: string, teamId?: string) {
 
 async function getVercelAuditLog(token: string, teamId?: string) {
   const allEvents: Record<string, unknown>[] = [];
-  let untilCursor: string | undefined;
+  let nextCursor: string | undefined;
   const MAX_PAGES = 10; // safety cap: 1 000 events max
 
   for (let page = 0; page < MAX_PAGES; page++) {
-    const params = new URLSearchParams({
-      limit: '100',
-      since: String(INCIDENT_START),
-      until: untilCursor ?? String(INCIDENT_END),
-    });
+    const params = new URLSearchParams({ limit: '100' });
     if (teamId) params.set('teamId', teamId);
+    if (nextCursor) params.set('next', nextCursor);
 
     const r = await fetch(`https://api.vercel.com/v3/events?${params}`, {
       headers: vercelHeaders(token),
@@ -133,14 +132,17 @@ async function getVercelAuditLog(token: string, teamId?: string) {
     if (events.length === 0) break;
     allEvents.push(...events);
 
-    // Fewer than 100 means this is the last page
+    // Find oldest timestamp on this page — events arrive newest-first
+    const oldestTs = Math.min(...events.map(e => Number(e.createdAt ?? e.timestamp ?? Infinity)));
+
+    // Gone past the incident window — no need to fetch older pages
+    if (oldestTs < INCIDENT_START) break;
+
+    // Fewer than 100 means no more pages
     if (events.length < 100) break;
 
-    // Advance cursor to the oldest event timestamp on this page so the
-    // next request fetches the next older batch within the window
-    const nextCursor = data.pagination?.next;
+    nextCursor = data.pagination?.next ? String(data.pagination.next) : undefined;
     if (!nextCursor) break;
-    untilCursor = String(nextCursor);
   }
 
   return allEvents;
@@ -244,6 +246,9 @@ async function checkVercelIntegrations(token: string, teamId?: string): Promise<
     if (msg.includes('401') || msg.includes('403')) {
       return { status: 'error', summary: 'Invalid or expired Vercel token. Check it has read access.', findings: [] };
     }
+    if (msg.includes('400')) {
+      return { status: 'error', summary: 'Vercel returned 400. If your projects are under a team, add your Team ID (team_xxxxxx) in the field above.', findings: [] };
+    }
     return { status: 'error', summary: `Vercel API error: ${msg}`, findings: [] };
   }
 
@@ -298,6 +303,9 @@ async function checkVercelAuditLog(token: string, teamId?: string): Promise<Chec
     const msg = e instanceof Error ? e.message : String(e);
     if (msg.includes('401') || msg.includes('403')) {
       return { status: 'error', summary: 'Invalid token or insufficient permissions to read audit log.', findings: [] };
+    }
+    if (msg.includes('400')) {
+      return { status: 'error', summary: 'Vercel returned 400. If your projects are under a team, add your Team ID (team_xxxxxx) in the field above.', findings: [] };
     }
     return { status: 'error', summary: `Vercel audit API error: ${msg}`, findings: [] };
   }
