@@ -157,6 +157,15 @@
   line-height: 1.6;
 }
 
+.checkDisclaimer {
+  margin-top: 0.6rem;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  line-height: 1.55;
+  padding: 0.5rem 0.75rem;
+  border-left: 2px solid var(--border);
+}
+
 /* ── Inputs ───────────────────────────────────────────────────────────────── */
 
 .checkBody {

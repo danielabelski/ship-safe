@@ -111,14 +111,39 @@ async function getVercelIntegrations(token: string, teamId?: string) {
 }
 
 async function getVercelAuditLog(token: string, teamId?: string) {
-  const params = new URLSearchParams({ limit: '100' });
-  if (teamId) params.set('teamId', teamId);
-  const r = await fetch(`https://api.vercel.com/v3/events?${params}`, {
-    headers: vercelHeaders(token),
-  });
-  if (!r.ok) throw new Error(`Vercel audit API ${r.status}`);
-  const data = await r.json();
-  return (data.events ?? data) as Record<string, unknown>[];
+  const allEvents: Record<string, unknown>[] = [];
+  let untilCursor: string | undefined;
+  const MAX_PAGES = 10; // safety cap: 1 000 events max
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const params = new URLSearchParams({
+      limit: '100',
+      since: String(INCIDENT_START),
+      until: untilCursor ?? String(INCIDENT_END),
+    });
+    if (teamId) params.set('teamId', teamId);
+
+    const r = await fetch(`https://api.vercel.com/v3/events?${params}`, {
+      headers: vercelHeaders(token),
+    });
+    if (!r.ok) throw new Error(`Vercel audit API ${r.status}`);
+    const data = await r.json();
+    const events = (data.events ?? data) as Record<string, unknown>[];
+
+    if (events.length === 0) break;
+    allEvents.push(...events);
+
+    // Fewer than 100 means this is the last page
+    if (events.length < 100) break;
+
+    // Advance cursor to the oldest event timestamp on this page so the
+    // next request fetches the next older batch within the window
+    const nextCursor = data.pagination?.next;
+    if (!nextCursor) break;
+    untilCursor = String(nextCursor);
+  }
+
+  return allEvents;
 }
 
 /* ── Check result shape ── */

@@ -243,6 +243,11 @@ export default function BreachChecker() {
                 deployments:write) and scans your audit log for suspicious activity between
                 March 28 – April 12, 2026 — the confirmed incident window.
               </p>
+              <p className={styles.checkDisclaimer}>
+                <strong>Note:</strong> Integration flagging is scope-based — any integration holding
+                env:read, deployments:write, or secrets:read is flagged as a risk, regardless of vendor.
+                Vercel has not published a list of confirmed-compromised integration names.
+              </p>
             </div>
           </div>
           <div className={styles.checkBody}>
