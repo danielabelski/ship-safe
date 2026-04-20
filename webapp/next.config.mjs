@@ -26,7 +26,7 @@ const nextConfig = {
   outputFileTracingIncludes: {
     '/api/scan': ['./node_modules/ship-safe/**/*'],
     '/api/cron': ['./node_modules/ship-safe/**/*'],
-    '/api/og': ['./public/og-shipsafe.jpg'],
+    '/api/og': ['./public/og-shipsafe.jpg', './public/og1.png', './public/og2.png'],
   },
   // Prevent nft from including build-time artifacts in the Lambda bundle.
   // .next/cache alone is 200+ MB and is never needed at runtime.

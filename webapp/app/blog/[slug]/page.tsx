@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const post = getPostBySlug(slug);
   if (!post) return {};
 
-  const ogImageUrl = 'https://www.shipsafecli.com/og-shipsafe.jpg';
+  const ogImageUrl = 'https://www.shipsafecli.com/og2.png';
 
   return {
     title: post.title,
@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       publishedTime: post.date,
       authors: [post.author],
       tags: post.tags,
-      images: [{ url: ogImageUrl, width: 1952, height: 1007, alt: post.title }],
+      images: [{ url: ogImageUrl, width: 1200, height: 628, alt: post.title }],
     },
     twitter: {
       card: 'summary_large_image',

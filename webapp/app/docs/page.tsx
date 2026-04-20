@@ -2,7 +2,7 @@ import Nav from '@/components/Nav';
 import styles from './docs.module.css';
 import type { Metadata } from 'next';
 
-const ogImage = 'https://www.shipsafecli.com/og-shipsafe.jpg';
+const ogImage = 'https://www.shipsafecli.com/og1.png';
 
 export const metadata: Metadata = {
   title: 'Documentation',
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://www.shipsafecli.com/docs',
     siteName: 'Ship Safe',
-    images: [{ url: ogImage, width: 1952, height: 1007, alt: 'Ship Safe Documentation' }],
+    images: [{ url: ogImage, width: 1200, height: 628, alt: 'Ship Safe Documentation' }],
   },
   twitter: {
     card: 'summary_large_image',

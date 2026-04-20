@@ -21,13 +21,13 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://www.shipsafecli.com',
     siteName: 'Ship Safe',
-    images: [{ url: 'https://www.shipsafecli.com/og-shipsafe.jpg', width: 1952, height: 1007, alt: 'Ship Safe - AI Agent Security Scanner' }],
+    images: [{ url: 'https://www.shipsafecli.com/og1.png', width: 1200, height: 628, alt: 'Ship Safe - AI Agent Security Scanner' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Ship Safe — AI Agent Security Scanner for Developers',
     description: '23 AI security agents detect LLM vulnerabilities, MCP misconfigurations, RAG poisoning, secrets, and CVEs. One command. Free and open source.',
-    images: ['https://www.shipsafecli.com/og-shipsafe.jpg'],
+    images: ['https://www.shipsafecli.com/og1.png'],
   },
 };
 

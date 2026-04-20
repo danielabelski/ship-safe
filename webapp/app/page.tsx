@@ -17,7 +17,7 @@ import ThreatMarquee from '@/components/ThreatMarquee';
 import RecentPosts from '@/components/RecentPosts';
 import { getRepoStats } from '@/lib/stats';
 
-const ogImage = 'https://www.shipsafecli.com/og-shipsafe.jpg';
+const ogImage = 'https://www.shipsafecli.com/og1.png';
 
 export const metadata: Metadata = {
   title: 'Ship Safe — AI Agent Security Scanner for Developers',
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://www.shipsafecli.com',
     siteName: 'Ship Safe',
-    images: [{ url: ogImage, width: 1952, height: 1007, alt: 'Ship Safe - AI Agent Security Scanner' }],
+    images: [{ url: ogImage, width: 1200, height: 628, alt: 'Ship Safe - AI Agent Security Scanner' }],
   },
   twitter: {
     card: 'summary_large_image',

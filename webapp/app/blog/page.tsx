@@ -4,7 +4,7 @@ import { posts } from '@/data/blog';
 import styles from './blog.module.css';
 import type { Metadata } from 'next';
 
-const ogImage = 'https://www.shipsafecli.com/og-shipsafe.jpg';
+const ogImage = 'https://www.shipsafecli.com/og2.png';
 
 export const metadata: Metadata = {
   title: 'Blog',
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://www.shipsafecli.com/blog',
     siteName: 'Ship Safe',
-    images: [{ url: ogImage, width: 1952, height: 1007, alt: 'Ship Safe Blog' }],
+    images: [{ url: ogImage, width: 1200, height: 628, alt: 'Ship Safe Blog' }],
   },
   twitter: {
     card: 'summary_large_image',

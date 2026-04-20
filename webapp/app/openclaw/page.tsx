@@ -4,7 +4,7 @@ import styles from './openclaw.module.css';
 import ScrollAnimator from '@/components/ScrollAnimator';
 import type { Metadata } from 'next';
 
-const ogImage = 'https://www.shipsafecli.com/og-shipsafe.jpg';
+const ogImage = 'https://www.shipsafecli.com/og1.png';
 
 export const metadata: Metadata = {
   title: 'OpenClaw Security Scanner',
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://www.shipsafecli.com/openclaw',
     siteName: 'Ship Safe',
-    images: [{ url: ogImage, width: 1952, height: 1007, alt: 'OpenClaw Security Scanner' }],
+    images: [{ url: ogImage, width: 1200, height: 628, alt: 'OpenClaw Security Scanner' }],
   },
   twitter: {
     card: 'summary_large_image',
