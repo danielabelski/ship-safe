@@ -105,8 +105,10 @@ async function getVercelIntegrations(token: string, teamId?: string) {
   const r = await fetch(`https://api.vercel.com/v1/integrations/configurations${qs}`, {
     headers: vercelHeaders(token),
   });
-  if (r.status === 400) throw new Error('400');
-  if (!r.ok) throw new Error(`Vercel API ${r.status}`);
+  if (!r.ok) {
+    const body = await r.text();
+    throw new Error(`${r.status}::${body}`);
+  }
   const data = await r.json();
   return (data.configurations ?? data.integrations ?? data) as Record<string, unknown>[];
 }
@@ -244,9 +246,6 @@ async function checkVercelIntegrations(token: string, teamId?: string): Promise<
     const msg = e instanceof Error ? e.message : String(e);
     if (msg.includes('401') || msg.includes('403')) {
       return { status: 'error', summary: 'Invalid or expired Vercel token. Check it has read access.', findings: [] };
-    }
-    if (msg.includes('400')) {
-      return { status: 'error', summary: 'Vercel returned 400. If your projects are under a team, add your Team ID (team_xxxxxx) in the field above.', findings: [] };
     }
     return { status: 'error', summary: `Vercel API error: ${msg}`, findings: [] };
   }
