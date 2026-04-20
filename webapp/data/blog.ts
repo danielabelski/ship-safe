@@ -2055,6 +2055,70 @@ Ship Safe exists for exactly this gap. Whether you built on Lovable, Bolt, Curso
 Ship fast. Ship safe.
     `.trim(),
   },
+  {
+    slug: 'kimi-k2-6-ship-safe-provider',
+    title: 'Run Ship Safe with Kimi K2.6 — Moonshot\'s Agentic Model Is Now a Supported Provider',
+    description: 'Kimi K2.6 from Moonshot AI is now a supported LLM provider in Ship Safe. With 96.6% tool invocation accuracy, 300 parallel sub-agents, and pricing at $0.95/MTok input, it\'s the most cost-effective way to run deep security analysis on large codebases.',
+    date: '2026-04-20',
+    author: 'Ship Safe Team',
+    tags: ['release', 'LLM providers', 'security tooling', 'agentic AI'],
+    keywords: ['Kimi K2.6 Ship Safe', 'Moonshot AI security scanner', 'kimi-k2.6 provider', 'Ship Safe LLM provider', 'agentic code security', 'cheap deep code analysis', 'MOONSHOT_API_KEY ship-safe', 'AI security audit LLM provider'],
+    content: `
+Kimi K2.6 — released by Moonshot AI on April 19, 2026 — is now a supported LLM provider in Ship Safe. One env var and you're running all 23 security agents on Kimi's infrastructure.
+
+## Why Kimi K2.6 matters for security scanning
+
+Tool-use accuracy is the metric that matters for agentic code analysis. A model that drops tool calls or hallucinates arguments produces false negatives — security issues that get missed because the agent lost its way mid-chain.
+
+Kimi K2.6 benchmarks at **96.6% tool invocation success rate** on ACEBench. For context, that benchmark specifically measures whether a model calls the right tool with the right arguments across multi-step agent tasks — exactly what Ship Safe does when it dispatches 23 agents across your codebase.
+
+The other relevant number: **300 parallel sub-agents** with 4,000+ tool calls per session. Ship Safe's orchestrator already runs agents in chunks of 6 — Kimi's ceiling means that constraint is about infrastructure cost, not model capacity.
+
+## Pricing for deep analysis
+
+| Tier | Input | Output |
+|------|-------|--------|
+| Long context | $0.95 / MTok | $4.00 / MTok |
+| Short context | $0.15 / MTok | $0.60 / MTok |
+
+A full \`npx ship-safe audit .\` on a mid-size codebase (100 files, ~50K tokens of context) with Kimi K2.6 costs roughly $0.05–0.15 per scan. That makes it practical to run on every PR, not just as a periodic manual step.
+
+## How to use it
+
+Set your Moonshot API key and pass the provider flag:
+
+\`\`\`bash
+export MOONSHOT_API_KEY=sk-...
+npx ship-safe audit . --provider kimi
+\`\`\`
+
+Or add it to your project \`.env\` and Ship Safe will auto-detect it:
+
+\`\`\`bash
+MOONSHOT_API_KEY=sk-...
+\`\`\`
+
+\`\`\`bash
+npx ship-safe audit .
+\`\`\`
+
+Both \`kimi\` and \`moonshot\` are valid as the \`--provider\` value. The default model is \`kimi-k2.6\`. You can override it with \`--model kimi-k2.5\` if you're on an older tier or want to compare outputs.
+
+## What changes in practice
+
+Nothing in the audit pipeline changes — all 23 agents run the same rules regardless of provider. The provider only affects the deep analysis phase: when agents have collected raw findings and need to classify them as real vs. false positive and generate fix suggestions.
+
+With Anthropic (the default), that phase uses claude-haiku-4-5 for speed and claude-sonnet-4-6 for complex findings. With Kimi K2.6, the same routing runs through Moonshot's API at roughly 60% lower cost per token.
+
+If you've been avoiding deep analysis on large codebases because of API cost, Kimi K2.6 removes that barrier.
+
+## Other supported providers
+
+Ship Safe supports any OpenAI-compatible endpoint. Current presets: \`anthropic\`, \`openai\`, \`google\`, \`groq\`, \`together\`, \`mistral\`, \`deepseek\`, \`xai\`, \`kimi\`, \`ollama\`, and \`gemma4\` (local). Pass any custom endpoint with \`--base-url\`.
+
+See the [GitHub README](https://github.com/asamassekou10/ship-safe) for the full provider reference.
+    `.trim(),
+  },
 ];
 
 export function getPostBySlug(slug: string): BlogPost | undefined {

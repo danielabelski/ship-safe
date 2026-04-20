@@ -364,6 +364,8 @@ const OPENAI_COMPATIBLE_PRESETS = {
   perplexity: { baseUrl: 'https://api.perplexity.ai/chat/completions',               model: 'llama-3.1-sonar-large-128k-online', envKey: 'PERPLEXITY_API_KEY' },
   lmstudio:   { baseUrl: 'http://localhost:1234/v1/chat/completions',                model: null,                         envKey: null },
   xai:        { baseUrl: 'https://api.x.ai/v1/chat/completions',                    model: 'grok-3-mini',                envKey: 'XAI_API_KEY' },
+  kimi:       { baseUrl: 'https://api.moonshot.ai/v1/chat/completions',             model: 'kimi-k2.6',                  envKey: 'MOONSHOT_API_KEY' },
+  moonshot:   { baseUrl: 'https://api.moonshot.ai/v1/chat/completions',             model: 'kimi-k2.6',                  envKey: 'MOONSHOT_API_KEY' },
   // Gemma 4 via Ollama — runs fully local, no API key required
   // e4b: MoE 4B active params, ~8GB RAM;  27b: dense, ~20GB RAM
   gemma4:     { baseUrl: 'http://localhost:11434/v1/chat/completions',               model: 'gemma4:e4b',                 envKey: null },
@@ -439,7 +441,7 @@ export function createProvider(provider, apiKey, options = {}) {
   throw new Error(
     `Unknown LLM provider: "${provider}".\n` +
     `Built-in: anthropic, openai, google, ollama\n` +
-    `Presets:  groq, together, mistral, cohere, deepseek, perplexity, lmstudio, xai\n` +
+    `Presets:  groq, together, mistral, cohere, deepseek, perplexity, lmstudio, xai, kimi\n` +
     `Custom:   pass any name with --base-url <url>`
   );
 }
@@ -480,6 +482,8 @@ export function autoDetectProvider(rootPath, options = {}) {
     MISTRAL_API_KEY:   'mistral',
     DEEPSEEK_API_KEY:  'deepseek',
     XAI_API_KEY:       'xai',
+    MOONSHOT_API_KEY:  'kimi',
+    KIMI_API_KEY:      'kimi',
   };
 
   for (const [envVar, providerName] of Object.entries(envKeys)) {
