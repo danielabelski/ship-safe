@@ -8,5 +8,22 @@
       "path": "/api/cron",
       "schedule": "0 0 * * *"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "shipsafecli.com" }],
+      "destination": "https://www.shipsafecli.com/$1",
+      "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/og-shipsafe.jpg",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
+    }
   ]
 }
