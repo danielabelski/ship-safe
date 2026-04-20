@@ -259,6 +259,22 @@ export default async function BlogPost({ params }: Props) {
 
           <footer className={styles.footer}>
             <ShareButtons title={post.title} url={postUrl} />
+
+            {slug === 'vercel-april-2026-ai-integration-supply-chain-attack' && (
+              <div className={styles.breachCta}>
+                <div className={styles.breachCtaBadge}>
+                  <span className={styles.breachDot} />
+                  Security Advisory - April 2026
+                </div>
+                <h3>Was your project affected?</h3>
+                <p>Run the four checks directly in your browser - no CLI install needed. GitHub workflow scan, Vercel integration scope audit, audit log analysis, and MCP config scan.</p>
+                <Link href="/breach/vercel-april-2026" className="btn btn-primary">
+                  Check your project now
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </Link>
+              </div>
+            )}
+
             <div className={styles.cta}>
               <h3>Scan your project now</h3>
               <pre className={styles.ctaCode}><code>npx ship-safe audit .</code></pre>
