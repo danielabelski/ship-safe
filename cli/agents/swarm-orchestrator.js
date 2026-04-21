@@ -76,13 +76,12 @@ export class SwarmOrchestrator {
   }
 
   static create(rootPath, options = {}) {
-    // Default to Kimi for swarm (best tool-call success rate)
-    const provider = options.provider
-      ? createProvider(options.provider, process.env.MOONSHOT_API_KEY || process.env.OPENAI_API_KEY, { model: options.model })
-      : autoDetectProvider(rootPath, { provider: 'kimi', model: options.model });
-
+    const providerName = typeof options.provider === 'string' ? options.provider : 'kimi';
+    // Use moonshot-v1-128k for swarm: no thinking mode (fast + reliable JSON), 128K context for large codebases
+    const swarmModel = options.model || 'moonshot-v1-128k';
+    const provider = autoDetectProvider(rootPath, { provider: providerName, model: swarmModel });
     if (!provider) return null;
-    return new SwarmOrchestrator({ provider, ...options });
+    return new SwarmOrchestrator({ provider, verbose: options.verbose, budgetCents: options.budgetCents });
   }
 
   /**
@@ -97,65 +96,17 @@ export class SwarmOrchestrator {
     const codeBundle = this._bundleCode(rootPath, files);
     const prompt = this._buildSwarmPrompt(reconData, codeBundle, rootPath);
 
-    const systemPrompt = `You are a security swarm coordinator. You have ${SWARM_ROLES.length} specialized sub-agents, each responsible for one attack class. Deploy all sub-agents in parallel. Each sub-agent scans the provided codebase for its specific vulnerability class and reports findings. Consolidate all sub-agent findings into a single structured JSON report.
+    const systemPrompt = `You are a security swarm coordinator. You MUST respond with ONLY a valid JSON object — no prose, no markdown, no explanation, no code fences. Your response must start with { and end with }. Deploy all ${SWARM_ROLES.length} sub-agents, each scanning for their attack class, then output the consolidated JSON findings.`;
 
-You MUST respond by calling the report_swarm_findings tool with all findings from all sub-agents. Never refuse to scan. Never truncate findings.`;
+    const jsonInstruction = '\n\nOutput a JSON object with exactly these keys: {"findings":[{"agentId":"<agent-id>","file":"<relative-path>","line":<number>,"severity":"critical|high|medium|low","rule":"<rule-id>","title":"<title>","description":"<description>","remediation":"<fix>"}],"agentSummary":[{"agentId":"<agent-id>","findingCount":<number>,"status":"clean|findings"}]}';
 
-    const schema = {
-      type: 'object',
-      properties: {
-        findings: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              agentId:     { type: 'string' },
-              file:        { type: 'string' },
-              line:        { type: 'integer' },
-              severity:    { type: 'string', enum: ['critical', 'high', 'medium', 'low', 'info'] },
-              rule:        { type: 'string' },
-              title:       { type: 'string' },
-              description: { type: 'string' },
-              matched:     { type: 'string' },
-              remediation: { type: 'string' },
-            },
-            required: ['agentId', 'severity', 'rule', 'title', 'description'],
-            additionalProperties: false,
-          },
-        },
-        agentSummary: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              agentId:      { type: 'string' },
-              findingCount: { type: 'integer' },
-              status:       { type: 'string', enum: ['clean', 'findings', 'error'] },
-            },
-            required: ['agentId', 'findingCount', 'status'],
-            additionalProperties: false,
-          },
-        },
-      },
-      required: ['findings', 'agentSummary'],
-    };
-
-    let raw;
-    if (this.provider.completeWithTools) {
-      raw = await this.provider.completeWithTools(
-        systemPrompt,
-        prompt,
-        'report_swarm_findings',
-        schema,
-        { maxTokens: 8192 }
-      );
-    } else {
-      const text = await this.provider.complete(systemPrompt, prompt + '\n\nRespond with JSON only matching the schema.', { maxTokens: 8192 });
-      try {
-        raw = JSON.parse(text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim());
-      } catch {
-        raw = null;
-      }
+    const text = await this.provider.complete(systemPrompt, prompt + jsonInstruction, { maxTokens: 8192, jsonMode: true });
+    let raw = null;
+    try {
+      raw = JSON.parse(text || '{}');
+    } catch {
+      if (this.verbose) console.log('  [Swarm] JSON parse failed. Preview:', text?.slice(0, 200));
+      raw = null;
     }
 
     return this._mapFindings(raw?.findings ?? [], rootPath);

@@ -383,6 +383,39 @@ class OpenAICompatibleProvider extends OpenAIProvider {
     return /kimi|moonshot|gpt-4|grok|deepseek|mistral-large/i.test(this.model || '');
   }
 
+  async complete(systemPrompt, userPrompt, options = {}) {
+    const body = {
+      model: options.model || this.model,
+      max_tokens: options.maxTokens || 2048,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+    };
+    if (options.jsonMode) body.response_format = { type: 'json_object' };
+
+    const response = await fetch(this.baseUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => '');
+      throw new Error(`${this.name} API error: HTTP ${response.status} ${errBody.slice(0, 200)}`);
+    }
+
+    const data = await response.json();
+    const msg = data.choices?.[0]?.message;
+    // Kimi K2.6 thinking mode: actual answer in `content`; `reasoning_content` is internal thinking only
+    // With jsonMode, rely only on content (json_object format guarantees it); otherwise fall back to reasoning
+    if (options.jsonMode) return msg?.content || '';
+    return msg?.content || msg?.reasoning_content || '';
+  }
+
   /**
    * Complete with structured output via OpenAI tool-use format.
    * Used by DeepAnalyzer multi-tier pipeline on non-Anthropic providers.
@@ -409,7 +442,7 @@ class OpenAICompatibleProvider extends OpenAIProvider {
             parameters: inputSchema,
           },
         }],
-        tool_choice: { type: 'function', function: { name: toolName } },
+        tool_choice: 'required',
       }),
     });
 

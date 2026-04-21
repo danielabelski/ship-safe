@@ -19,7 +19,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { createProvider, autoDetectProvider } from '../providers/llm-provider.js';
+import { autoDetectProvider } from '../providers/llm-provider.js';
 import { createFinding } from './base-agent.js';
 
 // Max chars of diff content per event
@@ -48,13 +48,10 @@ export class StatefulWatcher {
   }
 
   static create(rootPath, options = {}) {
-    const provider = autoDetectProvider(rootPath, {
-      provider: options.provider || 'kimi',
-      model: options.model || 'kimi-k2.6',
-    });
-
+    const providerName = typeof options.provider === 'string' ? options.provider : 'kimi';
+    const provider = autoDetectProvider(rootPath, { provider: providerName, model: options.model || 'kimi-k2.6' });
     if (!provider) return null;
-    return new StatefulWatcher({ provider, rootPath, ...options });
+    return new StatefulWatcher({ provider, rootPath, verbose: options.verbose });
   }
 
   /**
