@@ -35,6 +35,7 @@ import {
   loadGitignorePatterns
 } from '../utils/patterns.js';
 import { isHighEntropyMatch, getConfidence } from '../utils/entropy.js';
+import { printBanner } from '../utils/output.js';
 import { CacheManager } from '../utils/cache-manager.js';
 import { filterBaseline } from './baseline.js';
 import { SecurityMemory } from '../utils/security-memory.js';
@@ -89,11 +90,7 @@ export async function auditCommand(targetPath = '.', options = {}) {
   }
 
   if (!machineOutput) {
-    console.log();
-    console.log(chalk.cyan('═'.repeat(60)));
-    console.log(chalk.cyan.bold('  Ship Safe — Full Security Audit'));
-    console.log(chalk.cyan('═'.repeat(60)));
-    console.log();
+    printBanner();
   }
 
   // ── Cache Layer ──────────────────────────────────────────────────────────

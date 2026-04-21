@@ -27,6 +27,7 @@ import { SBOMGenerator } from '../agents/sbom-generator.js';
 import { autoDetectProvider } from '../providers/llm-provider.js';
 import { runDepsAudit } from './deps.js';
 import * as output from '../utils/output.js';
+import { printBanner } from '../utils/output.js';
 
 export async function redTeamCommand(targetPath = '.', options = {}) {
   const absolutePath = path.resolve(targetPath);
@@ -44,7 +45,8 @@ export async function redTeamCommand(targetPath = '.', options = {}) {
 
   // ── 1a. Swarm mode (Kimi K2.6 native parallel execution) ─────────────────
   if (options.swarm) {
-    output.header('Ship Safe — Kimi K2.6 Swarm Mode');
+    printBanner();
+    output.header('Kimi K2.6 Swarm Mode');
     console.log();
 
     const swarm = SwarmOrchestrator.create(absolutePath, {
@@ -79,7 +81,8 @@ export async function redTeamCommand(targetPath = '.', options = {}) {
 
   } else {
     // ── 1b. Standard local orchestration ───────────────────────────────────
-    output.header('Ship Safe v4.0 — Multi-Agent Security Audit');
+    printBanner();
+    output.header('Multi-Agent Security Audit');
     console.log();
 
     const orchestrator = await buildOrchestratorAsync(absolutePath, { quiet: true });
