@@ -360,7 +360,8 @@ const OPENAI_COMPATIBLE_PRESETS = {
   together:   { baseUrl: 'https://api.together.xyz/v1/chat/completions',             model: 'meta-llama/Llama-3-70b-chat-hf', envKey: 'TOGETHER_API_KEY' },
   mistral:    { baseUrl: 'https://api.mistral.ai/v1/chat/completions',               model: 'mistral-large-latest',       envKey: 'MISTRAL_API_KEY' },
   cohere:     { baseUrl: 'https://api.cohere.com/compatibility/v1/chat/completions', model: 'command-r-plus',             envKey: 'COHERE_API_KEY' },
-  deepseek:   { baseUrl: 'https://api.deepseek.com/v1/chat/completions',             model: 'deepseek-chat',              envKey: 'DEEPSEEK_API_KEY' },
+  deepseek:   { baseUrl: 'https://api.deepseek.com/v1/chat/completions',             model: 'deepseek-v4-pro',            envKey: 'DEEPSEEK_API_KEY' },
+  'deepseek-flash': { baseUrl: 'https://api.deepseek.com/v1/chat/completions',      model: 'deepseek-v4-flash',          envKey: 'DEEPSEEK_API_KEY' },
   perplexity: { baseUrl: 'https://api.perplexity.ai/chat/completions',               model: 'llama-3.1-sonar-large-128k-online', envKey: 'PERPLEXITY_API_KEY' },
   lmstudio:   { baseUrl: 'http://localhost:1234/v1/chat/completions',                model: null,                         envKey: null },
   xai:        { baseUrl: 'https://api.x.ai/v1/chat/completions',                    model: 'grok-3-mini',                envKey: 'XAI_API_KEY' },
@@ -525,7 +526,7 @@ export function createProvider(provider, apiKey, options = {}) {
   throw new Error(
     `Unknown LLM provider: "${provider}".\n` +
     `Built-in: anthropic, openai, google, ollama\n` +
-    `Presets:  groq, together, mistral, cohere, deepseek, perplexity, lmstudio, xai, kimi\n` +
+    `Presets:  groq, together, mistral, cohere, deepseek, deepseek-flash, perplexity, lmstudio, xai, kimi\n` +
     `Custom:   pass any name with --base-url <url>`
   );
 }

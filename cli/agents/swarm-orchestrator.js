@@ -76,12 +76,23 @@ export class SwarmOrchestrator {
   }
 
   static create(rootPath, options = {}) {
-    const providerName = typeof options.provider === 'string' ? options.provider : 'kimi';
-    // Use moonshot-v1-128k for swarm: no thinking mode (fast + reliable JSON), 128K context for large codebases
-    const swarmModel = options.model || 'moonshot-v1-128k';
-    const provider = autoDetectProvider(rootPath, { provider: providerName, model: swarmModel });
-    if (!provider) return null;
-    return new SwarmOrchestrator({ provider, verbose: options.verbose, budgetCents: options.budgetCents });
+    if (typeof options.provider === 'string') {
+      // Explicit provider requested
+      const provider = autoDetectProvider(rootPath, { provider: options.provider, model: options.model });
+      if (!provider) return null;
+      return new SwarmOrchestrator({ provider, verbose: options.verbose, budgetCents: options.budgetCents });
+    }
+
+    // Auto-select: prefer deepseek-flash (1M ctx, cheap) then kimi as fallback
+    for (const [providerName, swarmModel] of [
+      ['deepseek-flash', 'deepseek-v4-flash'],
+      ['kimi',           'moonshot-v1-128k'],
+    ]) {
+      const provider = autoDetectProvider(rootPath, { provider: providerName, model: swarmModel });
+      if (provider) return new SwarmOrchestrator({ provider, verbose: options.verbose, budgetCents: options.budgetCents });
+    }
+
+    return null;
   }
 
   /**
