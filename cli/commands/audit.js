@@ -329,9 +329,10 @@ export async function auditCommand(targetPath = '.', options = {}) {
   // ── AI Classification (optional, with LLM cache) ───────────────────────
   if (options.ai !== false) {
     const provider = autoDetectProvider(absolutePath, {
-      provider: options.provider,
-      baseUrl:  options.baseUrl,
-      model:    options.model,
+      provider:   options.provider,
+      baseUrl:    options.baseUrl,
+      model:      options.model,
+      think:      options.think || false,
     });
     if (provider && filteredFindings.length > 0 && filteredFindings.length <= 50) {
       const aiSpinner = machineOutput ? null : ora({ text: `Classifying with ${provider.name}...`, color: 'cyan' }).start();

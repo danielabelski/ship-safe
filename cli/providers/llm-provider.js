@@ -27,6 +27,8 @@ class BaseLLMProvider {
     this.apiKey = apiKey;
     this.model = options.model || null;
     this.baseUrl = options.baseUrl || null;
+    this.think = options.think || false;
+    this.thinkLevel = options.thinkLevel || 'high';
   }
 
   /**
@@ -44,7 +46,7 @@ class BaseLLMProvider {
     const response = await this.complete(
       'You are a security expert. Respond with JSON only, no markdown.',
       prompt,
-      { maxTokens: 4096 }
+      { maxTokens: 4096, think: this.think, thinkLevel: this.thinkLevel }
     );
     return this.parseJSON(response);
   }
@@ -177,20 +179,27 @@ class OpenAIProvider extends BaseLLMProvider {
   }
 
   async complete(systemPrompt, userPrompt, options = {}) {
+    const body = {
+      model: this.model,
+      max_tokens: options.maxTokens || 2048,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+    };
+
+    if (options.think) {
+      body.reasoning_effort = options.thinkLevel || 'high';
+      body.max_tokens = options.maxTokens || 16384;
+    }
+
     const response = await fetch(this.baseUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: this.model,
-        max_tokens: options.maxTokens || 2048,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -399,6 +408,10 @@ class OpenAICompatibleProvider extends OpenAIProvider {
       ],
     };
     if (options.jsonMode) body.response_format = { type: 'json_object' };
+    if (options.think) {
+      body.reasoning_effort = options.thinkLevel || 'high';
+      body.max_tokens = options.maxTokens || 16384;
+    }
 
     const response = await fetch(this.baseUrl, {
       method: 'POST',
@@ -517,8 +530,10 @@ export function createProvider(provider, apiKey, options = {}) {
       name.charAt(0).toUpperCase() + name.slice(1),
       apiKey,
       {
-        baseUrl: options.baseUrl || preset.baseUrl,
-        model:   options.model   || preset.model || 'default',
+        baseUrl:    options.baseUrl || preset.baseUrl,
+        model:      options.model   || preset.model || 'default',
+        think:      options.think,
+        thinkLevel: options.thinkLevel,
       }
     );
   }
@@ -547,8 +562,10 @@ export function autoDetectProvider(rootPath, options = {}) {
   if (options.provider) {
     const apiKey = resolveApiKey(options.provider, rootPath);
     return createProvider(options.provider, apiKey, {
-      model:   options.model,
-      baseUrl: options.baseUrl,
+      model:      options.model,
+      baseUrl:    options.baseUrl,
+      think:      options.think,
+      thinkLevel: options.thinkLevel,
     });
   }
 
