@@ -172,7 +172,7 @@ class AnthropicProvider extends BaseLLMProvider {
 class OpenAIProvider extends BaseLLMProvider {
   constructor(apiKey, options = {}) {
     super('OpenAI', apiKey, options);
-    this.model = options.model || 'gpt-5.4';
+    this.model = options.model || 'gpt-5.5';
     this.baseUrl = options.baseUrl || 'https://api.openai.com/v1/chat/completions';
   }
 
@@ -356,6 +356,8 @@ class GemmaProvider extends OllamaProvider {
 
 // Well-known OpenAI-compatible base URLs and their default models.
 const OPENAI_COMPATIBLE_PRESETS = {
+  'gpt-5.5':      { baseUrl: 'https://api.openai.com/v1/chat/completions',           model: 'gpt-5.5',                    envKey: 'OPENAI_API_KEY' },
+  'gpt-5.5-pro':  { baseUrl: 'https://api.openai.com/v1/chat/completions',           model: 'gpt-5.5-pro',                envKey: 'OPENAI_API_KEY' },
   'gpt-5.4':      { baseUrl: 'https://api.openai.com/v1/chat/completions',           model: 'gpt-5.4',                    envKey: 'OPENAI_API_KEY' },
   'gpt-5.4-mini': { baseUrl: 'https://api.openai.com/v1/chat/completions',           model: 'gpt-5.4-mini',               envKey: 'OPENAI_API_KEY' },
   'gpt-5.4-nano': { baseUrl: 'https://api.openai.com/v1/chat/completions',           model: 'gpt-5.4-nano',               envKey: 'OPENAI_API_KEY' },
@@ -529,7 +531,7 @@ export function createProvider(provider, apiKey, options = {}) {
   throw new Error(
     `Unknown LLM provider: "${provider}".\n` +
     `Built-in: anthropic, openai, google, ollama\n` +
-    `Presets:  groq, together, mistral, cohere, deepseek, deepseek-flash, perplexity, lmstudio, xai, kimi\n` +
+    `Presets:  gpt-5.5, gpt-5.5-pro, gpt-5.4, gpt-5.4-mini, gpt-5.4-nano, groq, together, mistral, cohere, deepseek, deepseek-flash, perplexity, lmstudio, xai, kimi\n` +
     `Custom:   pass any name with --base-url <url>`
   );
 }
