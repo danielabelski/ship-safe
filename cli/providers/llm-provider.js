@@ -172,7 +172,7 @@ class AnthropicProvider extends BaseLLMProvider {
 class OpenAIProvider extends BaseLLMProvider {
   constructor(apiKey, options = {}) {
     super('OpenAI', apiKey, options);
-    this.model = options.model || 'gpt-4o-mini';
+    this.model = options.model || 'gpt-5.4';
     this.baseUrl = options.baseUrl || 'https://api.openai.com/v1/chat/completions';
   }
 
@@ -356,6 +356,9 @@ class GemmaProvider extends OllamaProvider {
 
 // Well-known OpenAI-compatible base URLs and their default models.
 const OPENAI_COMPATIBLE_PRESETS = {
+  'gpt-5.4':      { baseUrl: 'https://api.openai.com/v1/chat/completions',           model: 'gpt-5.4',                    envKey: 'OPENAI_API_KEY' },
+  'gpt-5.4-mini': { baseUrl: 'https://api.openai.com/v1/chat/completions',           model: 'gpt-5.4-mini',               envKey: 'OPENAI_API_KEY' },
+  'gpt-5.4-nano': { baseUrl: 'https://api.openai.com/v1/chat/completions',           model: 'gpt-5.4-nano',               envKey: 'OPENAI_API_KEY' },
   groq:       { baseUrl: 'https://api.groq.com/openai/v1/chat/completions',         model: 'llama-3.3-70b-versatile',    envKey: 'GROQ_API_KEY' },
   together:   { baseUrl: 'https://api.together.xyz/v1/chat/completions',             model: 'meta-llama/Llama-3-70b-chat-hf', envKey: 'TOGETHER_API_KEY' },
   mistral:    { baseUrl: 'https://api.mistral.ai/v1/chat/completions',               model: 'mistral-large-latest',       envKey: 'MISTRAL_API_KEY' },
@@ -381,7 +384,7 @@ class OpenAICompatibleProvider extends OpenAIProvider {
 
   /** Models known to support OpenAI function calling reliably */
   get supportsStructuredOutput() {
-    return /kimi|moonshot|gpt-4|grok|deepseek|mistral-large/i.test(this.model || '');
+    return /kimi|moonshot|gpt-4|gpt-5|grok|deepseek|mistral-large/i.test(this.model || '');
   }
 
   async complete(systemPrompt, userPrompt, options = {}) {
