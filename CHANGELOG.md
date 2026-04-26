@@ -6,6 +6,62 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [9.2.0] — 2026-04-26 — Ship Safe Agent: scan, plan, fix, ship
+
+This release reorients ship-safe from a scanner into a fix-first agent. Find an issue, see a plan, accept it, ship the fix — all from your terminal or wired into CI.
+
+### Added
+
+- **`ship-safe agent [path]`** — interactive plan-then-execute fix loop.
+  - Scans, then for each affected file: generates a structured fix plan via LLM, shows a unified diff, prompts `[a]ccept / [s]kip / [e]dit / [q]uit`, applies atomically, re-scans to verify, logs to `.ship-safe/fixes.jsonl`.
+  - **Multi-file plans**: a single fix can also create `.env.example` and append to `.gitignore` as companion changes.
+  - **Find-string drift recovery**: if the LLM's exact-match string drifts (whitespace), the agent retries with a normalized match before giving up.
+  - **Failure diagnostics**: every plan that doesn't apply (parse error / LLM declined / validation rejected / provider error / empty response) is recorded with full context to `.ship-safe/failures.jsonl`.
+
+- **`ship-safe shell`** — interactive REPL with persistent session state.
+  - Slash commands: `/scan`, `/rescan`, `/findings`, `/show <n>`, `/plan <n>`, `/agent`, `/undo`, `/diff`, `/git`, `/provider`, `/clear`, `/help`, `/quit`.
+  - Free-form prompts → LLM with the latest scan results as context.
+  - **Streaming output**: tokens render as they arrive (OpenAI-compatible SSE — covers OpenAI, DeepSeek, Kimi, xAI).
+  - **Bare `ship-safe` on a TTY drops into the shell** automatically; help banner is preserved for `--help` and piped stdin.
+
+- **`ship-safe undo`** — revert the most recent agent fix (or all fixes with `--all`). Reverses edits, deletes created files, trims appended content. `--dry-run` shows what would change.
+
+- **Agent flags**:
+  - `--severity <level>` filter (default: low)
+  - `--plan-only` to inspect plans without writing
+  - `--branch [name]` to isolate fixes on a new branch with one commit per file
+  - `--pr` to push the branch and open a PR via `gh` CLI; in CI on a PR event, also leaves a comment on the originating PR
+  - `--yolo` to auto-accept every plan
+  - `--auto-low` to auto-accept only plans the LLM marked `risk:low`
+  - `--allow-dirty` to override the clean-tree check
+  - `--provider`, `--model`, `--think` to control the LLM
+  - `--sandbox` reserved for future Docker-isolated verification
+
+- **`.ship-safeignore` walks up** from the scan target to the project root — subdirectory scans now honor the repo-level ignore file.
+
+### Changed
+
+- **`PROMPT_INJECTION_PATTERN`** rule no longer fires on the literal phrase "system prompt" (which appears in every line of legitimate LLM-using code). Tightened to actual jailbreak verbs.
+
+- **`LLM_SYSTEM_PROMPT_CLIENT`** rule now skips server-side paths (`cli/`, `server/`, `lib/`, `api/`) — its whole premise is *client-side* exposure.
+
+- Per-pattern `skipFile` predicate support in `LLMRedTeam` for context-aware suppression.
+
+### Webapp
+
+- Settings → AI Models — pick a default LLM provider, model, think-mode, and per-key API tokens.
+- Scan form — per-scan AI options panel (provider picker, swarm/think toggles).
+- Provider badges on every scan in history and team-runs (colored per provider).
+- `aiOptions` now flow from form → API → `auditCommand`; `aiProvider` is recorded on completed scans and team runs.
+- New columns added to the schema: `User.llmSettings`, `Scan.aiProvider`, `TeamRun.aiProvider`.
+
+### Notes
+
+- Old non-interactive Claude-only `ship-safe agent` behavior preserved as `ship-safe agent --legacy`.
+- Real-CLI feel: bare `ship-safe`, streaming, persistent shell session, slash commands, edit-plan in `$EDITOR`.
+
+---
+
 ## [9.1.0] — 2026-04-19 — AgenticSupplyChainAgent & Vercel Breach Impact Checker
 
 ### Added

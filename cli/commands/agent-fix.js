@@ -192,26 +192,23 @@ export async function agentFixCommand(targetPath = '.', options = {}) {
 
     // Generate plan
     const planSpinner = ora({ text: 'Generating fix plan...', color: 'cyan', indent: 6 }).start();
-    let plan;
-    try {
-      plan = await generateBatchPlan(provider, root, filePath, fileFindings);
-      planSpinner.stop();
-    } catch (err) {
-      planSpinner.fail(chalk.red(`Plan generation failed: ${err.message}`));
-      skipped.push({ file: filePath, findings: fileFindings, reason: 'plan-generation-failed' });
-      continue;
-    }
+    const planResult = await generateBatchPlan(provider, root, filePath, fileFindings);
+    planSpinner.stop();
 
-    if (!plan || !plan.files || plan.files.length === 0) {
-      console.log(chalk.yellow('      No precise fix available — needs manual review.'));
-      skipped.push({ file: filePath, findings: fileFindings, reason: 'no-precise-fix' });
+    if (!planResult.ok) {
+      const detail = describePlanFailure(planResult);
+      console.log(chalk.yellow(`      ${detail.message}`));
+      logFailure(root, { timestamp: new Date().toISOString(), file: filePath, findings: fileFindings.map(f => ({ title: f.title, line: f.line, rule: f.rule })), ...planResult });
+      skipped.push({ file: filePath, findings: fileFindings, reason: detail.reason });
       continue;
     }
+    const plan = planResult.plan;
 
     // Validate (allows new safe files like .env.example)
     const validation = validatePlan(root, plan);
     if (!validation.ok) {
       console.log(chalk.yellow(`      Plan invalid: ${validation.reason}`));
+      logFailure(root, { timestamp: new Date().toISOString(), file: filePath, findings: fileFindings.map(f => ({ title: f.title, line: f.line, rule: f.rule })), reason: 'validation-rejected', detail: validation.reason, plan });
       skipped.push({ file: filePath, findings: fileFindings, reason: `plan-invalid: ${validation.reason}` });
       continue;
     }
@@ -354,13 +351,19 @@ export async function agentFixCommand(targetPath = '.', options = {}) {
 // PLAN GENERATION
 // =============================================================================
 
+// Generate a fix plan for a file. Returns either:
+//   { ok: true, plan }                       — plan generated successfully
+//   { ok: false, reason, raw, error }        — failed; reason is one of:
+//       'file-read-failed' | 'provider-error' | 'parse-error' |
+//       'llm-declined' | 'empty-response'
+// Caller decides what to do with the failure (log, persist, skip).
 async function generateBatchPlan(provider, root, filePath, fileFindings) {
   const abs = path.resolve(root, filePath);
   let content;
   try {
     content = fs.readFileSync(abs, 'utf8');
-  } catch {
-    return null;
+  } catch (err) {
+    return { ok: false, reason: 'file-read-failed', error: err.message };
   }
 
   const fileForPrompt = windowFileContent(content, fileFindings[0]?.line);
@@ -416,12 +419,32 @@ RULES:
 - If you cannot produce a precise mechanical plan, return {"summary":"requires manual review","files":[],"risk":"high"}
 - JSON only. No prose. No code fences.`;
 
-  const response = await provider.complete(systemPrompt, userPrompt, {
-    maxTokens: 3000,
-    jsonMode:  true,
-  });
+  let response;
+  try {
+    response = await provider.complete(systemPrompt, userPrompt, {
+      maxTokens: 3000,
+      jsonMode:  true,
+    });
+  } catch (err) {
+    return { ok: false, reason: 'provider-error', error: err.message };
+  }
 
-  return parseJsonLoose(response);
+  if (!response || !response.trim()) {
+    return { ok: false, reason: 'empty-response', raw: response ?? '' };
+  }
+
+  const plan = parseJsonLoose(response);
+  if (!plan) {
+    return { ok: false, reason: 'parse-error', raw: response };
+  }
+  if (!Array.isArray(plan.files) || plan.files.length === 0) {
+    // The LLM returned valid JSON but explicitly declined to produce edits
+    // (typically with summary like "requires manual review"). This is a
+    // legitimate "I don't know" — not a bug.
+    return { ok: false, reason: 'llm-declined', raw: response, plan };
+  }
+
+  return { ok: true, plan };
 }
 
 function parseJsonLoose(response) {
@@ -690,6 +713,44 @@ function logFix(root, entry) {
   const file = path.join(dir, FIX_LOG_FILE);
   fs.mkdirSync(dir, { recursive: true });
   fs.appendFileSync(file, JSON.stringify(entry) + '\n', 'utf8');
+}
+
+// Append a structured record for every plan that didn't produce an apply.
+// Useful for debugging regressions (the LLM said X, we rejected because Y).
+function logFailure(root, entry) {
+  const dir  = path.join(root, FIX_LOG_DIR);
+  const file = path.join(dir, 'failures.jsonl');
+  fs.mkdirSync(dir, { recursive: true });
+  // Truncate raw response to keep the log readable
+  const truncated = { ...entry };
+  if (typeof truncated.raw === 'string' && truncated.raw.length > 4000) {
+    truncated.raw = truncated.raw.slice(0, 4000) + '... [truncated]';
+  }
+  fs.appendFileSync(file, JSON.stringify(truncated) + '\n', 'utf8');
+}
+
+// Turn a structured plan failure into a user-facing one-liner.
+function describePlanFailure(failure) {
+  switch (failure.reason) {
+    case 'file-read-failed':
+      return { message: `Could not read source file: ${failure.error}`, reason: 'file-read-failed' };
+    case 'provider-error':
+      return { message: `LLM provider error — ${failure.error}`, reason: 'provider-error' };
+    case 'empty-response':
+      return { message: 'LLM returned an empty response (try again, or switch provider).', reason: 'empty-response' };
+    case 'parse-error':
+      return { message: 'LLM returned unparseable JSON — saved to .ship-safe/failures.jsonl for inspection.', reason: 'parse-error' };
+    case 'llm-declined': {
+      const summary = failure.plan?.summary;
+      return { message: summary
+        ? `LLM declined to fix this file — ${summary}`
+        : 'LLM declined to fix this file (returned files=[] — needs manual review).',
+        reason: 'llm-declined',
+      };
+    }
+    default:
+      return { message: `Plan failed: ${failure.reason}`, reason: failure.reason };
+  }
 }
 
 // =============================================================================
