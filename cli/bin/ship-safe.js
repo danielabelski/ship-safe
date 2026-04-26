@@ -196,6 +196,9 @@ program
   .option('--allow-dirty', 'Allow running with uncommitted changes in the working tree')
   .option('--branch [name]', 'Create a branch and commit one fix per file (default name: ship-safe/fixes-<timestamp>)')
   .option('--pr', 'After fixing, push the branch and open a pull request via gh CLI (requires --branch)')
+  .option('--yolo', 'Auto-accept every plan without prompting (use with caution; pairs well with --branch)')
+  .option('--auto-low', 'Auto-accept plans marked risk:low; prompt for medium/high')
+  .option('--sandbox', 'Verify each fix in a Docker sandbox (not yet implemented)')
   .option('--legacy', 'Use the legacy non-interactive Claude-only agent')
   .action((targetPath, options) => {
     if (options.legacy) {
@@ -657,8 +660,11 @@ How it works:
 // PARSE AND RUN
 // -----------------------------------------------------------------------------
 
-// Show help if no command provided
-if (process.argv.length === 2) {
+// No command + interactive TTY → drop into the REPL.
+// Help banner is still available via `--help` and shown when stdin is piped.
+if (process.argv.length === 2 && process.stdin.isTTY) {
+  shellCommand('.', {});
+} else if (process.argv.length === 2) {
   console.log(banner);
   console.log(chalk.yellow('\nQuick start:\n'));
   console.log(chalk.cyan.bold('  v9.0 — Agent Studio, Teams & Findings'));

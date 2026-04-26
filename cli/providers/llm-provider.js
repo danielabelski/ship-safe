@@ -39,6 +39,16 @@ class BaseLLMProvider {
   }
 
   /**
+   * Stream a completion as an async iterable of text chunks.
+   * Default implementation falls back to complete() and yields the whole
+   * response at once — providers that support real streaming should override.
+   */
+  async *stream(systemPrompt, userPrompt, options = {}) {
+    const text = await this.complete(systemPrompt, userPrompt, options);
+    if (text) yield text;
+  }
+
+  /**
    * Classify security findings using the LLM.
    */
   async classify(findings, context) {
@@ -208,6 +218,71 @@ class OpenAIProvider extends BaseLLMProvider {
 
     const data = await response.json();
     return data.choices?.[0]?.message?.content || '';
+  }
+
+  /**
+   * Streaming variant for the OpenAI Chat Completions SSE protocol.
+   * Yields content tokens as they arrive. Inherited by every
+   * OpenAI-compatible provider (DeepSeek, Kimi, xAI, OpenRouter).
+   */
+  async *stream(systemPrompt, userPrompt, options = {}) {
+    const body = {
+      model: this.model,
+      max_tokens: options.maxTokens || 2048,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      stream: true,
+    };
+    if (options.think) {
+      body.reasoning_effort = options.thinkLevel || 'high';
+      body.max_tokens = options.maxTokens || 16384;
+    }
+
+    const response = await fetch(this.baseUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type':  'application/json',
+        'Accept':        'text/event-stream',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => '');
+      throw new Error(`${this.name} API error: HTTP ${response.status} ${errBody.slice(0, 200)}`);
+    }
+
+    const reader  = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer    = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      // SSE events are separated by blank lines; parse line-by-line and only
+      // act on `data: ` payloads. Everything else (event:, id:, comments) ignored.
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? ''; // keep trailing partial line for next chunk
+
+      for (const raw of lines) {
+        const line = raw.trim();
+        if (!line.startsWith('data:')) continue;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === '[DONE]') continue;
+        try {
+          const evt = JSON.parse(payload);
+          const delta = evt.choices?.[0]?.delta;
+          // Token text (delta.content) — yield as-is. Some providers also send
+          // tool_calls; ignored here since the REPL doesn't use tools yet.
+          if (delta?.content) yield delta.content;
+        } catch { /* malformed chunk — skip */ }
+      }
+    }
   }
 }
 

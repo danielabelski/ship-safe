@@ -126,6 +126,11 @@ export async function agentFixCommand(targetPath = '.', options = {}) {
   }
   console.log(chalk.gray(`  Provider: ${chalk.cyan(provider.name)}`));
 
+  if (options.sandbox) {
+    console.log(chalk.yellow('  --sandbox is not yet implemented — falling back to in-process verification.'));
+    console.log(chalk.gray('  Track this in the agent\'s next milestone.'));
+  }
+
   // ── Run the scan ─────────────────────────────────────────────────────────
   const scanSpinner = ora({ text: 'Scanning for issues...', color: 'cyan' }).start();
   let scanResult;
@@ -219,8 +224,23 @@ export async function agentFixCommand(targetPath = '.', options = {}) {
       continue;
     }
 
-    // Confirm
-    const decision = (await prompt(chalk.cyan('      [a]ccept  [s]kip  [q]uit > '))).trim().toLowerCase();
+    // Decision logic:
+    //   --yolo       → auto-accept everything
+    //   --auto-low   → auto-accept low-risk plans, prompt on medium/high
+    //   default      → prompt every time
+    let decision;
+    const risk = (plan.risk || 'medium').toLowerCase();
+    if (options.yolo) {
+      decision = 'a';
+      console.log(chalk.gray('      (yolo: auto-accepting)'));
+    } else if (options.autoLow && risk === 'low') {
+      decision = 'a';
+      console.log(chalk.gray('      (auto-low: low-risk, auto-accepting)'));
+    } else {
+      // Interactive: prompt with [e]dit option
+      decision = await promptDecision(plan, root);
+    }
+
     if (decision === 'q' || decision === 'quit') {
       console.log(chalk.gray('      Stopping.'));
       stopped = true;
@@ -719,12 +739,61 @@ async function openPullRequest(root, branch, applied) {
   const title = `Security fixes: ${applied.length} file(s)`;
 
   console.log(chalk.gray('  Opening PR...'));
+  let prUrl = null;
   try {
-    const out = execFileSync('gh', ['pr', 'create', '--title', title, '--body', body], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] }).toString().trim();
-    console.log(chalk.green(`  PR opened: ${out}`));
+    prUrl = execFileSync('gh', ['pr', 'create', '--title', title, '--body', body], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] }).toString().trim();
+    console.log(chalk.green(`  PR opened: ${prUrl}`));
   } catch (err) {
     console.log(chalk.red(`  PR creation failed: ${err.message}`));
+    return;
   }
+
+  // If we're running inside CI on a PR, leave a comment on the originating PR
+  // pointing at our fix PR. Detect from common GitHub Actions env vars.
+  const originPr = detectOriginPrNumber();
+  if (originPr) {
+    const note = [
+      `### 🛡️ Ship Safe Agent — fix PR opened`,
+      ``,
+      `The Ship Safe agent found fixable security issues triggered by this PR and opened **${prUrl}** with proposed fixes.`,
+      ``,
+      `**Files changed:** ${applied.length}`,
+      `**Total edits:** ${totalFindings}`,
+      ``,
+      `Review the fix PR and merge if it looks good.`,
+    ].join('\n');
+    try {
+      execFileSync('gh', ['pr', 'comment', String(originPr), '--body', note], { cwd: root, stdio: 'pipe' });
+      console.log(chalk.green(`  Commented on origin PR #${originPr}`));
+    } catch (err) {
+      console.log(chalk.yellow(`  Could not comment on origin PR #${originPr}: ${err.message}`));
+    }
+  }
+}
+
+// Detect the PR number that triggered this CI run. Supports GitHub Actions'
+// pull_request and pull_request_target events. Returns null when not in CI
+// or when the event isn't a PR event.
+function detectOriginPrNumber() {
+  // Explicit override (handy for testing or non-GHA CI providers)
+  if (process.env.SHIP_SAFE_ORIGIN_PR) return process.env.SHIP_SAFE_ORIGIN_PR;
+
+  // GitHub Actions: GITHUB_REF looks like "refs/pull/<n>/merge" or "refs/pull/<n>/head"
+  const ref = process.env.GITHUB_REF || '';
+  const m = ref.match(/^refs\/pull\/(\d+)\//);
+  if (m) return m[1];
+
+  // GitHub Actions PR event payload also exposes the number via GITHUB_EVENT_PATH
+  const eventPath = process.env.GITHUB_EVENT_PATH;
+  if (eventPath && fs.existsSync(eventPath)) {
+    try {
+      const payload = JSON.parse(fs.readFileSync(eventPath, 'utf8'));
+      if (payload?.pull_request?.number) return String(payload.pull_request.number);
+      if (payload?.number) return String(payload.number);
+    } catch { /* malformed event payload */ }
+  }
+
+  return null;
 }
 
 // =============================================================================
@@ -774,4 +843,57 @@ function prompt(question) {
 async function confirm(question) {
   const a = (await prompt(`${question} [y/N] `)).trim().toLowerCase();
   return a === 'y' || a === 'yes';
+}
+
+// Plan decision prompt with [e]dit support: opens the plan in $EDITOR for the
+// user to tweak, then re-validates. Loops until accept/skip/quit.
+async function promptDecision(plan, root) {
+  while (true) {
+    const raw = (await prompt(chalk.cyan('      [a]ccept  [s]kip  [e]dit  [q]uit > '))).trim().toLowerCase();
+    if (['a', 'accept', 'y', 'yes'].includes(raw)) return 'a';
+    if (['s', 'skip', 'n', 'no'].includes(raw))    return 's';
+    if (['q', 'quit'].includes(raw))               return 'q';
+    if (['e', 'edit'].includes(raw)) {
+      const edited = await editPlanInEditor(plan, root);
+      if (!edited) {
+        console.log(chalk.yellow('      Edit cancelled — keeping original plan.'));
+      } else {
+        // Mutate plan in place so the caller's reference picks up the changes
+        plan.summary = edited.summary;
+        plan.files   = edited.files;
+        plan.risk    = edited.risk;
+        // Re-validate then re-show
+        const validation = validatePlan(root, plan);
+        if (!validation.ok) {
+          console.log(chalk.red(`      Edited plan invalid: ${validation.reason}`));
+          console.log(chalk.gray('      Returning to prompt — try editing again, or skip.'));
+          continue;
+        }
+        printPlan(plan, root);
+      }
+      // Loop back and re-prompt
+      continue;
+    }
+    console.log(chalk.gray('      Unknown choice. Type a, s, e, or q.'));
+  }
+}
+
+async function editPlanInEditor(plan, root) {
+  const editor = process.env.EDITOR || process.env.VISUAL || 'vi';
+  const tmpFile = path.join(root, '.ship-safe', `plan-edit-${Date.now()}.json`);
+  fs.mkdirSync(path.dirname(tmpFile), { recursive: true });
+  // Strip _resolvedFind annotations before showing — they're internal
+  const exportable = JSON.parse(JSON.stringify(plan, (k, v) => k === '_resolvedFind' ? undefined : v));
+  fs.writeFileSync(tmpFile, JSON.stringify(exportable, null, 2), 'utf8');
+
+  try {
+    execFileSync(editor, [tmpFile], { stdio: 'inherit' });
+    const updated = JSON.parse(fs.readFileSync(tmpFile, 'utf8'));
+    fs.unlinkSync(tmpFile);
+    return updated;
+  } catch (err) {
+    try { fs.unlinkSync(tmpFile); } catch { /* best effort */ }
+    console.log(chalk.red(`      Editor failed: ${err.message}`));
+    return null;
+  }
 }

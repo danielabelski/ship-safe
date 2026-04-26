@@ -19,6 +19,7 @@
  */
 
 import { createInterface } from 'readline';
+import { execFileSync, spawnSync } from 'child_process';
 import path from 'path';
 import chalk from 'chalk';
 import ora from 'ora';
@@ -110,7 +111,8 @@ async function handleSlashCommand(line, state, options) {
       process.stdout.write('\x1Bc');
       return true;
 
-    case 'scan': {
+    case 'scan':
+    case 'rescan': {
       const spinner = ora({ text: 'Scanning...', color: 'cyan' }).start();
       try {
         const result = await auditCommand(state.root, { _agenticInner: true, deep: false, deps: false, noAi: true });
@@ -119,6 +121,61 @@ async function handleSlashCommand(line, state, options) {
         printScanSummary(result);
       } catch (err) {
         spinner.fail(err.message);
+      }
+      return true;
+    }
+
+    case 'diff': {
+      // Show working-tree diff so the user can review changes from /agent
+      try {
+        const out = execFileSync('git', ['diff', '--no-color', ...args], { cwd: state.root, stdio: ['ignore', 'pipe', 'pipe'] }).toString();
+        if (!out.trim()) {
+          console.log(chalk.gray('  No changes.'));
+        } else {
+          console.log();
+          console.log(out);
+        }
+      } catch (err) {
+        console.log(chalk.red(`  git diff failed: ${err.message}`));
+      }
+      return true;
+    }
+
+    case 'git': {
+      // Pass through to git so the user can poke around (status, log, stash, etc.)
+      // without leaving the shell. Inherit stdio so paged commands work.
+      const result = spawnSync('git', args, { cwd: state.root, stdio: 'inherit' });
+      if (result.error) console.log(chalk.red(`  ${result.error.message}`));
+      return true;
+    }
+
+    case 'plan': {
+      // Preview a fix plan for ONE finding without applying.
+      // Usage: /plan <n>  (1-based, from /findings)
+      if (!state.lastScan) {
+        console.log(chalk.yellow('  No scan results yet. Run /scan first.'));
+        return true;
+      }
+      const findings = state.lastScan.findings ?? [];
+      const n = parseInt(args[0], 10);
+      if (!Number.isInteger(n) || n < 1 || n > findings.length) {
+        console.log(chalk.yellow(`  Usage: /plan <n>  (1..${findings.length})`));
+        return true;
+      }
+      const f = findings[n - 1];
+      if (!f.file) {
+        console.log(chalk.yellow('  Finding has no file path — cannot plan.'));
+        return true;
+      }
+      // Delegate to agent in plan-only mode, scoped narrowly.
+      // Building a one-finding workflow inline duplicates a lot of agent-fix logic;
+      // run the full agent restricted to this file's directory + plan-only.
+      const dir = path.dirname(path.resolve(state.root, f.file));
+      console.log(chalk.gray(`  Generating plan for finding ${n} in ${f.file}...`));
+      try {
+        await agentFixCommand(dir, { ...options, planOnly: true, allowDirty: true, severity: f.severity || 'low' });
+      } catch (err) {
+        console.log(chalk.red(`  Plan failed: ${err.message}`));
       }
       return true;
     }
@@ -213,16 +270,22 @@ async function handlePrompt(text, state) {
   const systemPrompt = buildSystemPrompt(state);
   const userPrompt   = buildConversationPrompt(state);
 
-  const spinner = ora({ text: `Asking ${state.provider.name}...`, color: 'cyan' }).start();
+  // Stream tokens as they arrive so the REPL feels alive.
+  // Falls back transparently to one-shot complete() for providers without
+  // real streaming (the base class default yields the whole response).
+  process.stdout.write('\n  ');
+  let collected = '';
   try {
-    const response = await state.provider.complete(systemPrompt, userPrompt, { maxTokens: 1500 });
-    spinner.stop();
-    state.history.push({ role: 'assistant', content: response.trim() });
-    console.log();
-    console.log(formatAssistant(response.trim()));
-    console.log();
+    for await (const chunk of state.provider.stream(systemPrompt, userPrompt, { maxTokens: 1500 })) {
+      collected += chunk;
+      // Indent any new lines that appear inside a streamed chunk
+      process.stdout.write(chalk.white(chunk.replace(/\n/g, '\n  ')));
+    }
+    process.stdout.write('\n\n');
+    state.history.push({ role: 'assistant', content: collected.trim() });
   } catch (err) {
-    spinner.fail(`Provider call failed: ${err.message}`);
+    process.stdout.write('\n');
+    console.log(chalk.red(`  Provider call failed: ${err.message}`));
   }
 }
 
@@ -270,11 +333,14 @@ function formatAssistant(text) {
 function printHelp() {
   console.log();
   console.log(chalk.bold('  Commands:'));
-  console.log('    /scan                 Re-scan the project');
+  console.log('    /scan, /rescan        Re-scan the project');
   console.log('    /findings             List the latest scan\'s findings');
   console.log('    /show <n>             Show full detail of finding <n>');
+  console.log('    /plan <n>             Preview a fix plan for finding <n> (no writes)');
   console.log('    /agent [--plan-only]  Run the interactive fix loop');
   console.log('    /undo [--all]         Revert the last fix (or all)');
+  console.log('    /diff [path]          Show git working-tree diff');
+  console.log('    /git <args>           Pass through to git (status, log, stash, ...)');
   console.log('    /provider <name>      Switch LLM provider');
   console.log('    /clear                Clear the screen');
   console.log('    /quit                 Exit');
