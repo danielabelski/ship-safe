@@ -20,7 +20,9 @@
 
 import { createInterface } from 'readline';
 import { execFileSync, spawnSync } from 'child_process';
+import { readFileSync as fsReadFileSync } from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import chalk from 'chalk';
 import ora from 'ora';
 import { autoDetectProvider } from '../providers/llm-provider.js';
@@ -30,6 +32,36 @@ import { undoCommand } from './undo.js';
 import * as output from '../utils/output.js';
 
 const SEV_RANK = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
+
+// Read version from package.json so the banner stays in sync with releases.
+const PKG_VERSION = (() => {
+  try {
+    const here = path.dirname(fileURLToPath(import.meta.url));
+    const pkg  = JSON.parse(fsReadFileSync(path.join(here, '..', '..', 'package.json'), 'utf8'));
+    return pkg.version;
+  } catch { return ''; }
+})();
+
+// Big block-letter wordmark — same one used by the help banner so brand stays
+// consistent. Falls back to a tighter compact version on narrow terminals.
+function shipSafeBanner() {
+  // Default to the big banner; only fall back to compact when we can confirm
+  // the terminal is genuinely narrow (<70 cols). Piped/non-TTY stdout still
+  // gets the big banner — recordings and screenshots want it.
+  const cols   = process.stdout.columns;
+  const narrow = typeof cols === 'number' && cols > 0 && cols < 70;
+  if (narrow) {
+    return chalk.cyan.bold('  S H I P   S A F E');
+  }
+  return [
+    chalk.cyan('  ███████╗██╗  ██╗██╗██████╗     ███████╗ █████╗ ███████╗███████╗'),
+    chalk.cyan('  ██╔════╝██║  ██║██║██╔══██╗    ██╔════╝██╔══██╗██╔════╝██╔════╝'),
+    chalk.cyan('  ███████╗███████║██║██████╔╝    ███████╗███████║█████╗  █████╗  '),
+    chalk.cyan('  ╚════██║██╔══██║██║██╔═══╝     ╚════██║██╔══██║██╔══╝  ██╔══╝  '),
+    chalk.cyan('  ███████║██║  ██║██║██║         ███████║██║  ██║██║     ███████╗'),
+    chalk.cyan('  ╚══════╝╚═╝  ╚═╝╚═╝╚═╝         ╚══════╝╚═╝  ╚═╝╚═╝     ╚══════╝'),
+  ].join('\n');
+}
 
 export async function shellCommand(targetPath = '.', options = {}) {
   const root = path.resolve(targetPath);
@@ -49,13 +81,18 @@ export async function shellCommand(targetPath = '.', options = {}) {
     think:    options.think || false,
   });
 
+  // Branded entry: big wordmark, version + provider + cwd, then a CTA hint.
+  // Modeled on Claude Code / Gemini CLI / Aider — establish the tool's identity
+  // in the first second, then get out of the way.
   console.log();
-  output.header('Ship Safe — Interactive Shell');
-  console.log(chalk.gray(`  cwd:      ${root}`));
-  console.log(chalk.gray(`  provider: ${state.provider ? chalk.cyan(state.provider.name) : chalk.yellow('none — set DEEPSEEK_API_KEY or similar')}`));
+  console.log(shipSafeBanner());
   console.log();
-  console.log(chalk.gray('  Type /help for commands, anything else to ask the agent.'));
-  console.log(chalk.gray('  /quit or Ctrl-D to exit.'));
+  const ver  = PKG_VERSION ? `v${PKG_VERSION}` : '';
+  const prov = state.provider ? chalk.cyan(state.provider.name) : chalk.yellow('no provider');
+  const cwd  = chalk.gray(prettyCwd(root));
+  console.log(`  ${chalk.bold(ver)}  ${chalk.gray('·')}  ${prov}  ${chalk.gray('·')}  ${cwd}`);
+  console.log();
+  console.log(chalk.gray('  /scan to find issues  ·  /agent to fix them  ·  /help for more'));
   console.log();
 
   const rl = createInterface({
@@ -405,6 +442,12 @@ function sevTag(sev) {
     case 'low':      return chalk.blue('[LOW]');
     default:         return chalk.gray(`[${(sev || 'INFO').toUpperCase()}]`);
   }
+}
+
+function prettyCwd(p) {
+  const home = process.env.HOME || '';
+  if (home && p.startsWith(home + '/')) return '~' + p.slice(home.length);
+  return p;
 }
 
 function gradeColor(score) {
