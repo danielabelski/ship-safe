@@ -327,7 +327,7 @@ export async function auditCommand(targetPath = '.', options = {}) {
   );
 
   // ── AI Classification (optional, with LLM cache) ───────────────────────
-  if (options.ai !== false) {
+  if (options.ai !== false && !options.noAi) {
     const provider = autoDetectProvider(absolutePath, {
       provider:   options.provider,
       baseUrl:    options.baseUrl,

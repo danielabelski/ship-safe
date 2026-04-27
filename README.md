@@ -50,6 +50,10 @@ npx ship-safe ci . --threshold 80 --sarif results.sarif
 
 No signup. No API key required for scanning. Works offline.
 
+<p align="center">
+  <img src=".github/assets/demo-agent.gif" alt="Ship Safe agent demo" width="800" />
+</p>
+
 ---
 
 ## 23 Security Agents
