@@ -6,6 +6,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [9.2.1] — 2026-04-26
+
+### Fixed
+
+- **Double banner on bare `ship-safe`**: launching the REPL without arguments showed the help banner concurrently with the REPL banner because `shellCommand` was not awaited before `program.parse()` ran. Fixed by gating `program.parse()` in the `else` branch.
+
+### Added
+
+- **Glitch animation on startup**: the SHIP SAFE wordmark now animates in on REPL launch — each line scrambles through box-drawing characters and locks into place over ~300ms.
+
+---
+
 ## [9.2.0] — 2026-04-26 — Ship Safe Agent: scan, plan, fix, ship
 
 This release reorients ship-safe from a scanner into a fix-first agent. Find an issue, see a plan, accept it, ship the fix — all from your terminal or wired into CI.
