@@ -5,15 +5,31 @@ import { prisma } from '@/lib/prisma';
 import { authenticateApiKey } from '@/lib/api-auth';
 import { notifyScanComplete, notifyScanFailed } from '@/lib/notifications';
 import { logAudit } from '@/lib/audit';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { mkdtemp, rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+const REPO_RE   = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/;
+const BRANCH_RE = /^[a-zA-Z0-9/_.-]{1,256}$/;
 
 const PAID_PLANS = ['pro', 'team', 'enterprise'];
+
+const scanHits = new Map<string, { count: number; resetAt: number }>();
+function checkScanRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const entry = scanHits.get(userId);
+  if (!entry || now >= entry.resetAt) {
+    scanHits.set(userId, { count: 1, resetAt: now + 3_600_000 });
+    return true;
+  }
+  if (entry.count >= 10) return false;
+  entry.count++;
+  return true;
+}
 
 async function resolveUser(req: NextRequest): Promise<{ userId: string; plan: string } | null> {
   // Try API key first, then session
@@ -88,6 +104,9 @@ export async function POST(req: NextRequest) {
   const { repo, branch = 'main', options = {} } = body;
 
   if (!repo) return NextResponse.json({ error: 'repo is required' }, { status: 400 });
+  if (!REPO_RE.test(repo)) return NextResponse.json({ error: 'Invalid repo format (expected owner/name)' }, { status: 400 });
+  if (!BRANCH_RE.test(branch)) return NextResponse.json({ error: 'Invalid branch name' }, { status: 400 });
+  if (!checkScanRateLimit(userId)) return NextResponse.json({ error: 'Rate limit exceeded: 10 scans per hour' }, { status: 429 });
 
   const scan = await prisma.scan.create({
     data: { userId, repo, branch, method: 'github', trigger: 'api', status: 'running', options },
@@ -105,11 +124,11 @@ async function runScanBackground(scanId: string, userId: string, repo: string, b
   const tmpDir = await mkdtemp(join(tmpdir(), 'shipsafe-'));
   const startTime = Date.now();
   try {
-    await execAsync(`git clone --depth 1 --branch ${branch} https://github.com/${repo}.git ${tmpDir}/repo`, { timeout: 60_000 });
+    await execFileAsync('git', ['clone', '--depth', '1', '--branch', branch, `https://github.com/${repo}.git`, `${tmpDir}/repo`], { timeout: 60_000 });
     const flags: string[] = ['--json'];
     if (options.deep) flags.push('--deep');
     if (options.deps) flags.push('--deps');
-    const { stdout } = await execAsync(`npx ship-safe audit ${tmpDir}/repo ${flags.join(' ')}`, { timeout: 120_000, maxBuffer: 10 * 1024 * 1024 });
+    const { stdout } = await execFileAsync('npx', ['ship-safe', 'audit', `${tmpDir}/repo`, ...flags], { timeout: 120_000, maxBuffer: 10 * 1024 * 1024 });
     const duration = (Date.now() - startTime) / 1000;
     let report: Record<string, unknown> = {};
     try { report = JSON.parse(stdout); } catch { report = { raw: stdout }; }

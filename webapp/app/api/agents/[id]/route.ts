@@ -76,11 +76,18 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const data: Record<string, unknown> = {};
   if (name && typeof name === 'string') data.name = name.trim().slice(0, 80);
   if (typeof description === 'string') data.description = description.trim().slice(0, 300);
-  if (Array.isArray(tools)) data.tools = tools;
+  if (Array.isArray(tools)) data.tools = tools.slice(0, 50);
   if (['builtin', 'honcho', 'hindsight', 'mem0', 'none'].includes(memoryProvider)) data.memoryProvider = memoryProvider;
   if (typeof maxDepth === 'number') data.maxDepth = Math.min(Math.max(maxDepth, 1), 2);
-  if (Array.isArray(skills)) data.skills = skills;
-  if (typeof envVars === 'object' && !Array.isArray(envVars)) data.envVars = envVars;
+  if (Array.isArray(skills)) data.skills = skills.slice(0, 50);
+  if (typeof envVars === 'object' && !Array.isArray(envVars) && envVars !== null) {
+    const BLOCKED_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+    const safe: Record<string, string> = {};
+    for (const [k, v] of Object.entries(envVars).slice(0, 50)) {
+      if (!BLOCKED_KEYS.has(k) && typeof v === 'string') safe[k] = v.slice(0, 1024);
+    }
+    data.envVars = safe;
+  }
   if (['github', 'gitlab', 'none'].includes(ciProvider)) data.ciProvider = ciProvider;
 
   const agent = await prisma.agent.update({ where: { id }, data });

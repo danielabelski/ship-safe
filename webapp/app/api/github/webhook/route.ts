@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   const signature = req.headers.get('x-hub-signature-256');
   const event = req.headers.get('x-github-event');
 
-  if (GITHUB_APP_WEBHOOK_SECRET && !verifySignature(body, signature)) {
+  if (!verifySignature(body, signature)) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
@@ -197,23 +197,31 @@ async function handleCheckSuite(payload: Record<string, unknown>) {
   advanceRun(run.id).catch(console.error);
 }
 
+const BRANCH_RE = /^[a-zA-Z0-9/_.-]{1,256}$/;
+const REPO_RE   = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/;
+
 async function triggerScan(scanId: string, userId: string, repo: string, branch: string) {
-  const { exec } = await import('child_process');
+  const { execFile } = await import('child_process');
   const { promisify } = await import('util');
   const { mkdtemp, rm } = await import('fs/promises');
   const { tmpdir } = await import('os');
   const { join } = await import('path');
   const { notifyScanComplete, notifyScanFailed } = await import('@/lib/notifications');
 
-  const execAsync = promisify(exec);
+  if (!REPO_RE.test(repo) || !BRANCH_RE.test(branch)) {
+    await prisma.scan.update({ where: { id: scanId }, data: { status: 'failed', report: { error: 'Invalid repo or branch' } } });
+    return;
+  }
+
+  const execFileAsync = promisify(execFile);
   const tmpDir = await mkdtemp(join(tmpdir(), 'shipsafe-gh-'));
   const startTime = Date.now();
 
   await prisma.scan.update({ where: { id: scanId }, data: { status: 'running' } });
 
   try {
-    await execAsync(`git clone --depth 1 --branch ${branch} https://github.com/${repo}.git ${tmpDir}/repo`, { timeout: 60_000 });
-    const { stdout } = await execAsync(`npx ship-safe audit ${tmpDir}/repo --json --deps`, { timeout: 120_000, maxBuffer: 10 * 1024 * 1024 });
+    await execFileAsync('git', ['clone', '--depth', '1', '--branch', branch, `https://github.com/${repo}.git`, `${tmpDir}/repo`], { timeout: 60_000 });
+    const { stdout } = await execFileAsync('npx', ['ship-safe', 'audit', `${tmpDir}/repo`, '--json', '--deps'], { timeout: 120_000, maxBuffer: 10 * 1024 * 1024 });
 
     const duration = (Date.now() - startTime) / 1000;
     let report: Record<string, unknown> = {};

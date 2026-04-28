@@ -2,6 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { fireAgentRun } from '@/lib/fire-agent-run';
 
+const triggerHits = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 10;
+const RATE_WINDOW_MS = 60_000;
+
+function checkRateLimit(triggerId: string): boolean {
+  const now = Date.now();
+  const entry = triggerHits.get(triggerId);
+  if (!entry || now >= entry.resetAt) {
+    triggerHits.set(triggerId, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT) return false;
+  entry.count++;
+  return true;
+}
+
 type Params = { params: Promise<{ triggerId: string }> };
 
 /**
@@ -42,6 +58,9 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
   if (trigger.secret !== token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (!checkRateLimit(triggerId)) {
+    return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
   }
 
   const deployment = trigger.agent.deployments[0];
