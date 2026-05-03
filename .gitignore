@@ -101,6 +101,7 @@ secrets.yaml
 *.sqlite3
 *.db
 *.sql
+!webapp/prisma/migrations/**/*.sql
 dump.rdb
 
 # -----------------------------------------------------------------------------

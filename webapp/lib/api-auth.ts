@@ -2,15 +2,20 @@ import { NextRequest } from 'next/server';
 import { prisma } from './prisma';
 import crypto from 'crypto';
 
+export type ApiScope = 'scan:read' | 'scan:write' | 'findings:read' | 'agent:read' | 'agent:write' | 'admin';
+
 /**
  * Authenticate API requests via Bearer token (API key) or session.
- * Returns { userId, keyId } or null.
+ * Returns { userId, keyId, scopes } or null.
  */
-export async function authenticateApiKey(req: NextRequest): Promise<{ userId: string; keyId: string } | null> { // ship-safe-ignore — this IS the auth library; it validates tokens, not forward credentials between tools
+export async function authenticateApiKey(
+  req: NextRequest,
+  requiredScope?: ApiScope,
+): Promise<{ userId: string; keyId: string; scopes: string[] } | null> { // ship-safe-ignore — this IS the auth library; it validates tokens, not forward credentials between tools
   const authHeader = req.headers.get('authorization');
   if (!authHeader?.startsWith('Bearer sk_')) return null;
 
-  const key = authHeader.slice(7); // Remove "Bearer "
+  const key = authHeader.slice(7);
   const keyHash = crypto.createHash('sha256').update(key).digest('hex');
 
   const apiKey = await prisma.apiKey.findUnique({
@@ -21,10 +26,16 @@ export async function authenticateApiKey(req: NextRequest): Promise<{ userId: st
   if (!apiKey) return null;
   if (apiKey.expiresAt && apiKey.expiresAt < new Date()) return null;
 
-  // Update last used
+  const scopes = (apiKey.scopes as string[]) ?? [];
+
+  // Enforce scope if required — admin scope grants everything
+  if (requiredScope && !scopes.includes(requiredScope) && !scopes.includes('admin')) {
+    return null;
+  }
+
   prisma.apiKey.update({ where: { id: apiKey.id }, data: { lastUsedAt: new Date() } }).catch(() => {});
 
-  return { userId: apiKey.userId, keyId: apiKey.id };
+  return { userId: apiKey.userId, keyId: apiKey.id, scopes };
 }
 
 export function generateApiKey(): { key: string; hash: string; prefix: string } {

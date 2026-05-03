@@ -162,10 +162,10 @@ export async function GET(req: NextRequest) {
     data:  { status: 'error', completedAt: now },
   });
 
-  // ── Weekly digest (every Monday 08:00 UTC) ───────────────────────────────────
-  const isMonday8am = now.getUTCDay() === 1 && now.getUTCHours() === 8 && now.getUTCMinutes() < 2;
-  if (isMonday8am) {
-    sendWeeklyDigests().catch(console.error);
+  // ── Score digest emails (daily @ 08:00 UTC, weekly on Monday) ───────────────
+  const is8am = now.getUTCHours() === 8 && now.getUTCMinutes() < 2;
+  if (is8am) {
+    sendWeeklyDigests(now.getUTCDay() === 1 ? 'weekly' : 'daily').catch(console.error);
   }
 
   // ── Expired shared reports cleanup ───────────────────────────────────────────

@@ -98,7 +98,7 @@ $ ship-safe
   ███████╗██╗  ██╗██╗██████╗     ███████╗ █████╗ ███████╗███████╗
   ...
 
-  v9.2.1  ·  DeepSeek  ·  ~/my-project
+  v9.2.3  ·  DeepSeek  ·  ~/my-project
 
   /scan to find issues  ·  /agent to fix them  ·  /help for more
 
@@ -113,6 +113,7 @@ shipsafe ›
 | `/show <n>` | Full detail on finding n |
 | `/plan <n>` | Preview fix plan for finding n (no writes) |
 | `/undo [--all]` | Revert the last fix (or all fixes) |
+| `/share` | Publish scan report as a public URL (7 days) |
 | `/diff` | Show git working-tree diff |
 | `/provider <name>` | Switch LLM provider mid-session |
 | `/quit` | Exit (also `Ctrl-D` or `Ctrl-C`) |

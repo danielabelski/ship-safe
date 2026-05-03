@@ -31,9 +31,11 @@ function checkScanRateLimit(userId: string): boolean {
   return true;
 }
 
-async function resolveUser(req: NextRequest): Promise<{ userId: string; plan: string } | null> {
-  // Try API key first, then session
-  const apiAuth = await authenticateApiKey(req);
+async function resolveUser(
+  req: NextRequest,
+  scope: 'scan:read' | 'scan:write',
+): Promise<{ userId: string; plan: string } | null> {
+  const apiAuth = await authenticateApiKey(req, scope);
   if (apiAuth) {
     const user = await prisma.user.findUnique({ where: { id: apiAuth.userId }, select: { plan: true } });
     return { userId: apiAuth.userId, plan: user?.plan ?? 'free' };
@@ -46,7 +48,7 @@ async function resolveUser(req: NextRequest): Promise<{ userId: string; plan: st
 
 // GET /api/v1/scans — list scans
 export async function GET(req: NextRequest) {
-  const resolved = await resolveUser(req);
+  const resolved = await resolveUser(req, 'scan:read');
   if (!resolved) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { userId, plan } = resolved;
   if (!PAID_PLANS.includes(plan)) {
@@ -90,7 +92,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/v1/scans — create a scan
 export async function POST(req: NextRequest) {
-  const resolved = await resolveUser(req);
+  const resolved = await resolveUser(req, 'scan:write');
   if (!resolved) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { userId, plan } = resolved;
   if (!PAID_PLANS.includes(plan)) {

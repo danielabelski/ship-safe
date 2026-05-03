@@ -29,6 +29,7 @@ import { autoDetectProvider } from '../providers/llm-provider.js';
 import { auditCommand } from './audit.js';
 import { agentFixCommand } from './agent-fix.js';
 import { undoCommand } from './undo.js';
+import { shareCommand } from './share.js';
 import * as output from '../utils/output.js';
 
 const SEV_RANK = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
@@ -320,6 +321,11 @@ async function handleSlashCommand(line, state, options) {
       return true;
     }
 
+    case 'share': {
+      await shareCommand(state.root);
+      return true;
+    }
+
     case 'provider': {
       const name = args[0];
       if (!name) {
@@ -428,6 +434,7 @@ function printHelp() {
   console.log('    /plan <n>             Preview a fix plan for finding <n> (no writes)');
   console.log('    /agent [--plan-only]  Run the interactive fix loop');
   console.log('    /undo [--all]         Revert the last fix (or all)');
+  console.log('    /share                Publish scan report as a public URL (7 days)');
   console.log('    /diff [path]          Show git working-tree diff');
   console.log('    /git <args>           Pass through to git (status, log, stash, ...)');
   console.log('    /provider <name>      Switch LLM provider');

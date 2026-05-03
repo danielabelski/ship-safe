@@ -397,13 +397,14 @@ export async function notifyGuardianBlocked(run: GuardianResult, reason: string)
 
 /* ── Weekly Score Trend Digest ────────────────────────── */
 
-export async function sendWeeklyDigests() {
-  const oneWeekAgo  = new Date(Date.now() - 7  * 24 * 60 * 60 * 1000);
-  const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+export async function sendWeeklyDigests(frequency: 'weekly' | 'daily' = 'weekly') {
+  const windowMs    = frequency === 'daily' ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
+  const prevWindowMs = windowMs * 2;
+  const oneWeekAgo  = new Date(Date.now() - windowMs);
+  const twoWeeksAgo = new Date(Date.now() - prevWindowMs);
 
-  // Find users who have email notifications enabled and scanned in the last 2 weeks
   const settings = await prisma.notificationSetting.findMany({
-    where: { emailOnComplete: true, emailDigest: { in: ['weekly', 'daily'] } },
+    where: { emailOnComplete: true, emailDigest: frequency },
     select: { userId: true },
   });
 
