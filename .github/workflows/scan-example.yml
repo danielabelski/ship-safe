@@ -17,13 +17,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Ship Safe Security Scan
-        id: scan
-        uses: asamassekou10/ship-safe-action@v1
+      - uses: actions/setup-node@v4
         with:
-          threshold: 70
-          fail-on-secrets: 'true'
-          sarif: results.sarif
+          node-version: '20'
+
+      - name: Ship Safe Security Scan
+        run: |
+          set +e
+          npx --yes ship-safe@latest ci . \
+            --threshold 70 \
+            --json \
+            --no-ai \
+            --sarif results.sarif
+          EXIT_CODE=$?
+          set -e
+          exit $EXIT_CODE
 
       - name: Upload SARIF to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v4
