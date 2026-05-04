@@ -27,7 +27,6 @@ jobs:
           npx --yes ship-safe@latest ci . \
             --threshold 70 \
             --json \
-            --no-ai \
             --sarif results.sarif
           EXIT_CODE=$?
           set -e
