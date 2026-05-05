@@ -54,7 +54,7 @@ export interface ContentAgentResult {
   };
 }
 
-const DEFAULT_MAX_ITEMS = 8;
+const DEFAULT_MAX_ITEMS = 10;
 const DEFAULT_MIN_SCORE = 24;
 
 export const defaultContentAgentConfig: ContentAgentConfig = {
@@ -71,6 +71,13 @@ export const defaultContentAgentConfig: ContentAgentConfig = {
     'secrets scanning',
     'Vercel security',
     'developer security',
+    'zero-day',
+    'CVE',
+    'data exposure',
+    'MCP server',
+    'AI app',
+    'npm package',
+    'PyPI package',
   ],
   competitorKeywords: ['Snyk', 'Semgrep', 'GitGuardian', 'Socket', 'Wiz', 'Aikido'],
   painPointKeywords: [
@@ -82,31 +89,71 @@ export const defaultContentAgentConfig: ContentAgentConfig = {
     'compromised token',
     'CI/CD',
     'OAuth scopes',
+    'data exposure',
+    'zero-day',
+    'CVE',
+    'ransomware',
   ],
   sources: [
     {
-      id: 'hn-security',
+      id: 'hn-ai-security-news',
       type: 'hackernews',
       url: 'https://hn.algolia.com/api/v1/search_by_date?query=AI%20security%20OR%20supply%20chain%20security&tags=story',
-      weight: 1.05,
+      weight: 1.2,
+    },
+    {
+      id: 'hn-agent-mcp-security',
+      type: 'hackernews',
+      url: 'https://hn.algolia.com/api/v1/search_by_date?query=prompt%20injection%20OR%20MCP%20security%20OR%20AI%20agent%20security&tags=story',
+      weight: 1.25,
+    },
+    {
+      id: 'bleepingcomputer-security-rss',
+      type: 'rss',
+      url: 'https://www.bleepingcomputer.com/feed/',
+      weight: 1.2,
+    },
+    {
+      id: 'the-hacker-news-rss',
+      type: 'rss',
+      url: 'https://feeds.feedburner.com/TheHackersNews',
+      weight: 1.15,
+    },
+    {
+      id: 'securityweek-rss',
+      type: 'rss',
+      url: 'https://www.securityweek.com/feed/',
+      weight: 1.1,
     },
     {
       id: 'google-security-rss',
       type: 'rss',
       url: 'https://blog.google/technology/safety-security/rss/',
-      weight: 1,
+      weight: 0.95,
     },
     {
       id: 'github-blog-security-rss',
       type: 'rss',
       url: 'https://github.blog/security/feed/',
-      weight: 1.15,
+      weight: 0.85,
     },
     {
-      id: 'reddit-netsec',
+      id: 'reddit-netsec-new',
       type: 'reddit',
-      url: 'https://www.reddit.com/r/netsec/hot.json?limit=15',
-      weight: 0.9,
+      url: 'https://www.reddit.com/r/netsec/new.json?limit=20',
+      weight: 1.1,
+    },
+    {
+      id: 'reddit-cybersecurity-new',
+      type: 'reddit',
+      url: 'https://www.reddit.com/r/cybersecurity/new.json?limit=20',
+      weight: 1.05,
+    },
+    {
+      id: 'reddit-localllama-new',
+      type: 'reddit',
+      url: 'https://www.reddit.com/r/LocalLLaMA/new.json?limit=20',
+      weight: 0.95,
     },
   ],
   maxItemsPerSource: DEFAULT_MAX_ITEMS,
@@ -180,7 +227,10 @@ async function discoverItems(config: ContentAgentConfig): Promise<DiscoveredItem
   const settled = await Promise.allSettled(
     config.sources.map(async (source) => {
       const res = await fetch(source.url, {
-        headers: source.type === 'reddit' ? { 'User-Agent': 'ship-safe-content-agent/0.1' } : undefined,
+        headers: {
+          'Accept': source.type === 'rss' ? 'application/rss+xml, application/xml, text/xml, */*' : 'application/json, text/html, */*',
+          'User-Agent': 'ship-safe-content-agent/0.1 by gitskinspro@gmail.com',
+        },
         next: { revalidate: 1800 },
       });
 
@@ -317,12 +367,23 @@ function scoreItems(items: DiscoveredItem[], config: ContentAgentConfig): Scored
       }
 
       const ageDays = item.publishedAt ? (Date.now() - new Date(item.publishedAt).getTime()) / 86_400_000 : 7;
-      if (ageDays <= 2) {
-        score += 14;
-        reasons.push('Published in the last 48 hours');
+      if (ageDays <= 1) {
+        score += 30;
+        reasons.push('Published in the last 24 hours');
+      } else if (ageDays <= 3) {
+        score += 22;
+        reasons.push('Published in the last 72 hours');
+      } else if (ageDays <= 7) {
+        score += 15;
+        reasons.push('Published this week');
       } else if (ageDays <= 14) {
         score += 8;
         reasons.push('Published in the last two weeks');
+      }
+
+      if (item.sourceType === 'reddit' || item.sourceType === 'hackernews') {
+        score += 6;
+        reasons.push('Has social discussion signal');
       }
 
       if ((item.engagement ?? 0) > 50) {
@@ -390,6 +451,16 @@ The signal from the source material is:
 
 - ${topic.reasons.join('\n- ')}
 
+## What Happened
+
+The source material points to a fresh security-relevant story or discussion that intersects with AI-assisted software delivery. The important part is not only the headline. It is the operational pattern underneath it: new integrations, new automation paths, new package dependencies, or new ways credentials and trust boundaries can be exposed.
+
+Teams should verify the details against the linked sources before treating this as confirmed incident reporting. If the source is Reddit or Hacker News, treat it as an early signal that may deserve monitoring, not as final proof.
+
+## Why This Is Timely
+
+Security content performs best when it helps builders understand a risk while it is still current. This topic earned a spot because it is recent, relevant to AI or software supply-chain risk, and connected to the kinds of mistakes that spread quickly in SaaS teams: broad OAuth scopes, token reuse, automation with write permissions, unreviewed agent tools, and dependency trust.
+
 ## What Teams Should Check
 
 - Review integrations that can read secrets, deployment metadata, source code, or customer data
@@ -397,6 +468,8 @@ The signal from the source material is:
 - Confirm webhook receivers verify signatures before triggering downstream agent workflows
 - Audit CI jobs that run AI tools with write permissions
 - Rotate credentials when an upstream tool or identity provider may have been involved
+- Watch social channels and project issue trackers for follow-up reports, patches, or maintainer clarifications
+- Capture what changed in your own environment this week: new apps, new GitHub permissions, new MCP servers, new packages, and new deployment tokens
 
 ## How Ship Safe Helps
 
@@ -423,12 +496,12 @@ async function draftWithOpenAI(topic: ScoredItem, supportingSources: ScoredItem[
       input: [
         {
           role: 'system',
-          content: 'You are a careful B2B SaaS security editor. Return only valid JSON. Do not invent citations, quotes, dates, or claims.',
+          content: 'You are a careful B2B SaaS security editor. Return only valid JSON. Write substantial 1,200-1,600 word drafts when source material supports it. Do not invent citations, quotes, dates, or claims.',
         },
         {
           role: 'user',
           content: JSON.stringify({
-            task: 'Draft a concise, source-cited blog post in the provided schema.',
+            task: 'Draft a timely, source-cited blog post in the provided schema.',
             brand: config.brandName,
             audience: config.audience,
             productUrl: config.productUrl,
@@ -444,6 +517,12 @@ async function draftWithOpenAI(topic: ScoredItem, supportingSources: ScoredItem[
               keywords: ['6-12 SEO strings'],
               content: 'markdown body with a Sources section linking every factual source used',
             },
+            editorialRequirements: [
+              'Lead with the same-day or this-week news angle.',
+              'Include What Happened, Why It Matters, What Teams Should Check, and Sources sections.',
+              'Treat Reddit/Hacker News as social signal, not confirmed fact.',
+              'Make the draft practical for SaaS founders and developers.',
+            ],
           }),
         },
       ],
