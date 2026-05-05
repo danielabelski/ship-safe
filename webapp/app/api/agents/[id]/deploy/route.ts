@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 
 type Params = { params: Promise<{ id: string }> };
 
+export const maxDuration = 60;
+
 const ORCHESTRATOR_URL    = process.env.ORCHESTRATOR_URL;
 const ORCHESTRATOR_SECRET = process.env.ORCHESTRATOR_SECRET;
 const SUBDOMAIN_BASE      = process.env.VPS_SUBDOMAIN_BASE || 'agents.shipsafecli.com';
@@ -87,7 +89,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
         maxDepth:       agent.maxDepth,
         envVars:        agent.envVars,
       }),
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(55_000),
     });
 
     if (!orchRes.ok) {
