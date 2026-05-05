@@ -46,19 +46,22 @@ export default async function IntelligencePage() {
 
   const highCount = items.filter((item) => item.urgency === 'critical' || item.urgency === 'high').length;
   const latestRun = runs[0];
+  const topItem = items[0];
+  const watchCount = items.filter((item) => item.urgency === 'watch').length;
 
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <div>
+        <div className={styles.headerText}>
+          <span className={styles.eyebrow}>Threat-informed workflow</span>
           <h1>Security Intelligence</h1>
-          <p className={styles.subtitle}>Fresh security news mapped to what Ship Safe can help you check now.</p>
+          <p className={styles.subtitle}>Fresh security news, social chatter, and advisories mapped to the checks Ship Safe can run for your stack.</p>
         </div>
         <RunIntelligenceButton />
       </header>
 
       <section className={styles.statsRow}>
-        <div className={styles.stat}>
+        <div className={`${styles.stat} ${styles.statHot}`}>
           <span className={styles.statValue}>{items.length}</span>
           <span className={styles.statLabel}>Active items</span>
         </div>
@@ -67,8 +70,8 @@ export default async function IntelligencePage() {
           <span className={styles.statLabel}>High urgency</span>
         </div>
         <div className={styles.stat}>
-          <span className={styles.statValue}>{repos}</span>
-          <span className={styles.statLabel}>Known repos</span>
+          <span className={styles.statValue}>{watchCount}</span>
+          <span className={styles.statLabel}>Watch list</span>
         </div>
         <div className={styles.stat}>
           <span className={styles.statValue}>{latestRun ? timeAgo(latestRun.createdAt) : 'Never'}</span>
@@ -76,13 +79,15 @@ export default async function IntelligencePage() {
         </div>
       </section>
 
-      {latestScan && (
-        <section className={styles.contextBand}>
-          <span>Context:</span>
-          <strong>{latestScan.repo}</strong>
-          <span>score {latestScan.score ?? 'n/a'}</span>
-          <span>{latestScan.secrets} secrets</span>
-          <span>{latestScan.vulns + latestScan.cves} dependency signals</span>
+      {topItem && (
+        <section className={styles.leadSignal}>
+          <div className={styles.leadMeta}>
+            <span className={`${styles.urgency} ${styles[`urgency_${topItem.urgency}`] ?? ''}`}>{topItem.urgency}</span>
+            <span>{topItem.score}/100</span>
+            <span>{topItem.sourceType} · {timeAgo(topItem.publishedAt ?? topItem.createdAt)}</span>
+          </div>
+          <a href={topItem.url} target="_blank" rel="noreferrer">{topItem.title}</a>
+          <p>{topItem.excerpt || asStringArray(topItem.reasons)[0] || 'Highest ranked signal from the latest intelligence run.'}</p>
         </section>
       )}
 
@@ -90,7 +95,7 @@ export default async function IntelligencePage() {
         <div className={styles.feed}>
           <div className={styles.sectionHeader}>
             <h2>Today’s Signals</h2>
-            <Link href="/app/scan" className={styles.secondaryLink}>Run scan</Link>
+            <span>{items.length ? `${items.length} ranked by urgency and relevance` : 'No active signals'}</span>
           </div>
 
           {items.length === 0 ? (
@@ -113,6 +118,9 @@ export default async function IntelligencePage() {
                 </div>
                 <a href={item.url} target="_blank" rel="noreferrer" className={styles.title}>{item.title}</a>
                 <p>{item.excerpt || reasons[0] || 'Fresh security signal discovered from monitored sources.'}</p>
+                {reasons.length > 0 && (
+                  <div className={styles.reasonLine}>{reasons[0]}</div>
+                )}
                 <div className={styles.pillRow}>
                   {riskTypes.slice(0, 4).map((risk) => <span key={risk}>{risk}</span>)}
                   {affectedAreas.slice(0, 4).map((area) => <span key={area}>{area}</span>)}
@@ -126,6 +134,31 @@ export default async function IntelligencePage() {
         </div>
 
         <aside className={styles.side}>
+          <div className={styles.panel}>
+            <h2>Recommended Next</h2>
+            <div className={styles.actionStack}>
+              <Link href="/app/scan">Run a targeted scan</Link>
+              <Link href="/app/findings">Review open findings</Link>
+              <Link href="/app/agents">Check agent configs</Link>
+            </div>
+          </div>
+
+          <div className={styles.panel}>
+            <h2>Your Context</h2>
+            <div className={styles.contextList}>
+              <span><strong>{repos}</strong> monitored repos</span>
+              {latestScan ? (
+                <>
+                  <span><strong>{latestScan.repo}</strong> latest scan</span>
+                  <span><strong>{latestScan.score ?? 'n/a'}</strong> security score</span>
+                  <span><strong>{latestScan.secrets}</strong> secrets · <strong>{latestScan.vulns + latestScan.cves}</strong> dependency signals</span>
+                </>
+              ) : (
+                <span>No completed scans yet</span>
+              )}
+            </div>
+          </div>
+
           <div className={styles.panel}>
             <h2>Run History</h2>
             {runs.length === 0 ? (
@@ -141,7 +174,7 @@ export default async function IntelligencePage() {
 
           <div className={styles.panel}>
             <h2>What This Uses</h2>
-            <p>News RSS, Reddit, Hacker News, vendor blogs, your recent scans, monitored repos, and configured agents.</p>
+            <p>News RSS, Reddit, Hacker News, vendor blogs, recent scans, monitored repos, and configured agents.</p>
           </div>
         </aside>
       </section>
