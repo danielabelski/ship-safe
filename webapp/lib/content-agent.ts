@@ -162,8 +162,7 @@ export const defaultContentAgentConfig: ContentAgentConfig = {
 
 export async function runContentAgent(config: Partial<ContentAgentConfig> = {}): Promise<ContentAgentResult> {
   const resolved = mergeConfig(config);
-  const discovered = await discoverItems(resolved);
-  const ranked = scoreItems(discovered, resolved).sort((a, b) => b.score - a.score);
+  const { discovered, ranked } = await discoverRankedItems(resolved);
   const scored = ranked.filter((item) => item.score >= (resolved.minScore ?? DEFAULT_MIN_SCORE));
 
   const selected = pickTopic(scored) ?? ranked[0];
@@ -210,6 +209,13 @@ export async function runContentAgent(config: Partial<ContentAgentConfig> = {}):
     guardrails,
     cms,
   };
+}
+
+export async function discoverRankedItems(config: Partial<ContentAgentConfig> = {}) {
+  const resolved = mergeConfig(config);
+  const discovered = await discoverItems(resolved);
+  const ranked = scoreItems(discovered, resolved).sort((a, b) => b.score - a.score);
+  return { config: resolved, discovered, ranked };
 }
 
 function mergeConfig(config: Partial<ContentAgentConfig>): ContentAgentConfig {

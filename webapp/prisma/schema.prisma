@@ -27,6 +27,8 @@ model User {
   agentTeams    AgentTeam[]
   contentAgentRuns ContentAgentRun[]
   contentDrafts ContentDraft[]
+  intelligenceRuns IntelligenceRun[]
+  intelligenceItems IntelligenceItem[]
   llmSettings   Json?     // { provider, model, think, apiKeys: { DEEPSEEK_API_KEY, OPENAI_API_KEY, ... } }
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -542,4 +544,53 @@ model ContentDraft {
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([status, createdAt(sort: Desc)])
+}
+
+// ── Security Intelligence ───────────────────────────────
+
+model IntelligenceRun {
+  id             String             @id @default(cuid())
+  userId         String
+  status         String             @default("running") // running | completed | error
+  sourceCount    Int                @default(0)
+  candidateCount Int                @default(0)
+  selectedCount  Int                @default(0)
+  error          String?            @db.Text
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items          IntelligenceItem[]
+  createdAt      DateTime           @default(now())
+  completedAt    DateTime?
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+}
+
+model IntelligenceItem {
+  id                 String           @id @default(cuid())
+  userId             String
+  runId              String?
+  title              String
+  url                String
+  sourceId           String
+  sourceType         String
+  excerpt            String           @db.Text
+  publishedAt        DateTime?
+  engagement         Int?
+  score              Int
+  urgency            String           @default("watch") // critical | high | medium | watch
+  confidence         String           @default("medium") // high | medium | low
+  riskTypes          Json             @default("[]")
+  affectedAreas      Json             @default("[]")
+  recommendedActions Json             @default("[]")
+  reasons            Json             @default("[]")
+  status             String           @default("new") // new | dismissed | watched | acted
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  run                IntelligenceRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@unique([userId, url])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, score])
+  @@index([runId])
 }
