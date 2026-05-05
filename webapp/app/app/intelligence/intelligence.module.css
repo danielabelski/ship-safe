@@ -3,6 +3,7 @@
   flex-direction: column;
   gap: 1.15rem;
   max-width: 1180px;
+  padding: 2rem;
 }
 
 .header {
@@ -344,5 +345,11 @@
 
   .runControl {
     justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 1.25rem;
   }
 }
