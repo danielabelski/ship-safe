@@ -109,6 +109,22 @@ function scoreColor(n: number) {
   return 'var(--red)';
 }
 
+async function readJsonResponse<T>(res: Response, fallback: string): Promise<T> {
+  const contentType = res.headers.get('content-type') ?? '';
+  const text = await res.text();
+
+  if (!contentType.includes('application/json')) {
+    const preview = text.replace(/\s+/g, ' ').slice(0, 220);
+    throw new Error(`${fallback}: server returned ${res.status} ${contentType || 'unknown content-type'} instead of JSON. Preview: ${preview}`);
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(`${fallback}: server returned invalid JSON.`);
+  }
+}
+
 const SUBDOMAIN_BASE = process.env.NEXT_PUBLIC_SUBDOMAIN_BASE || 'agents.shipsafecli.com';
 
 export default function AgentDetailPage() {
@@ -268,7 +284,7 @@ export default function AgentDetailPage() {
     setDeploying(true);
     try {
       const res = await fetch(`/api/agents/${id}/deploy`, { method: 'POST' });
-      const data = await res.json();
+      const data = await readJsonResponse<{ error?: string }>(res, 'Deploy failed');
       if (!res.ok) throw new Error(data.error || 'Deploy failed');
       await load();
     } catch (e) {
