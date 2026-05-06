@@ -139,22 +139,92 @@
 }
 
 .productPreview {
+  position: relative;
   border: 1px solid var(--border);
   border-radius: 8px;
   background:
     linear-gradient(180deg, rgba(8, 145, 178, 0.06), transparent 34%),
     var(--bg-card);
   box-shadow: var(--shadow-lg);
-  padding: 1rem;
+  overflow: hidden;
+  padding: 0.7rem;
 }
 
-.previewTop,
+.browserBar,
 .findingRow,
 .consoleHeader {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
+}
+
+.browserBar {
+  gap: 0.42rem;
+  border-bottom: 1px solid var(--border);
+  padding: 0.15rem 0.25rem 0.7rem;
+}
+
+.browserBar span {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--border-hover);
+}
+
+.browserBar strong {
+  margin-left: 0.35rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.heroScreenshot {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2458 / 1280;
+  object-fit: cover;
+  object-position: top left;
+  border-radius: 6px;
+  margin-top: 0.7rem;
+}
+
+.heroOverlay {
+  position: absolute;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  display: grid;
+  max-width: 330px;
+  gap: 0.32rem;
+  border: 1px solid rgba(8, 145, 178, 0.28);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+  box-shadow: var(--shadow-md);
+  padding: 0.95rem;
+}
+
+.heroOverlay span,
+.mediaPanel span,
+.productShot span {
+  color: var(--cyan);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.heroOverlay strong,
+.mediaPanel strong {
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.heroOverlay p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
 }
 
 .previewTop {
@@ -488,6 +558,78 @@
   font-size: 0.88rem;
 }
 
+.mediaPanel,
+.videoFrame,
+.productShot {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.mediaPanel {
+  align-self: center;
+}
+
+.mediaPanel img,
+.productShot img,
+.videoFrame video {
+  display: block;
+  width: 100%;
+  background: var(--bg-elevated);
+}
+
+.mediaPanel img {
+  aspect-ratio: 2864 / 1392;
+  object-fit: cover;
+  object-position: top left;
+}
+
+.mediaPanel div {
+  display: grid;
+  gap: 0.28rem;
+  padding: 1rem;
+}
+
+.productGallery {
+  display: grid;
+  width: min(1180px, calc(100% - 3rem));
+  margin: 0 auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  padding: 0 0 4.5rem;
+}
+
+.productShot img {
+  aspect-ratio: 2.08 / 1;
+  object-fit: cover;
+  object-position: top left;
+}
+
+.productShot div {
+  display: grid;
+  gap: 0.4rem;
+  padding: 1rem;
+}
+
+.productShot h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.productShot p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.videoFrame video {
+  aspect-ratio: 16 / 9;
+}
+
 .intelligenceSpotlight {
   padding: 4.5rem 0;
   background: var(--bg-elevated);
@@ -590,6 +732,17 @@
   box-shadow: inset 0 0 0 1px rgba(8, 145, 178, 0.12);
 }
 
+.cliPreview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1028 / 725;
+  object-fit: cover;
+  object-position: top left;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+}
+
 .finalCta {
   display: grid;
   justify-items: center;
@@ -637,6 +790,7 @@
   .pricingSection,
   .finalCta,
   .coverageStrip,
+  .productGallery,
   .proofBand {
     width: min(100% - 2rem, 1180px);
   }
@@ -663,12 +817,19 @@
   .workflowGrid,
   .compareGrid,
   .priceCards,
+  .productGallery,
   .proofBand {
     grid-template-columns: 1fr;
   }
 
   .productPreview {
     padding: 0.75rem;
+  }
+
+  .heroOverlay {
+    position: static;
+    max-width: none;
+    margin-top: 0.75rem;
   }
 
   .scorePanel {

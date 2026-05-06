@@ -274,3 +274,6 @@ CONTEXT.md
 !webapp/**/*.html
 !webapp/public/**
 !.github/assets/*.gif
+
+# Local source capture is too large for GitHub; homepage uses the smaller MOV demo.
+webapp/public/demo ship-safe intelligence.mp4

@@ -30,11 +30,27 @@ const workflows = [
   },
 ];
 
-const signals = [
-  { name: 'Exposed token pattern', value: 'Critical', tone: 'critical' },
-  { name: 'Docker CVE advisory', value: 'High', tone: 'high' },
-  { name: 'MCP server over HTTP', value: 'High', tone: 'high' },
-  { name: 'RAG poisoning surface', value: 'Medium', tone: 'medium' },
+const productShots = [
+  {
+    title: 'Scan results',
+    copy: 'Prioritized findings, severity, confidence, and the context your team needs to fix the issue.',
+    src: '/scan%20result.png',
+  },
+  {
+    title: 'Security Intelligence',
+    copy: 'Fresh advisories and social signals ranked against your own repos, scans, and agents.',
+    src: '/app%20intelligence.png',
+  },
+  {
+    title: 'Hermes agent teams',
+    copy: 'Custom agents for deploy checks, monitoring, investigation, and security workflows.',
+    src: '/Agent%20Team.png',
+  },
+  {
+    title: 'PR Guardian',
+    copy: 'Review pull requests before risky code, secrets, or config changes reach production.',
+    src: '/PR%20Guardian.png',
+  },
 ];
 
 export default function HomeRedesign({ stars, downloads }: HomeRedesignProps) {
@@ -59,50 +75,22 @@ export default function HomeRedesign({ stars, downloads }: HomeRedesignProps) {
             </div>
           </div>
 
-          <div className={styles.productPreview} data-animate="right" aria-label="Ship Safe product preview">
-            <div className={styles.previewTop}>
-              <div>
-                <span>ship-safe dashboard</span>
-                <strong>Production API</strong>
-              </div>
-              <span className={styles.livePill}>Live scan</span>
+          <div className={styles.productPreview} data-animate="right" aria-label="Ship Safe dashboard screenshot">
+            <div className={styles.browserBar}>
+              <span />
+              <span />
+              <span />
+              <strong>shipsafecli.com/app</strong>
             </div>
-            <div className={styles.scorePanel}>
-              <div>
-                <span className={styles.panelLabel}>Security score</span>
-                <strong>82</strong>
-              </div>
-              <div className={styles.scoreRing} aria-hidden="true">
-                <span />
-              </div>
-            </div>
-            <div className={styles.previewGrid}>
-              <div className={styles.metricCard}>
-                <span>Critical</span>
-                <strong>2</strong>
-              </div>
-              <div className={styles.metricCard}>
-                <span>Fixes ready</span>
-                <strong>7</strong>
-              </div>
-              <div className={styles.metricCard}>
-                <span>Agents</span>
-                <strong>4</strong>
-              </div>
-            </div>
-            <div className={styles.findingList}>
-              {signals.map((signal) => (
-                <div key={signal.name} className={styles.findingRow}>
-                  <span className={`${styles.severityDot} ${styles[signal.tone]}`} />
-                  <span>{signal.name}</span>
-                  <strong>{signal.value}</strong>
-                </div>
-              ))}
-            </div>
-            <div className={styles.intelCard}>
+            <img
+              src="/Dashboard.png"
+              alt="Ship Safe dashboard showing scans, findings, and security status"
+              className={styles.heroScreenshot}
+            />
+            <div className={styles.heroOverlay}>
               <span>Security Intelligence</span>
-              <strong>New vendor advisory matches your dependency graph.</strong>
-              <p>Recommended next: run a targeted scan and review open findings.</p>
+              <strong>New advisory matches your app context.</strong>
+              <p>Run a targeted scan, review open findings, and rotate affected credentials.</p>
             </div>
           </div>
         </div>
@@ -146,21 +134,25 @@ export default function HomeRedesign({ stars, downloads }: HomeRedesignProps) {
             <li>Hermes agents for monitoring, deploy checks, and custom security workflows.</li>
           </ul>
         </div>
-        <div className={styles.consoleMock} data-animate="right">
-          <div className={styles.consoleHeader}>
+        <div className={styles.mediaPanel} data-animate="right">
+          <img src="/app%20intelligence.png" alt="Ship Safe Security Intelligence page" />
+          <div>
             <span>Intelligence run</span>
-            <strong>Today</strong>
-          </div>
-          <div className={styles.consoleBody}>
-            <div className={styles.consoleLine}><span>01</span><code>collect: advisories, vendor blogs, reddit, hn</code></div>
-            <div className={styles.consoleLine}><span>02</span><code>match: repos, scans, dependencies, agents</code></div>
-            <div className={styles.consoleLine}><span>03</span><code>rank: urgency, relevance, confidence</code></div>
-            <div className={styles.consoleResult}>
-              <strong>12 relevant signals</strong>
-              <p>3 high urgency items need review before your next release.</p>
-            </div>
+            <strong>12 relevant signals ranked by urgency and relevance.</strong>
           </div>
         </div>
+      </section>
+
+      <section className={styles.productGallery} aria-label="Ship Safe product screenshots">
+        {productShots.map((shot) => (
+          <article key={shot.title} className={styles.productShot} data-animate>
+            <img src={shot.src} alt={`${shot.title} screenshot`} />
+            <div>
+              <h3>{shot.title}</h3>
+              <p>{shot.copy}</p>
+            </div>
+          </article>
+        ))}
       </section>
 
       <section className={styles.intelligenceSpotlight}>
@@ -173,10 +165,15 @@ export default function HomeRedesign({ stars, downloads }: HomeRedesignProps) {
               signals into ranked next steps for your own application.
             </p>
           </div>
-          <div className={styles.signalStack} data-animate>
-            <div><span>Fresh signal</span><strong>OAuth token leakage pattern trending today</strong></div>
-            <div><span>Why it matters</span><strong>Your latest scan found two token-like secrets.</strong></div>
-            <div><span>Next step</span><strong>Run a targeted scan, rotate affected credentials, review findings.</strong></div>
+          <div className={styles.videoFrame} data-animate>
+            <video
+              src="/demo%20app%20intelligence.mov"
+              controls
+              muted
+              playsInline
+              preload="metadata"
+              poster="/app%20intelligence.png"
+            />
           </div>
         </div>
       </section>
@@ -237,6 +234,7 @@ export default function HomeRedesign({ stars, downloads }: HomeRedesignProps) {
             <h3>Free CLI</h3>
             <strong>$0</strong>
             <p>Local scans, CI checks, security score, secrets, dependencies, and core app security coverage.</p>
+            <img src="/demo-cli.gif" alt="Ship Safe CLI demo" className={styles.cliPreview} />
           </div>
           <div className={`${styles.priceCard} ${styles.priceFeatured}`} data-animate>
             <h3>Cloud dashboard</h3>
