@@ -73,6 +73,11 @@ export default function HomeRedesign({ stars, downloads }: HomeRedesignProps) {
               <span>$</span>
               <code>npx ship-safe scan</code>
             </div>
+            <div className={styles.liveRail} aria-label="Live Ship Safe signals">
+              <span><i /> Scanning secrets</span>
+              <span><i /> Ranking advisories</span>
+              <span><i /> Watching agents</span>
+            </div>
           </div>
 
           <div className={styles.productPreview} data-animate="right" aria-label="Ship Safe dashboard screenshot">

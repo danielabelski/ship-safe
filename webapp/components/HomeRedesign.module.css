@@ -4,6 +4,19 @@
   overflow: hidden;
 }
 
+.page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(115deg, transparent 0 42%, rgba(8, 145, 178, 0.07) 48%, transparent 54% 100%),
+    linear-gradient(180deg, rgba(8, 145, 178, 0.04), transparent 28rem);
+  background-size: 220% 100%, 100% 100%;
+  animation: ambientSweep 16s ease-in-out infinite alternate;
+}
+
 .hero {
   padding: 5rem 0 2rem;
 }
@@ -30,6 +43,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 1.15rem;
+  animation: heroRise 0.7s ease both;
 }
 
 .kicker {
@@ -92,13 +106,17 @@
   padding: 0.75rem 1.1rem;
   font-size: 0.93rem;
   font-weight: 800;
+  position: relative;
+  overflow: hidden;
   text-decoration: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease;
 }
 
 .primaryCta {
   border: 1px solid var(--cyan);
   background: var(--cyan);
   color: #001014;
+  box-shadow: 0 12px 30px rgba(8, 145, 178, 0.18);
 }
 
 .secondaryCta {
@@ -113,6 +131,19 @@
   transform: translateY(-1px);
 }
 
+.primaryCta::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 0 34%, rgba(255, 255, 255, 0.42) 48%, transparent 62% 100%);
+  transform: translateX(-140%);
+  transition: transform 0.45s ease;
+}
+
+.primaryCta:hover::after {
+  transform: translateX(140%);
+}
+
 .installBox {
   display: inline-flex;
   max-width: 100%;
@@ -124,6 +155,12 @@
   color: var(--text);
   padding: 0.85rem 1rem;
   box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.installBox:hover {
+  border-color: rgba(8, 145, 178, 0.35);
+  transform: translateY(-1px);
 }
 
 .installBox span {
@@ -138,6 +175,39 @@
   white-space: nowrap;
 }
 
+.liveRail {
+  display: flex;
+  max-width: 100%;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.liveRail span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-card) 88%, transparent);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+  padding: 0.38rem 0.62rem;
+  animation: railPop 0.5s ease both;
+}
+
+.liveRail span:nth-child(2) { animation-delay: 0.12s; }
+.liveRail span:nth-child(3) { animation-delay: 0.24s; }
+
+.liveRail i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--green);
+  box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.45);
+  animation: pulseStatus 1.8s ease-in-out infinite;
+}
+
 .productPreview {
   position: relative;
   border: 1px solid var(--border);
@@ -148,6 +218,25 @@
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   padding: 0.7rem;
+  transform-origin: center;
+  animation: previewEnter 0.9s 0.12s ease both, previewFloat 8s 1.1s ease-in-out infinite;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.productPreview:hover {
+  border-color: rgba(8, 145, 178, 0.36);
+  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(8, 145, 178, 0.18);
+  transform: translateY(-3px);
+}
+
+.productPreview::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 0 8%, rgba(34, 211, 238, 0.12) 10%, transparent 12% 100%);
+  transform: translateY(-100%);
+  animation: scanSweep 6s ease-in-out infinite;
 }
 
 .browserBar,
@@ -187,6 +276,12 @@
   object-position: top left;
   border-radius: 6px;
   margin-top: 0.7rem;
+  transform: scale(1.01);
+  transition: transform 0.45s ease;
+}
+
+.productPreview:hover .heroScreenshot {
+  transform: scale(1.035);
 }
 
 .heroOverlay {
@@ -201,6 +296,7 @@
   background: color-mix(in srgb, var(--bg-card) 92%, transparent);
   box-shadow: var(--shadow-md);
   padding: 0.95rem;
+  animation: alertFloat 4.5s ease-in-out infinite;
 }
 
 .heroOverlay span,
@@ -406,6 +502,14 @@
   font-size: 0.84rem;
   font-weight: 700;
   padding: 0.45rem 0.75rem;
+  transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.coverageStrip span:hover {
+  border-color: rgba(8, 145, 178, 0.35);
+  background: rgba(8, 145, 178, 0.08);
+  color: var(--text);
+  transform: translateY(-2px);
 }
 
 .section {
@@ -443,6 +547,17 @@
 .workflowCard {
   display: grid;
   gap: 0.8rem;
+  transition: border-color 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease;
+}
+
+.workflowCard:hover,
+.compareCard:hover,
+.priceCard:hover,
+.productShot:hover,
+.mediaPanel:hover {
+  border-color: rgba(8, 145, 178, 0.32);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-3px);
 }
 
 .workflowCard h3,
@@ -566,6 +681,7 @@
   background: var(--bg-card);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
+  transition: border-color 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease;
 }
 
 .mediaPanel {
@@ -578,6 +694,13 @@
   display: block;
   width: 100%;
   background: var(--bg-elevated);
+  transition: transform 0.55s ease, filter 0.55s ease;
+}
+
+.mediaPanel:hover img,
+.productShot:hover img {
+  filter: saturate(1.08) contrast(1.04);
+  transform: scale(1.035);
 }
 
 .mediaPanel img {
@@ -661,6 +784,7 @@
   border-radius: 8px;
   background: var(--bg-card);
   padding: 1rem;
+  transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
 .signalStack strong {
@@ -718,6 +842,7 @@
 .priceCard {
   display: grid;
   gap: 0.75rem;
+  transition: border-color 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease;
 }
 
 .priceCard strong {
@@ -741,6 +866,47 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--bg-elevated);
+}
+
+@keyframes ambientSweep {
+  from { background-position: 0% 0, 0 0; opacity: 0.75; }
+  to { background-position: 100% 0, 0 0; opacity: 1; }
+}
+
+@keyframes heroRise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes previewEnter {
+  from { opacity: 0; transform: translateY(20px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes previewFloat {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -8px; }
+}
+
+@keyframes scanSweep {
+  0%, 45% { transform: translateY(-110%); opacity: 0; }
+  55% { opacity: 1; }
+  100% { transform: translateY(110%); opacity: 0; }
+}
+
+@keyframes alertFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes pulseStatus {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.38); opacity: 1; }
+  50% { box-shadow: 0 0 0 5px rgba(22, 163, 74, 0); opacity: 0.72; }
+}
+
+@keyframes railPop {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
 }
 
 .finalCta {
@@ -824,6 +990,7 @@
 
   .productPreview {
     padding: 0.75rem;
+    animation: previewEnter 0.7s 0.08s ease both;
   }
 
   .heroOverlay {
@@ -843,5 +1010,33 @@
   .consoleLine {
     grid-template-columns: 1fr;
     gap: 0.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page::before,
+  .heroCopy,
+  .liveRail span,
+  .liveRail i,
+  .productPreview,
+  .productPreview::after,
+  .heroOverlay {
+    animation: none !important;
+  }
+
+  .primaryCta,
+  .secondaryCta,
+  .installBox,
+  .productPreview,
+  .heroScreenshot,
+  .coverageStrip span,
+  .workflowCard,
+  .compareCard,
+  .priceCard,
+  .productShot,
+  .mediaPanel,
+  .mediaPanel img,
+  .productShot img {
+    transition: none !important;
   }
 }
