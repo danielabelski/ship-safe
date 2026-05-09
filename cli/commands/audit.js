@@ -923,7 +923,7 @@ function outputSARIF(findings, rootPath) {
 
 // Walk up from `start` looking for `name`. Returns the absolute path or null.
 // Bounded to 8 ancestors to avoid runaway loops on weird filesystems.
-function findUpwards(start, name) {
+export function findUpwards(start, name) {
   let dir = path.resolve(start);
   for (let i = 0; i < 8; i++) {
     const candidate = path.join(dir, name);

@@ -95,7 +95,7 @@ export async function undoCommand(targetPath = '.', options = {}) {
   }
 }
 
-function reverseEntry(root, entry) {
+export function reverseEntry(root, entry) {
   const plan = entry.plan;
   if (!plan || !Array.isArray(plan.files) || plan.files.length === 0) {
     throw new Error('entry has no plan to reverse');

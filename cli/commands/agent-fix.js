@@ -448,7 +448,7 @@ RULES:
   return { ok: true, plan };
 }
 
-function parseJsonLoose(response) {
+export function parseJsonLoose(response) {
   if (!response) return null;
   const cleaned = response.trim()
     .replace(/^```(?:json)?\s*/i, '')
@@ -465,7 +465,7 @@ function parseJsonLoose(response) {
   }
 }
 
-function windowFileContent(content, line) {
+export function windowFileContent(content, line) {
   if (content.length <= 8000) return content;
   if (!line) return content.slice(0, 8000);
   const lines = content.split('\n');
@@ -478,7 +478,7 @@ function windowFileContent(content, line) {
 // PLAN VALIDATION
 // =============================================================================
 
-function validatePlan(root, plan) {
+export function validatePlan(root, plan) {
   if (!Array.isArray(plan.files) || plan.files.length === 0) {
     return { ok: false, reason: 'no files in plan' };
   }
@@ -541,7 +541,7 @@ function validatePlan(root, plan) {
 
 // Try exact match first, then whitespace-normalized match if exact misses.
 // Returns { kind: 'unique'|'ambiguous'|'missing', matched, count }
-function locateFindString(haystack, needle) {
+export function locateFindString(haystack, needle) {
   const exact = countOccurrences(haystack, needle);
   if (exact === 1) return { kind: 'unique', matched: needle, count: 1 };
   if (exact > 1)   return { kind: 'ambiguous', matched: needle, count: exact };
@@ -573,7 +573,7 @@ function locateFindString(haystack, needle) {
   return { kind: 'missing', matched: null, count: 0 };
 }
 
-function countOccurrences(haystack, needle) {
+export function countOccurrences(haystack, needle) {
   if (!needle) return 0;
   let count = 0, idx = 0;
   while ((idx = haystack.indexOf(needle, idx)) !== -1) { count++; idx += needle.length; }
