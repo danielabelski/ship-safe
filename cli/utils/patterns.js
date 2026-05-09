@@ -691,14 +691,14 @@ export const SECRET_PATTERNS = [
   // =========================================================================
   {
     name: 'Generic API Key Assignment',
-    pattern: /["']?(?:api[_-]?key|apikey)["']?\s*[:=]\s*["']([a-zA-Z0-9_\-]{20,})["']/gi,
+    pattern: /["']?(?:api[_-]?key|apikey)["']?\s*[:=]\s*["']([a-zA-Z0-9_-]{20,})["']/gi,
     severity: 'medium',
     requiresEntropyCheck: true,
     description: 'Hardcoded API keys should be moved to environment variables.'
   },
   {
     name: 'Generic Secret Assignment',
-    pattern: /["']?(?:secret|secret[_-]?key)["']?\s*[:=]\s*["']([a-zA-Z0-9_\-]{20,})["']/gi,
+    pattern: /["']?(?:secret|secret[_-]?key)["']?\s*[:=]\s*["']([a-zA-Z0-9_-]{20,})["']/gi,
     severity: 'medium',
     requiresEntropyCheck: true,
     description: 'Hardcoded secrets should be moved to environment variables.'
@@ -719,7 +719,7 @@ export const SECRET_PATTERNS = [
   },
   {
     name: 'Bearer Token in Code',
-    pattern: /["']Bearer\s+[a-zA-Z0-9_\-\.=]{20,}["']/gi,
+    pattern: /["']Bearer\s+[a-zA-Z0-9_\-.=]{20,}["']/gi,
     severity: 'medium',
     requiresEntropyCheck: true,
     description: 'Hardcoded bearer tokens should not be in source code.'

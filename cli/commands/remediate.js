@@ -125,7 +125,7 @@ function computeReplacement(matched, envRef) {
   }
 
   // Case 2: unquoted assignment — key = value  (no quotes around value)
-  const unquotedAssignment = matched.match(/^(.*?[:=]\s*)([^\s"'<>\[\]{},;]{8,})(\s*)$/s);
+  const unquotedAssignment = matched.match(/^(.*?[:=]\s*)([^\s"'<>[\]{},;]{8,})(\s*)$/s);
   if (unquotedAssignment) {
     const [, prefix, secretValue, suffix] = unquotedAssignment;
     return { replacement: prefix + envRef + suffix, secretValue };

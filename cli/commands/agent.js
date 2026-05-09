@@ -213,7 +213,7 @@ export async function agentCommand(targetPath = '.', options = {}) {
     console.log(chalk.white(`  ${step++}.`) + chalk.gray(' Fill in .env with fresh values from your providers'));
   }
   if (vulnCount > 0) {
-    console.log(chalk.white(`  ${step++}.`) + chalk.gray(' Apply the code fixes shown above, then re-run: ') + chalk.cyan('npx ship-safe agent .'));
+    console.log(chalk.white(`  ${step}.`) + chalk.gray(' Apply the code fixes shown above, then re-run: ') + chalk.cyan('npx ship-safe agent .'));
   }
   console.log();
 }

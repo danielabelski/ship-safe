@@ -39,7 +39,7 @@ const PATTERNS = [
   {
     rule: 'PII_IN_LOGGER',
     title: 'Privacy: PII in Structured Logger',
-    regex: /(?:logger|winston|pino|bunyan|morgan)\.(?:info|warn|error|debug|log)\s*\([\s\S]{0,200}(?:[\.\[\(]email\b|password|ssn|creditCard|credit_card|phoneNumber|phone_number|dateOfBirth|date_of_birth)/g,
+    regex: /(?:logger|winston|pino|bunyan|morgan)\.(?:info|warn|error|debug|log)\s*\([\s\S]{0,200}(?:[.[(]email\b|password|ssn|creditCard|credit_card|phoneNumber|phone_number|dateOfBirth|date_of_birth)/g,
     severity: 'high',
     cwe: 'CWE-532',
     owasp: 'A09:2021',

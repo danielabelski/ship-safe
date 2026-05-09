@@ -166,7 +166,10 @@ export async function queryOSV(deps) {
     } catch (err) {
       // Network error — return what we have so far
       if (allResults.length === 0) {
-        throw new Error(`Failed to reach OSV.dev: ${err.message}. Run with --offline to skip live checks.`);
+        throw new Error(
+          `Failed to reach OSV.dev: ${err.message}. Run with --offline to skip live checks.`,
+          { cause: err },
+        );
       }
     }
   }

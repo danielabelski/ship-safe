@@ -112,7 +112,7 @@ export class SwarmOrchestrator {
     const jsonInstruction = '\n\nOutput a JSON object with exactly these keys: {"findings":[{"agentId":"<agent-id>","file":"<relative-path>","line":<number>,"severity":"critical|high|medium|low","rule":"<rule-id>","title":"<title>","description":"<description>","remediation":"<fix>"}],"agentSummary":[{"agentId":"<agent-id>","findingCount":<number>,"status":"clean|findings"}]}';
 
     const text = await this.provider.complete(systemPrompt, prompt + jsonInstruction, { maxTokens: 8192, jsonMode: true });
-    let raw = null;
+    let raw;
     try {
       raw = JSON.parse(text || '{}');
     } catch {

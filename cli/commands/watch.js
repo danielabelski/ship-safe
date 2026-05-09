@@ -332,7 +332,7 @@ async function watchStateful(absolutePath, options = {}) {
   await watcher.setBaseline(recon, files);
   console.log(chalk.green(`  Baseline set (${watcher.provider.name} / ${watcher.provider.model}). Watching...\n`));
 
-  let pendingFiles = new Set();
+  const pendingFiles = new Set();
   let debounceTimer = null;
   let allFindings = [];
 
@@ -454,7 +454,7 @@ async function watchDeep(absolutePath, options = {}) {
   } catch { recon = {}; }
   console.log(chalk.gray('  Recon complete. Watching...\n'));
 
-  let pendingFiles = new Set();
+  const pendingFiles = new Set();
   let debounceTimer = null;
   let scanCount = 0;
 

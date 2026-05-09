@@ -19,7 +19,7 @@ import { program } from 'commander';
 import chalk from 'chalk';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join, resolve } from 'path';
 import { scanCommand } from '../commands/scan.js';
 import { checklistCommand } from '../commands/checklist.js';
 import { initCommand } from '../commands/init.js';
@@ -638,7 +638,7 @@ How it works:
   on every audit or watch --deep run.
 `)
   .action((action, options) => {
-    const rootPath = path.resolve(process.cwd());
+    const rootPath = resolve(process.cwd());
     if (action === 'new') {
       const pluginName = options.args?.[0] || options._name || 'my-rule';
       try {

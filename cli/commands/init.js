@@ -276,10 +276,9 @@ async function handleAgentFiles(targetDir, force, results) {
         results.skipped.push(`${label} (already contains ship-safe rules)`);
         continue;
       }
-      if (force || true) { // always append unless already present
-        fs.writeFileSync(targetPath, existing.trimEnd() + '\n' + AGENT_SECTION);
-        results.merged.push(label);
-      }
+      // Always append (ship-safe marker check above already short-circuits the no-op case)
+      fs.writeFileSync(targetPath, existing.trimEnd() + '\n' + AGENT_SECTION);
+      results.merged.push(label);
     } else {
       // Ensure parent directory exists (e.g. .github/)
       const parentDir = path.dirname(targetPath);

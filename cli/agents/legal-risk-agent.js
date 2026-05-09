@@ -274,7 +274,7 @@ export class LegalRiskAgent extends BaseAgent {
 
     const lines = (this.readFile(goModPath) || '').split('\n');
     for (const line of lines) {
-      const m = line.trim().match(/^([\w./\-]+)\s+(v[\d.]+)/);
+      const m = line.trim().match(/^([\w./-]+)\s+(v[\d.]+)/);
       if (!m) continue;
       const [, name, version] = m;
 

@@ -61,7 +61,7 @@ const PATTERNS = [
     owasp: 'ASI-10',
     confidence: 'high',
     description: 'hermes-agent package version is not pinned — a malicious minor/patch release could modify agent behavior.',
-    fix: 'Pin to exact version: "\"@nousresearch/hermes-agent\": \"1.2.3\""',
+    fix: 'Pin to exact version: "@nousresearch/hermes-agent": "1.2.3"',
   },
 
   // ── Missing integrity fields ────────────────────────────────────────────────

@@ -16,7 +16,7 @@ const PATTERNS = [
   {
     rule: 'MOBILE_HARDCODED_KEY',
     title: 'Mobile: Hardcoded API Key in Bundle',
-    regex: /(?:apiKey|api_key|API_KEY|secret|SECRET)\s*[:=]\s*["'][a-zA-Z0-9_\-]{20,}["']/g,
+    regex: /(?:apiKey|api_key|API_KEY|secret|SECRET)\s*[:=]\s*["'][a-zA-Z0-9_-]{20,}["']/g,
     severity: 'critical',
     cwe: 'CWE-798',
     owasp: 'M1',

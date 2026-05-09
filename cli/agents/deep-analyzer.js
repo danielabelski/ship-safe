@@ -445,7 +445,7 @@ export class DeepAnalyzer {
         codeContext: this._getFileContext(f),
       }));
 
-      let projectContext = this._buildProjectContext(context);
+      const projectContext = this._buildProjectContext(context);
       const prompt = `Analyze these ${items.length} security findings for taint reachability and exploitability.${projectContext}\n\nFindings:\n${JSON.stringify(items, null, 2)}`;
 
       try {

@@ -96,7 +96,7 @@ export async function auditCommand(targetPath = '.', options = {}) {
   // ── Cache Layer ──────────────────────────────────────────────────────────
   const useCache = options.cache !== false;
   const cache = new CacheManager(absolutePath);
-  let cacheData = useCache ? cache.load() : null;
+  const cacheData = useCache ? cache.load() : null;
   let cacheDiff = null;
   let allFiles = [];
 

@@ -40,8 +40,8 @@ export async function redTeamCommand(targetPath = '.', options = {}) {
   console.log();
 
   let findings = [];
-  let recon = {};
-  let agentResults = [];
+  let recon;
+  let agentResults;
 
   // ── 1a. Swarm mode (parallel execution via best available provider) ────────
   if (options.swarm) {

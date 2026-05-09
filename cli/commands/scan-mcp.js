@@ -105,7 +105,7 @@ const MCP_TOOL_PATTERNS = [
   // ── Encoded payload in description ────────────────────────────────────────
   {
     name: 'Encoded payload block',
-    regex: /[A-Za-z0-9+\/]{60,}={0,2}/g,
+    regex: /[A-Za-z0-9+/]{60,}={0,2}/g,
     severity: 'medium',
     target: 'any',
   },

@@ -25,10 +25,11 @@ import { printBanner } from '../utils/output.js';
 
 function stripAnsi(str) {
   // Remove all ANSI escape sequences (colors, cursor moves, clears, etc.)
+  // eslint-disable-next-line no-control-regex
   return str
-    .replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '')
-    .replace(/\x1b\][^\x07]*\x07/g, '')
-    .replace(/\x1b[()][AB012]/g, '')
+    .replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '')   // eslint-disable-line no-control-regex
+    .replace(/\x1b\][^\x07]*\x07/g, '')       // eslint-disable-line no-control-regex
+    .replace(/\x1b[()][AB012]/g, '')          // eslint-disable-line no-control-regex
     .replace(/\x9b[0-9;]*[A-Za-z]/g, '');
 }
 

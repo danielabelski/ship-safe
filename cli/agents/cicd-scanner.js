@@ -74,7 +74,7 @@ const PATTERNS = [
   {
     rule: 'CICD_HARDCODED_SECRET',
     title: 'CI/CD: Hardcoded Secret in Workflow',
-    regex: /(?:api[_-]?key|token|password|secret)\s*[:=]\s*["'][a-zA-Z0-9_\-]{20,}["']/gi,
+    regex: /(?:api[_-]?key|token|password|secret)\s*[:=]\s*["'][a-zA-Z0-9_-]{20,}["']/gi,
     severity: 'critical',
     cwe: 'CWE-798',
     owasp: 'CICD-SEC-6',
@@ -148,7 +148,7 @@ const PATTERNS = [
   {
     rule: 'CICD_ENV_EXFILTRATION',
     title: 'CI/CD: Potential Secret/Env Exfiltration',
-    regex: /(?:curl|wget|Invoke-WebRequest|Invoke-RestMethod)\b[^\n]*\$\{\{\s*(?:secrets\.|env\.)[^\}]+\}\}/g,
+    regex: /(?:curl|wget|Invoke-WebRequest|Invoke-RestMethod)\b[^\n]*\$\{\{\s*(?:secrets\.|env\.)[^}]+\}\}/g,
     severity: 'critical',
     cwe: 'CWE-200',
     owasp: 'CICD-SEC-6',

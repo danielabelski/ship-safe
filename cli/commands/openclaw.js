@@ -54,7 +54,7 @@ export async function openclawCommand(targetPath = '.', options = {}) {
     mcpScanner.analyze(context),
   ]);
 
-  let findings = [...configFindings, ...mcpFindings];
+  const findings = [...configFindings, ...mcpFindings];
 
   // Threat intel enrichment
   const intel = ThreatIntel.load();

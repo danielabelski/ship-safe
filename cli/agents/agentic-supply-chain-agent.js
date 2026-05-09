@@ -434,7 +434,7 @@ export class AgenticSupplyChainAgent extends BaseAgent {
     if (!content) return;
 
     // Look for AI plugins in netlify.toml [[plugins]] sections
-    const pluginMatches = content.matchAll(/\[\[plugins\]\][^\[]*package\s*=\s*["']([^"']+)["']/gs);
+    const pluginMatches = content.matchAll(/\[\[plugins\]\][^[]*package\s*=\s*["']([^"']+)["']/gs);
     for (const m of pluginMatches) {
       const pkg = m[1];
       if (!NETLIFY_AI_PLUGINS.has(pkg) && !/ai|llm|openai|anthropic|langchain|vector/.test(pkg)) continue;

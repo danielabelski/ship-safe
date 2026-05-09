@@ -240,6 +240,7 @@ export async function agentFixCommand(targetPath = '.', options = {}) {
 
     if (decision === 'q' || decision === 'quit') {
       console.log(chalk.gray('      Stopping.'));
+      // eslint-disable-next-line no-useless-assignment -- read by outer-loop guard at top of next iteration
       stopped = true;
       break;
     }
@@ -800,7 +801,7 @@ async function openPullRequest(root, branch, applied) {
   const title = `Security fixes: ${applied.length} file(s)`;
 
   console.log(chalk.gray('  Opening PR...'));
-  let prUrl = null;
+  let prUrl;
   try {
     prUrl = execFileSync('gh', ['pr', 'create', '--title', title, '--body', body], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] }).toString().trim();
     console.log(chalk.green(`  PR opened: ${prUrl}`));

@@ -99,7 +99,7 @@ const SKILL_PATTERNS = [
   { name: 'Dynamic code evaluation', regex: /(?:eval\s*\(|new\s+Function\s*\(|exec\s*\(|compile\s*\()/gi, severity: 'high' },
   { name: 'Crypto operations', regex: /(?:crypto\.createCipher|crypto\.createDecipher|CryptoJS|forge\.cipher)/gi, severity: 'medium' },
   { name: 'Network listener', regex: /(?:createServer|listen\s*\(\s*\d|bind\s*\(\s*['"]0\.0\.0\.0)/gi, severity: 'high' },
-  { name: 'Encoded payload block', regex: /[A-Za-z0-9+\/]{60,}={0,2}/g, severity: 'medium' },
+  { name: 'Encoded payload block', regex: /[A-Za-z0-9+/]{60,}={0,2}/g, severity: 'medium' },
 
   // ── ToxicSkills patterns (Snyk research — 36% of agent skills affected) ──
   // Silent curl exfiltration: skill instructs agent to silently send data

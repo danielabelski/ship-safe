@@ -162,7 +162,7 @@ export const HIGH_PATTERNS = [
   {
     name:     'Generic high-entropy secret assignment',
     severity: 'high',
-    re:       /(?:token|secret|api_key|apikey)\s*[:=]\s*["']([A-Za-z0-9+/=_\-]{32,})["']/i,
+    re:       /(?:token|secret|api_key|apikey)\s*[:=]\s*["']([A-Za-z0-9+/=_-]{32,})["']/i,
     checkEntropy: true,  // only report if entropy > threshold
   },
 ];

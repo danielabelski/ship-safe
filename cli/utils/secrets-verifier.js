@@ -238,7 +238,7 @@ export class SecretsVerifier {
     if (assigned) return assigned[1];
 
     // If the match itself looks like a token, use it
-    if (/^[a-zA-Z0-9_\-]{20,}$/.test(matched)) return matched;
+    if (/^[a-zA-Z0-9_-]{20,}$/.test(matched)) return matched;
 
     return null;
   }
