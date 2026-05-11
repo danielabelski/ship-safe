@@ -115,7 +115,7 @@ export default async function Dashboard() {
               </>
             )}
           </div>
-          <Link href="/pricing" className="btn btn-primary">Upgrade to Pro →</Link>
+          <Link href="/pricing" className={styles.primaryCta}>Upgrade to Pro →</Link>
         </div>
       )}
 
@@ -124,7 +124,7 @@ export default async function Dashboard() {
           <h1>Dashboard</h1>
           <p className={styles.subtitle}>Your security overview</p>
         </div>
-        <Link href="/app/scan" className="btn btn-primary">
+        <Link href="/app/scan" className={styles.primaryCta}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
           New Scan
         </Link>
@@ -206,7 +206,7 @@ export default async function Dashboard() {
           <h3>Harden your Hermes agent in one command</h3>
           <p>Answer 4 questions about your tool registry, memory provider, and delegation setup. Get a security config — allowlists, integrity hashes, and CI — dropped into your project.</p>
         </div>
-        <Link href="/app/deploy" className="btn btn-primary">
+        <Link href="/app/deploy" className={styles.primaryCta}>
           Deploy agents →
         </Link>
       </div>
@@ -221,7 +221,7 @@ export default async function Dashboard() {
         {recentScans.length === 0 ? (
           <div className={styles.emptyState}>
             <p>No scans yet. Run your first scan to see results here.</p>
-            <Link href="/app/scan" className="btn btn-primary">Start first scan</Link>
+            <Link href="/app/scan" className={styles.primaryCta}>Start first scan</Link>
           </div>
         ) : (
           <div className={styles.scanList}>
