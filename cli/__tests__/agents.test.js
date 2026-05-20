@@ -1715,6 +1715,86 @@ describe('HermesSecurityAgent', async () => {
         'Should detect browser/fetch tool without metadata SSRF floor');
     } finally { cleanup(dir); }
   });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // xurl skill / X API integration coverage (xAI xurl guide, May 2026)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  it('detects xurl command built from interpolated input (critical — ASI-03, CWE-78)', async () => {
+    const { dir, file } = writeHermesFile(
+      // xurl command assembled as a shell string with an interpolation
+      'execSync(`xurl post "${userText}"`);'
+    );
+    try {
+      const findings = await agent.analyze({ rootPath: dir, files: [file], recon: { files: [file] }, options: {} });
+      assert.ok(findings.some(f => f.rule === 'HERMES_XURL_SUBPROCESS_INJECTION'),
+        'Should detect interpolated xurl subprocess command');
+    } finally { cleanup(dir); }
+  });
+
+  it('detects xurl credential store copied into an image (critical — ASI-10)', async () => {
+    const { dir, file } = writeHermesFile(
+      // Dockerfile-style COPY of the xurl token store
+      'COPY .xurl /root/.xurl'
+    );
+    try {
+      const findings = await agent.analyze({ rootPath: dir, files: [file], recon: { files: [file] }, options: {} });
+      assert.ok(findings.some(f => f.rule === 'HERMES_XURL_TOKEN_STORE_EXPOSURE'),
+        'Should detect xurl/.hermes credential store being copied');
+    } finally { cleanup(dir); }
+  });
+
+  it('detects xurl read-then-write loop without a human gate (critical — ASI-01)', async () => {
+    const { dir, file } = writeHermesFile(
+      // A skill flow that both reads X content and writes back, no approval gate
+      'await run("xurl search ai safety");\nawait run("xurl post \\"my summary\\"");'
+    );
+    try {
+      const findings = await agent.analyze({ rootPath: dir, files: [file], recon: { files: [file] }, options: {} });
+      assert.ok(findings.some(f => f.rule === 'HERMES_XURL_READ_WRITE_LOOP'),
+        'Should detect xurl read+write loop with no human gate');
+    } finally { cleanup(dir); }
+  });
+
+  it('does NOT flag xurl read+write when a human-approval gate is present', async () => {
+    const { dir, file } = writeHermesFile(
+      'await run("xurl search ai safety");\nif (await requireApproval()) {\n  await run("xurl post \\"my summary\\"");\n}'
+    );
+    try {
+      const findings = await agent.analyze({ rootPath: dir, files: [file], recon: { files: [file] }, options: {} });
+      assert.ok(!findings.some(f => f.rule === 'HERMES_XURL_READ_WRITE_LOOP'),
+        'Human-approval gate should suppress the read/write-loop finding');
+    } finally { cleanup(dir); }
+  });
+});
+
+// =============================================================================
+// SECRET_PATTERNS — X API credentials (xurl skill coverage)
+// =============================================================================
+
+describe('SECRET_PATTERNS — X API credentials', async () => {
+  const { SECRET_PATTERNS } = await import('../utils/patterns.js');
+
+  function matches(name, sample) {
+    const entry = SECRET_PATTERNS.find(p => p.name === name);
+    assert.ok(entry, `pattern "${name}" should exist`);
+    entry.pattern.lastIndex = 0;
+    return entry.pattern.test(sample);
+  }
+
+  it('flags an X API OAuth client secret', () => {
+    assert.ok(matches('X API OAuth Client Secret',
+      'client_secret = "aB3dE5fG7hJ9kL1mN3pQ5rS7tU9vW1xY3zA5bC7dE9f"'));
+  });
+
+  it('flags an X API v2 bearer token', () => {
+    assert.ok(matches('X API v2 Bearer Token',
+      'AAAAAAAAAAAAAAAAAAAAA' + 'B'.repeat(80)));
+  });
+
+  it('still flags an xAI (Grok) API key', () => {
+    assert.ok(matches('xAI (Grok) API Key', 'xai-' + 'a'.repeat(60)));
+  });
 });
 
 // =============================================================================

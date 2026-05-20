@@ -288,6 +288,40 @@ const PATTERNS = [
   // implemented as structural checks below (checkAuthJsonTOCTOU,
   // checkCronSkillInjection, checkBrowserCloudMetadataFloor).
 
+  // ────────────────────────────────────────────────────────────────────────────
+  // TRACK X — xurl skill / X API integration (xAI xurl guide, May 2026)
+  // The xurl skill lets a Hermes agent read and write to X. It is a separate
+  // CLI shelled out from the agent, backed by OAuth credentials in ~/.xurl.
+  // ────────────────────────────────────────────────────────────────────────────
+
+  {
+    rule: 'HERMES_XURL_SUBPROCESS_INJECTION',
+    title: 'Hermes: xurl Command Built From Interpolated Input',
+    // exec/spawn of an `xurl …` command string with a ${} interpolation —
+    // the agent's natural-language → xurl translation is being assembled as a
+    // shell string. Prompt injection then controls xurl flags or shell metachars.
+    regex: /(?:exec|execSync|spawn|spawnSync|spawnAsync|shell)\s*\(?\s*`[^`]*\bxurl\b[^`]*\$\{/g,
+    severity: 'critical',
+    cwe: 'CWE-78',
+    owasp: 'ASI03',
+    description: 'An `xurl` command is assembled as a shell string with an interpolated value. xurl can post, reply, DM, and manage lists on the linked X account — a prompt injection that reaches this interpolation controls real write actions on a live social account.',
+    fix: 'Never build the xurl command as a string. Pass arguments as an argv array (execFile/spawn with an args array), validate every argument against an allowlist, and treat all LLM/user text as untrusted.',
+  },
+
+  {
+    rule: 'HERMES_XURL_TOKEN_STORE_EXPOSURE',
+    title: 'Hermes: xurl / Hermes Credential Store Copied or Tracked',
+    // ~/.xurl (OAuth tokens + client secrets, YAML) or ~/.hermes/auth.json
+    // referenced in a Dockerfile COPY/ADD, a cp/rsync/tar, or otherwise
+    // moved off the developer machine.
+    regex: /(?:COPY|ADD|cp|rsync|scp|tar|mv)\s+[^\n]*(?:\.xurl\b|\.hermes\/auth\.json|\.hermes\b)/g,
+    severity: 'critical',
+    cwe: 'CWE-538',
+    owasp: 'ASI10',
+    description: 'A Hermes / xurl credential store (~/.xurl holds OAuth tokens and X API client secrets; ~/.hermes/auth.json holds auto-refreshing provider tokens) is being copied into an image, archive, or another host. These tokens grant durable, refreshable access to the linked accounts.',
+    fix: 'Never bake credential stores into images or backups. Mount them at runtime from a secret manager, and add .xurl / .hermes/ / auth.json to .gitignore and .dockerignore.',
+  },
+
 ];
 
 // =============================================================================
@@ -603,6 +637,54 @@ function checkBrowserCloudMetadataFloor(content, filePath, agent) {
   return findings;
 }
 
+/**
+ * Detect the xurl indirect-injection → action loop. The xurl skill lets a
+ * Hermes agent both READ X content (search / timeline / bookmarks — all
+ * attacker-controlled) and WRITE to X (post / reply / quote / like / DM).
+ * When a single skill, cron task, or source flow does both with no
+ * human-approval gate, a poisoned post the agent reads can hijack it into
+ * posting on the user's behalf — the canonical OWASP ASI-01/ASI-08 chain.
+ */
+function checkXurlReadWriteLoop(content, filePath, agent) {
+  const findings = [];
+
+  // Only relevant if the file actually touches the xurl skill.
+  if (!/\bxurl\b|\/xurl\b/i.test(content)) return findings;
+
+  // xurl READ-class operations — content sources the agent does not control
+  const READ_RE  = /\bxurl\s+(?:search|bookmarks|timeline|users?|get)\b|\b(?:search\s+for\s+posts|my\s+(?:latest\s+)?timeline|all\s+of\s+my\s+bookmarks|look\s+up\s+@)/i;
+  // xurl WRITE-class operations — real, visible actions on the live account
+  const WRITE_RE = /\bxurl\s+(?:post|reply|quote|like|unlike|bookmark|unbookmark|dm|delete)\b|\b(?:post\s+["'`]|reply\s+to\s+post|quote\s+post|like\s+post|send\s+a\s+dm)/i;
+  // Presence of a human-in-the-loop gate disqualifies the finding
+  const GATE_RE  = /\b(?:requireApproval|human[-_]?(?:approval|review|confirm)|confirm(?:ation)?\s*(?:gate|required|before)|awaitConfirm|ask\s+(?:the\s+user\s+)?before|dry[-_]?run)\b/i;
+
+  const hasRead  = READ_RE.test(content);
+  const hasWrite = WRITE_RE.test(content);
+  if (!hasRead || !hasWrite) return findings;
+  if (GATE_RE.test(content)) return findings;
+
+  // Anchor the finding on the first write operation
+  const wm = content.match(WRITE_RE);
+  const line = wm ? content.slice(0, content.indexOf(wm[0])).split('\n').length : 1;
+
+  findings.push(createFinding({
+    file: filePath,
+    line,
+    severity: 'critical',
+    category: agent.category,
+    rule: 'HERMES_XURL_READ_WRITE_LOOP',
+    title: 'Hermes: xurl Read-then-Write Loop Without a Human Gate',
+    description: 'This file drives the xurl skill to both read X content (search / timeline / bookmarks — all attacker-controlled) and write to X (post / reply / quote / like / DM) with no human-approval gate. A poisoned post the agent reads while summarizing a timeline or bookmark set can hijack it via indirect prompt injection into posting, replying, or DMing on the linked account.',
+    matched: wm ? wm[0].trim().slice(0, 120) : 'xurl read + write in one flow',
+    confidence: 'medium',
+    cwe: 'CWE-94',
+    owasp: 'ASI01',
+    fix: 'Split read and write into separate, gated steps. Require explicit human approval before any xurl write (post/reply/quote/like/DM). Treat every piece of fetched X content as untrusted input and scan it for injection before it reaches the model.',
+  }));
+
+  return findings;
+}
+
 // =============================================================================
 // AGENT CLASS
 // =============================================================================
@@ -660,6 +742,8 @@ export class HermesSecurityAgent extends BaseAgent {
       findings.push(...checkAuthJsonTOCTOU(content, filePath, this));
       findings.push(...checkCronSkillInjection(content, filePath, this));
       findings.push(...checkBrowserCloudMetadataFloor(content, filePath, this));
+      // xurl skill / X API integration coverage
+      findings.push(...checkXurlReadWriteLoop(content, filePath, this));
     }
 
     return findings;
@@ -696,7 +780,7 @@ export class HermesSecurityAgent extends BaseAgent {
       if (/\.(js|ts|mjs|cjs|py)$/.test(rel)) {
         const content = this.readFile(file);
         if (!content) continue;
-        if (/(?:hermes[-_]agent|@nousresearch\/hermes|hermes\.config|toolRegistry|registerTool|callTool|spawnAgent|createSubAgent|memory\.store|episodicMemory|semanticMemory|loadManifest)/i.test(content)) {
+        if (/(?:hermes[-_]agent|@nousresearch\/hermes|hermes\.config|toolRegistry|registerTool|callTool|spawnAgent|createSubAgent|memory\.store|episodicMemory|semanticMemory|loadManifest|\bxurl\b)/i.test(content)) {
           hermesFiles.add(file);
         }
       }

@@ -6,6 +6,57 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [9.3.1] — 2026-05-12 — xurl skill coverage
+
+Detection for the `xurl` skill attack surface — the xAI guide published
+this week walks Hermes Agent users through wiring an agent to read and
+write to X (post, reply, quote, DM, manage lists) through the `xurl`
+CLI. That introduces a credentialed, subprocess-driven, cron-schedulable
+write path to a live social account. This release adds coverage for the
+three highest-impact failure modes.
+
+### Agent security
+
+- **`HERMES_XURL_READ_WRITE_LOOP`** (critical — ASI-01, CWE-94) — a
+  structural check that flags a skill, cron task, or source flow which
+  both reads X content (`xurl search` / `timeline` / `bookmarks` — all
+  attacker-controlled) and writes to X (`xurl post` / `reply` / `quote`
+  / `like` / `dm`) with no human-approval gate. A poisoned post the
+  agent reads while summarizing a timeline can hijack it via indirect
+  prompt injection into posting on the linked account. Suppressed when
+  a `requireApproval` / `human-review` / `dry-run`-style gate is present.
+
+- **`HERMES_XURL_SUBPROCESS_INJECTION`** (critical — ASI-03, CWE-78) —
+  flags an `xurl` command assembled as a shell template string with a
+  `${…}` interpolation. The agent's natural-language → `xurl` translation
+  is being built as a string; a prompt injection reaching the
+  interpolation controls real write actions on a live X account.
+
+- **`HERMES_XURL_TOKEN_STORE_EXPOSURE`** (critical — ASI-10, CWE-538) —
+  flags a `COPY` / `ADD` / `cp` / `rsync` / `scp` / `tar` / `mv` of the
+  `~/.xurl` credential store (OAuth tokens + X API client secrets, YAML)
+  or `~/.hermes/auth.json` (auto-refreshing provider tokens) into an
+  image, archive, or another host.
+
+The `HermesSecurityAgent` source-file content filter now also matches
+files that reference `xurl` so xurl-driving code is scanned even when it
+does not import the hermes-agent SDK directly.
+
+### Secrets
+
+- **X API OAuth Client Secret** — new `SECRET_PATTERNS` entry (critical).
+  Detects a high-entropy value next to `client_secret` / `consumer_secret`.
+- **X API v2 Bearer Token** — new `SECRET_PATTERNS` entry (critical).
+  Detects the `AAAA…`-prefixed v2 bearer-token shape.
+
+  (xAI `xai-` keys were already covered since v9.2.)
+
+### Tests
+
+- 7 new tests (188 → 195): 4 for the xurl agent rules — including a
+  negative test confirming the human-approval gate suppresses
+  `HERMES_XURL_READ_WRITE_LOOP` — and 3 for the X API secret patterns.
+
 ## [9.3.0] — 2026-05-11 — Tenacity Patch
 
 This release picks up the security flow from the past 30 days — the

@@ -480,6 +480,18 @@ export const SECRET_PATTERNS = [
     description: 'xAI API keys grant access to Grok models and incur usage charges on your account.'
   },
   {
+    name: 'X API OAuth Client Secret',
+    pattern: /(?:client[_-]?secret|consumer[_-]?secret)["'\s]*[:=]["'\s]*([A-Za-z0-9_-]{40,60})["']?/gi,
+    severity: 'critical',
+    description: 'An X (Twitter) API OAuth 2.0 client secret. With the matching client ID it lets an attacker complete the OAuth flow as your app — used by the xurl skill to post, reply, and DM on the linked account.'
+  },
+  {
+    name: 'X API v2 Bearer Token',
+    pattern: /AAAAAAAAAAAAAAAAAAAAA[A-Za-z0-9%]{60,}/g,
+    severity: 'critical',
+    description: 'An X (Twitter) API v2 bearer token. Grants app-level read access to the X API; if scoped to a user context it also enables writes.'
+  },
+  {
     name: 'Tavily API Key',
     pattern: /tvly-[a-zA-Z0-9]{32,}/g,
     severity: 'high',
